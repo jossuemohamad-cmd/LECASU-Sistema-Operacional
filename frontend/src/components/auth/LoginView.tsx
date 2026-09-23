@@ -8,9 +8,9 @@ import {
   KeyRound, 
   CheckCircle2, 
   X, 
-  RefreshCw,
   Eye,
-  EyeOff
+  EyeOff,
+  Sparkles
 } from 'lucide-react';
 import type { User } from '../../types';
 import { loginUser, forgotPassword, resetPassword } from '../../services/api';
@@ -105,7 +105,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         setTempCodeNotice(`Código de verificação gerado: ${res.temp_code}`);
         setForgotToken(res.temp_code);
       }
-      setForgotSuccess(res.message || 'Código de verificação enviado.');
+      setForgotSuccess(res.message || 'Código de verificação gerado.');
       setForgotStep(2);
     } catch (err: any) {
       setForgotError(err.message || 'Erro ao processar a solicitação de recuperação.');
@@ -154,50 +154,65 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans relative overflow-hidden">
-      {/* BACKGROUND ACCENTS */}
-      <div className="absolute -top-40 -right-40 w-96 h-96 bg-orange-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-orange-600/10 rounded-full blur-3xl pointer-events-none" />
+    <div 
+      className="min-h-screen w-full flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8 font-sans relative overflow-hidden bg-slate-950 bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: "url('/assets/images/login-bg.jpg')" }}
+    >
+      {/* LUXURY DARK GRADIENT & GLASS OVERLAY */}
+      <div className="absolute inset-0 bg-gradient-to-tr from-slate-950/95 via-slate-950/85 to-slate-900/80 backdrop-blur-[2px] pointer-events-none" />
+      
+      {/* AMBIENT GLOW EFFECTS */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-orange-600/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-24 -right-24 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="sm:mx-auto sm:w-full sm:max-w-md z-10">
-        {/* LOGO AREA LIMPA */}
-        <div className="flex items-center justify-center space-x-3 mb-6">
-          <div className="w-11 h-11 rounded-xl bg-orange-600 flex items-center justify-center font-bold text-white text-2xl tracking-wider shadow-xl shadow-orange-600/30">
-            L
-          </div>
-          <span className="font-bold text-2xl tracking-tight text-white">
-            LECASU <span className="text-orange-500 text-sm font-semibold tracking-normal">ERP</span>
-          </span>
-        </div>
-      </div>
-
-      <div className="sm:mx-auto sm:w-full sm:max-w-md z-10 px-4 sm:px-0">
-        <div className="bg-slate-900/90 backdrop-blur-md py-8 px-6 shadow-2xl rounded-2xl border border-slate-800 sm:px-10">
+      {/* LOGIN CARD CONTAINER */}
+      <div className="w-full max-w-md z-10 relative">
+        <div className="bg-slate-900/85 backdrop-blur-xl py-8 px-6 sm:px-10 shadow-2xl rounded-2xl border border-slate-700/60 transition-all duration-300 relative overflow-hidden">
           
-          <div className="mb-6 pb-4 border-b border-slate-800">
-            <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-              <ShieldCheck size={18} className="text-orange-500" />
-              Autenticação de Acesso
-            </h2>
-            <p className="text-xs text-slate-400 mt-1">
-              Introduza as suas credenciais corporativas para entrar.
+          {/* TOP ACCENT LINE WITH LOADING PULSE */}
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-600 via-amber-500 to-orange-600 overflow-hidden">
+            {isLoading && (
+              <div className="w-full h-full bg-white/40 animate-pulse" />
+            )}
+          </div>
+
+          {/* INTEGRATED BRANDING & HEADER */}
+          <div className="mb-6 pb-5 border-b border-slate-800/80 text-center">
+            <div className="inline-flex items-center justify-center space-x-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-orange-600 flex items-center justify-center font-black text-white text-xl tracking-wider shadow-lg shadow-orange-600/40 ring-1 ring-orange-400/30">
+                L
+              </div>
+              <div className="text-left">
+                <span className="font-extrabold text-xl tracking-tight text-white block leading-none">
+                  LECASU <span className="text-orange-500 text-xs font-bold tracking-normal uppercase ml-0.5">ERP</span>
+                </span>
+                <span className="text-[11px] text-slate-400 font-medium tracking-wide">
+                  Portal Corporativo
+                </span>
+              </div>
+            </div>
+            
+            <p className="text-xs text-slate-400 max-w-xs mx-auto">
+              Introduza as suas credenciais corporativas para entrar no sistema.
             </p>
           </div>
 
+          {/* ERROR ALERT */}
           {errorMessage && (
-            <div className="mb-5 bg-red-500/10 border border-red-500/30 text-red-400 p-3 rounded-lg flex items-start space-x-2.5 text-xs animate-in fade-in">
+            <div className="mb-5 bg-red-500/15 border border-red-500/30 text-red-300 p-3 rounded-lg flex items-start space-x-2.5 text-xs animate-in fade-in zoom-in-95">
               <AlertCircle size={16} className="flex-shrink-0 mt-0.5 text-red-400" />
-              <span>{errorMessage}</span>
+              <span className="leading-relaxed">{errorMessage}</span>
             </div>
           )}
 
+          {/* LOGIN FORM */}
           <form className="space-y-4" onSubmit={handleSubmit}>
             {/* EMAIL */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                 Endereço de E-mail
               </label>
-              <div className="relative rounded-md shadow-xs">
+              <div className="relative rounded-lg shadow-xs">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
                   <Mail size={15} />
                 </div>
@@ -206,13 +221,14 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   required
                   placeholder="utilizador@lecasu.co.mz"
                   value={email}
+                  disabled={isLoading}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-9 pr-3 py-2 text-xs bg-slate-950/80 border border-slate-700 rounded-md text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition"
+                  className="block w-full pl-9 pr-3 py-2.5 text-xs bg-slate-950/80 border border-slate-700/80 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition disabled:opacity-60"
                 />
               </div>
             </div>
 
-            {/* SENHA COM BOTÃO VER SENHA */}
+            {/* SENHA */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-xs font-semibold text-slate-300">
@@ -221,12 +237,13 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 <button
                   type="button"
                   onClick={handleOpenForgotModal}
-                  className="text-[11px] text-orange-400 hover:text-orange-300 hover:underline transition font-medium cursor-pointer"
+                  disabled={isLoading}
+                  className="text-[11px] text-orange-400 hover:text-orange-300 hover:underline transition font-medium cursor-pointer disabled:opacity-50"
                 >
                   Esqueceu-se da palavra-passe?
                 </button>
               </div>
-              <div className="relative rounded-md shadow-xs">
+              <div className="relative rounded-lg shadow-xs">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
                   <Lock size={15} />
                 </div>
@@ -235,13 +252,15 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   required
                   placeholder="••••••••••••"
                   value={password}
+                  disabled={isLoading}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-9 pr-10 py-2 text-xs bg-slate-950/80 border border-slate-700 rounded-md text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition"
+                  className="block w-full pl-9 pr-10 py-2.5 text-xs bg-slate-950/80 border border-slate-700/80 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition disabled:opacity-60"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 transition cursor-pointer"
+                  disabled={isLoading}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 transition cursor-pointer disabled:opacity-50"
                   title={showPassword ? 'Ocultar palavra-passe' : 'Ver palavra-passe'}
                 >
                   {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -250,11 +269,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             </div>
 
             {/* CHECKBOX LEMBRAR-ME */}
-            <div className="flex items-center justify-between pt-1">
+            <div className="flex items-center justify-between pt-0.5">
               <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={rememberMe}
+                  disabled={isLoading}
                   onChange={(e) => setRememberMe(e.target.checked)}
                   className="w-3.5 h-3.5 rounded border-slate-700 bg-slate-950 text-orange-600 focus:ring-orange-500 focus:ring-offset-slate-900 cursor-pointer accent-orange-600"
                 />
@@ -262,20 +282,31 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               </label>
             </div>
 
-            {/* SUBMIT BUTTON */}
+            {/* SUBMIT BUTTON COM EFEITO DE LOAD BONITO */}
             <div className="pt-2">
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-xs font-bold text-white bg-orange-600 hover:bg-orange-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition disabled:opacity-50 cursor-pointer"
+                className={`w-full relative overflow-hidden py-3 px-4 border border-transparent rounded-lg shadow-lg text-xs font-bold text-white transition-all duration-300 cursor-pointer ${
+                  isLoading 
+                    ? 'bg-orange-700 cursor-wait shadow-orange-600/20' 
+                    : 'bg-orange-600 hover:bg-orange-500 shadow-orange-600/30 hover:shadow-orange-600/40 active:scale-[0.99]'
+                }`}
               >
                 {isLoading ? (
-                  <span>A autenticar...</span>
+                  <div className="flex items-center justify-center space-x-2.5">
+                    {/* CUSTOM ROTATING DUAL-RING SPINNER */}
+                    <div className="relative w-4 h-4 flex-shrink-0">
+                      <div className="absolute inset-0 rounded-full border-2 border-white/20" />
+                      <div className="absolute inset-0 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                    </div>
+                    <span className="font-semibold tracking-wide">A autenticar credenciais...</span>
+                  </div>
                 ) : (
-                  <>
+                  <div className="flex items-center justify-center space-x-2">
                     <span>Entrar no Sistema</span>
-                    <ArrowRight size={14} />
-                  </>
+                    <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
+                  </div>
                 )}
               </button>
             </div>
@@ -284,14 +315,20 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         </div>
 
         {/* FOOTER */}
-        <p className="text-center text-[11px] text-slate-500 mt-8">
-          LECASU, Lda • Moçambique • Todos os direitos reservados 2026
-        </p>
+        <div className="text-center mt-6">
+          <p className="text-[11px] text-slate-400 font-medium">
+            LECASU, Lda • Moçambique • Todos os direitos reservados 2026
+          </p>
+          <p className="text-[10px] text-slate-500 mt-1 flex items-center justify-center gap-1">
+            <ShieldCheck size={12} className="text-orange-500" />
+            Ambiente Seguro & Criptografado (TLS/AES-256)
+          </p>
+        </div>
       </div>
 
       {/* MODAL DE RECUPERAÇÃO DE PALAVRA-PASSE */}
       {isForgotModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-in fade-in">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
             <button
               onClick={handleCloseForgotModal}
@@ -372,10 +409,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                     className="flex items-center gap-1.5 px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold rounded-lg shadow-sm transition disabled:opacity-50 cursor-pointer"
                   >
                     {forgotLoading ? (
-                      <>
-                        <RefreshCw size={13} className="animate-spin" />
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                         <span>A processar...</span>
-                      </>
+                      </div>
                     ) : (
                       <>
                         <span>Solicitar Código</span>
@@ -443,7 +480,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                       placeholder="Confirme a nova palavra-passe"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="block w-full pl-9 pr-3 py-2 text-xs bg-slate-950/80 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition"
+                      className="block w-full pl-9 pr-10 py-2 text-xs bg-slate-950/80 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition"
                     />
                   </div>
                 </div>
@@ -462,10 +499,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                     className="flex items-center gap-1.5 px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold rounded-lg shadow-sm transition disabled:opacity-50 cursor-pointer"
                   >
                     {forgotLoading ? (
-                      <>
-                        <RefreshCw size={13} className="animate-spin" />
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                         <span>A redefinir...</span>
-                      </>
+                      </div>
                     ) : (
                       <>
                         <span>Redefinir Palavra-passe</span>
