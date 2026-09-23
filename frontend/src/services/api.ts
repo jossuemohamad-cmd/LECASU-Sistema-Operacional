@@ -1,0 +1,161 @@
+import type { 
+  Client, 
+  ClientCreateInput, 
+  Proposal, 
+  ProposalCreateInput, 
+  Project, 
+  ProjectCreateInput, 
+  Task, 
+  TaskCreateInput, 
+  TaskUpdateInput,
+  DashboardOverview
+} from '../types';
+
+const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
+
+// ================= DASHBOARD =================
+export async function fetchDashboardOverview(): Promise<DashboardOverview> {
+  const res = await fetch(`${API_BASE_URL}/dashboard/overview`, {
+    headers: { 'Accept': 'application/json' }
+  });
+  return handleResponse<DashboardOverview>(res);
+}
+
+
+async function handleResponse<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    let errorMessage = `Erro na requisição: ${response.status} ${response.statusText}`;
+    try {
+      const errorData = await response.json();
+      if (errorData.detail) {
+        if (Array.isArray(errorData.detail)) {
+          errorMessage = errorData.detail.map((err: any) => `${err.loc?.slice(1)?.join('.') || 'Campo'}: ${err.msg}`).join(', ');
+        } else if (typeof errorData.detail === 'string') {
+          errorMessage = errorData.detail;
+        }
+      }
+    } catch {
+      // JSON parse failed, keep default message
+    }
+    throw new Error(errorMessage);
+  }
+  return response.json();
+}
+
+// ================= CLIENTS =================
+export async function fetchClients(): Promise<Client[]> {
+  const res = await fetch(`${API_BASE_URL}/clients`, {
+    headers: { 'Accept': 'application/json' }
+  });
+  return handleResponse<Client[]>(res);
+}
+
+export async function fetchClientById(id: number): Promise<Client> {
+  const res = await fetch(`${API_BASE_URL}/clients/${id}`, {
+    headers: { 'Accept': 'application/json' }
+  });
+  return handleResponse<Client>(res);
+}
+
+export async function createClient(payload: ClientCreateInput): Promise<Client> {
+  const res = await fetch(`${API_BASE_URL}/clients`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  return handleResponse<Client>(res);
+}
+
+// ================= PROPOSALS =================
+export async function fetchProposals(): Promise<Proposal[]> {
+  const res = await fetch(`${API_BASE_URL}/proposals`, {
+    headers: { 'Accept': 'application/json' }
+  });
+  return handleResponse<Proposal[]>(res);
+}
+
+export async function createProposal(payload: ProposalCreateInput): Promise<Proposal> {
+  const res = await fetch(`${API_BASE_URL}/proposals`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  return handleResponse<Proposal>(res);
+}
+
+export async function convertProposalToProject(proposalId: number): Promise<Project> {
+  const res = await fetch(`${API_BASE_URL}/proposals/${proposalId}/convert-to-project`, {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json'
+    }
+  });
+  return handleResponse<Project>(res);
+}
+
+// ================= PROJECTS =================
+export async function fetchProjects(): Promise<Project[]> {
+  const res = await fetch(`${API_BASE_URL}/projects`, {
+    headers: { 'Accept': 'application/json' }
+  });
+  return handleResponse<Project[]>(res);
+}
+
+export async function fetchProjectById(id: number): Promise<Project> {
+  const res = await fetch(`${API_BASE_URL}/projects/${id}`, {
+    headers: { 'Accept': 'application/json' }
+  });
+  return handleResponse<Project>(res);
+}
+
+export async function createProject(payload: ProjectCreateInput): Promise<Project> {
+  const res = await fetch(`${API_BASE_URL}/projects`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  return handleResponse<Project>(res);
+}
+
+// ================= TASKS =================
+export async function createProjectTask(projectId: number, payload: TaskCreateInput): Promise<Task> {
+  const res = await fetch(`${API_BASE_URL}/projects/${projectId}/tasks`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  return handleResponse<Task>(res);
+}
+
+export async function updateTask(taskId: number, payload: TaskUpdateInput): Promise<Task> {
+  const res = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  return handleResponse<Task>(res);
+}
+
+export async function deleteTask(taskId: number): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
+    method: 'DELETE'
+  });
+  if (!res.ok && res.status !== 204) {
+    throw new Error(`Falha ao remover tarefa (${res.status})`);
+  }
+}

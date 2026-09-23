@@ -1,0 +1,162 @@
+export interface Proposal {
+  id: number;
+  client_id: number;
+  title: string;
+  scope?: string | null;
+  total_amount: number;
+  status: 'DRAFT' | 'SENT' | 'ACCEPTED' | 'REJECTED' | string;
+  created_at?: string;
+}
+
+export interface Client {
+  id: number;
+  name: string;
+  contact_person?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  nuit?: string | null;
+  address?: string | null;
+  created_at?: string;
+  proposals?: Proposal[];
+}
+
+export interface ClientCreateInput {
+  name: string;
+  contact_person?: string;
+  email?: string;
+  phone?: string;
+  nuit?: string;
+  address?: string;
+}
+
+export interface ProposalCreateInput {
+  client_id: number;
+  title: string;
+  scope?: string;
+  total_amount: number;
+  status?: string;
+}
+
+export interface Task {
+  id: number;
+  project_id: number;
+  title: string;
+  description?: string | null;
+  status: 'TODO' | 'IN_PROGRESS' | 'DONE' | string;
+  due_date?: string | null;
+  assigned_to?: number | null;
+  created_at?: string;
+}
+
+export interface TaskCreateInput {
+  title: string;
+  description?: string;
+  status?: string;
+  due_date?: string;
+  assigned_to?: number;
+}
+
+export interface TaskUpdateInput {
+  title?: string;
+  description?: string;
+  status?: string;
+  due_date?: string | null;
+  assigned_to?: number | null;
+}
+
+export interface Project {
+  id: number;
+  client_id: number;
+  proposal_id?: number | null;
+  code?: string | null;
+  name: string;
+  status: 'PLANNING' | 'IN_PROGRESS' | 'COMPLETED' | 'ON_HOLD' | string;
+  created_at?: string;
+  client_name?: string | null;
+  tasks?: Task[];
+  total_tasks: number;
+  completed_tasks: number;
+  progress_percent: number;
+}
+
+export interface ProjectCreateInput {
+  client_id: number;
+  proposal_id?: number;
+  name: string;
+  code?: string;
+  status?: string;
+}
+
+export interface ToastMessage {
+  id: string;
+  type: 'success' | 'error' | 'info';
+  title: string;
+  description?: string;
+}
+
+export interface Invoice {
+  id: number;
+  project_id?: number | null;
+  client_id: number;
+  invoice_number?: string | null;
+  amount: number;
+  status: 'ISSUED' | 'PAID' | 'CANCELLED' | string;
+  due_date?: string | null;
+  created_at?: string;
+  client_name?: string | null;
+  project_code?: string | null;
+}
+
+export interface DashboardKPIs {
+  active_clients_count: number;
+  active_projects_count: number;
+  open_proposals_count: number;
+  total_invoiced: number;
+  total_received: number;
+  pending_amount: number;
+  average_project_progress: number;
+}
+
+export interface DashboardRecentProject {
+  id: number;
+  code?: string | null;
+  name: string;
+  client_name?: string | null;
+  status: string;
+  progress_percent: number;
+  total_tasks: number;
+  completed_tasks: number;
+  created_at?: string | null;
+}
+
+export interface DashboardRecentInvoice {
+  id: number;
+  invoice_number?: string | null;
+  client_name?: string | null;
+  project_code?: string | null;
+  amount: number;
+  status: string;
+  due_date?: string | null;
+  created_at?: string | null;
+}
+
+export interface DashboardPendingTask {
+  id: number;
+  project_id: number;
+  project_name?: string | null;
+  project_code?: string | null;
+  title: string;
+  description?: string | null;
+  status: string;
+  due_date?: string | null;
+  assigned_to?: number | null;
+  created_at?: string | null;
+}
+
+export interface DashboardOverview {
+  kpis: DashboardKPIs;
+  recent_projects: DashboardRecentProject[];
+  recent_invoices: DashboardRecentInvoice[];
+  pending_tasks: DashboardPendingTask[];
+}
+
