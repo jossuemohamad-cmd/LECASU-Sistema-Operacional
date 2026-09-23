@@ -21,6 +21,7 @@ import { DashboardView } from './components/dashboard/DashboardView';
 import { TechnicalTeamView } from './components/team/TechnicalTeamView';
 import { ServicesView } from './components/services/ServicesView';
 import { SettingsView } from './components/settings/SettingsView';
+import { SuppliersView } from './components/suppliers/SuppliersView';
 import { LoginView } from './components/auth/LoginView';
 import { getAuthToken, removeAuthToken, fetchCurrentUser } from './services/api';
 import type { User } from './types';
@@ -212,6 +213,8 @@ export default function App() {
               <ProjectsView />
             ) : activeTab === 'equipa' ? (
               <TechnicalTeamView />
+            ) : activeTab === 'fornecedores' ? (
+              <SuppliersView />
             ) : activeTab === 'definicoes' ? (
               <SettingsView />
             ) : (

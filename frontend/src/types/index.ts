@@ -283,3 +283,63 @@ export interface GenericMessageResponse {
   status: string;
   temp_code?: string | null;
 }
+
+export interface Supplier {
+  id: number;
+  name: string;
+  nuit?: string | null;
+  contact_person?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  category: string;
+  address?: string | null;
+  is_active: boolean;
+  created_at?: string;
+  purchases_count: number;
+  total_spent: number;
+}
+
+export interface SupplierCreateInput {
+  name: string;
+  nuit?: string;
+  contact_person?: string;
+  email?: string;
+  phone?: string;
+  category?: string;
+  address?: string;
+  is_active?: boolean;
+}
+
+export interface PurchaseOrder {
+  id: number;
+  supplier_id: number;
+  project_id?: number | null;
+  order_number: string;
+  description: string;
+  total_amount: number;
+  status: 'PENDING' | 'PAID' | 'CANCELLED' | string;
+  due_date?: string | null;
+  created_at?: string;
+  paid_at?: string | null;
+  supplier_name?: string | null;
+  supplier_category?: string | null;
+  project_name?: string | null;
+  project_code?: string | null;
+}
+
+export interface PurchaseOrderCreateInput {
+  supplier_id: number;
+  project_id?: number | null;
+  description: string;
+  total_amount: number;
+  due_date?: string | null;
+}
+
+export interface SupplierOverviewKPIs {
+  total_suppliers: number;
+  active_suppliers_count: number;
+  pending_amount_mzn: float | number;
+  paid_amount_mzn: float | number;
+  total_purchases_count: number;
+  pending_orders_count: number;
+}

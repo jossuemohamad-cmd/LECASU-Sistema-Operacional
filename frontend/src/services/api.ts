@@ -23,7 +23,12 @@ import type {
   ForgotPasswordInput,
   ResetPasswordInput,
   AdminResetPasswordInput,
-  GenericMessageResponse
+  GenericMessageResponse,
+  Supplier,
+  SupplierCreateInput,
+  PurchaseOrder,
+  PurchaseOrderCreateInput,
+  SupplierOverviewKPIs
 } from '../types';
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
@@ -404,6 +409,85 @@ export async function adminResetPassword(userId: number, payload: AdminResetPass
   return handleResponse<GenericMessageResponse>(res);
 }
 
+// ================= SUPPLIERS & PURCHASES =================
+export async function fetchSuppliers(params?: { category?: string; activeOnly?: boolean }): Promise<Supplier[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.category) {
+    searchParams.append('category', params.category);
+  }
+  if (params?.activeOnly) {
+    searchParams.append('active_only', 'true');
+  }
+  const query = searchParams.toString();
+  const res = await fetch(`${API_BASE_URL}/suppliers${query ? `?${query}` : ''}`, {
+    headers: getAuthHeaders()
+  });
+  return handleResponse<Supplier[]>(res);
+}
 
+export async function createSupplier(payload: SupplierCreateInput): Promise<Supplier> {
+  const res = await fetch(`${API_BASE_URL}/suppliers`, {
+    method: 'POST',
+    headers: getAuthHeaders({
+      'Content-Type': 'application/json'
+    }),
+    body: JSON.stringify(payload)
+  });
+  return handleResponse<Supplier>(res);
+}
 
+export async function toggleSupplierStatus(supplierId: number, isActive: boolean): Promise<Supplier> {
+  const res = await fetch(`${API_BASE_URL}/suppliers/${supplierId}/status?is_active=${isActive}`, {
+    method: 'PATCH',
+    headers: getAuthHeaders()
+  });
+  return handleResponse<Supplier>(res);
+}
 
+export async function fetchSupplierOverviewKPIs(): Promise<SupplierOverviewKPIs> {
+  const res = await fetch(`${API_BASE_URL}/suppliers/overview`, {
+    headers: getAuthHeaders()
+  });
+  return handleResponse<SupplierOverviewKPIs>(res);
+}
+
+export async function fetchPurchaseOrders(params?: {
+  supplierId?: number;
+  projectId?: number;
+  statusFilter?: string;
+}): Promise<PurchaseOrder[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.supplierId) {
+    searchParams.append('supplier_id', params.supplierId.toString());
+  }
+  if (params?.projectId) {
+    searchParams.append('project_id', params.projectId.toString());
+  }
+  if (params?.statusFilter) {
+    searchParams.append('status_filter', params.statusFilter);
+  }
+  const query = searchParams.toString();
+  const res = await fetch(`${API_BASE_URL}/purchases${query ? `?${query}` : ''}`, {
+    headers: getAuthHeaders()
+  });
+  return handleResponse<PurchaseOrder[]>(res);
+}
+
+export async function createPurchaseOrder(payload: PurchaseOrderCreateInput): Promise<PurchaseOrder> {
+  const res = await fetch(`${API_BASE_URL}/purchases`, {
+    method: 'POST',
+    headers: getAuthHeaders({
+      'Content-Type': 'application/json'
+    }),
+    body: JSON.stringify(payload)
+  });
+  return handleResponse<PurchaseOrder>(res);
+}
+
+export async function payPurchaseOrder(purchaseId: number): Promise<PurchaseOrder> {
+  const res = await fetch(`${API_BASE_URL}/purchases/${purchaseId}/pay`, {
+    method: 'PATCH',
+    headers: getAuthHeaders()
+  });
+  return handleResponse<PurchaseOrder>(res);
+}

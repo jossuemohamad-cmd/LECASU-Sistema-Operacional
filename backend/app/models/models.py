@@ -95,4 +95,33 @@ class Service(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+class Supplier(Base):
+    __tablename__ = 'suppliers'
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(150), nullable=False)
+    nuit = Column(String(50), nullable=True)
+    contact_person = Column(String(100), nullable=True)
+    email = Column(String(150), nullable=True)
+    phone = Column(String(50), nullable=True)
+    category = Column(String(100), default='Geral')
+    address = Column(Text, nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    purchases = relationship('PurchaseOrder', back_populates='supplier')
+
+class PurchaseOrder(Base):
+    __tablename__ = 'purchase_orders'
+    id = Column(Integer, primary_key=True, index=True)
+    supplier_id = Column(Integer, ForeignKey('suppliers.id'), nullable=False)
+    project_id = Column(Integer, ForeignKey('projects.id'), nullable=True)
+    order_number = Column(String(50), unique=True, index=True)
+    description = Column(Text, nullable=False)
+    total_amount = Column(Numeric(14, 2), nullable=False)
+    status = Column(String(50), default='PENDING')  # PENDING, PAID, CANCELLED
+    due_date = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    paid_at = Column(DateTime, nullable=True)
+    supplier = relationship('Supplier', back_populates='purchases')
+    project = relationship('Project')
+
 

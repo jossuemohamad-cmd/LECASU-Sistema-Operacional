@@ -500,6 +500,95 @@ class GenericMessageResponse(BaseModel):
     temp_code: Optional[str] = None
 
 
+# ================= SUPPLIERS & PURCHASES =================
+class SupplierCreate(BaseModel):
+    name: str
+    nuit: Optional[str] = None
+    contact_person: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    category: Optional[str] = 'Geral'
+    address: Optional[str] = None
+    is_active: bool = True
 
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        v = v.strip()
+        if len(v) < 2:
+            raise ValueError('O nome do fornecedor deve ter no mínimo 2 caracteres.')
+        return v
 
+class SupplierUpdate(BaseModel):
+    name: Optional[str] = None
+    nuit: Optional[str] = None
+    contact_person: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    category: Optional[str] = None
+    address: Optional[str] = None
+    is_active: Optional[bool] = None
 
+class SupplierResponse(BaseModel):
+    id: int
+    name: str
+    nuit: Optional[str] = None
+    contact_person: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    category: str
+    address: Optional[str] = None
+    is_active: bool
+    created_at: Optional[datetime] = None
+    purchases_count: int = 0
+    total_spent: float = 0.0
+
+    model_config = ConfigDict(from_attributes=True)
+
+class PurchaseOrderCreate(BaseModel):
+    supplier_id: int
+    project_id: Optional[int] = None
+    description: str
+    total_amount: float
+    due_date: Optional[datetime] = None
+
+    @field_validator('description')
+    @classmethod
+    def validate_description(cls, v: str) -> str:
+        v = v.strip()
+        if len(v) < 3:
+            raise ValueError('A descrição da compra deve ter no mínimo 3 caracteres.')
+        return v
+
+    @field_validator('total_amount')
+    @classmethod
+    def validate_amount(cls, v: float) -> float:
+        if v <= 0:
+            raise ValueError('O valor total da compra deve ser maior que zero.')
+        return v
+
+class PurchaseOrderResponse(BaseModel):
+    id: int
+    supplier_id: int
+    project_id: Optional[int] = None
+    order_number: str
+    description: str
+    total_amount: float
+    status: str
+    due_date: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+    paid_at: Optional[datetime] = None
+    supplier_name: Optional[str] = None
+    supplier_category: Optional[str] = None
+    project_name: Optional[str] = None
+    project_code: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class SupplierOverviewKPIs(BaseModel):
+    total_suppliers: int
+    active_suppliers_count: int
+    pending_amount_mzn: float
+    paid_amount_mzn: float
+    total_purchases_count: int
+    pending_orders_count: int
