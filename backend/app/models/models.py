@@ -8,10 +8,12 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
     email = Column(String(150), unique=True, index=True, nullable=False)
-    hashed_password = Column(String(255), nullable=False)
-    role = Column(String(50), default='tecnico')  # admin, direcao, financeiro, tecnico
+    phone = Column(String(50), nullable=True)
+    hashed_password = Column(String(255), nullable=True)
+    role = Column(String(50), default='tecnico')  # admin, direcao, financeiro, tecnico, engenheiro
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    tasks = relationship('Task', back_populates='technician')
 
 class Client(Base):
     __tablename__ = 'clients'
@@ -62,6 +64,8 @@ class Task(Base):
     due_date = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     project = relationship('Project', back_populates='tasks')
+    technician = relationship('User', back_populates='tasks')
+
 
 class Invoice(Base):
     __tablename__ = 'invoices'

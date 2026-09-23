@@ -18,6 +18,8 @@ import {
 import { ClientsProposalsView } from './components/clients/ClientsProposalsView';
 import { ProjectsView } from './components/projects/ProjectsView';
 import { DashboardView } from './components/dashboard/DashboardView';
+import { TechnicalTeamView } from './components/team/TechnicalTeamView';
+
 
 const TABS = [
   { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard },
@@ -143,7 +145,10 @@ export default function App() {
               />
             ) : activeTab === 'projetos' ? (
               <ProjectsView />
+            ) : activeTab === 'equipa' ? (
+              <TechnicalTeamView />
             ) : (
+
 
               <div>
                 <div className="flex items-center justify-between pb-6 border-b border-slate-200 mb-6">

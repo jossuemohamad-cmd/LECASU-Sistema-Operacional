@@ -265,3 +265,42 @@ class DashboardOverviewResponse(BaseModel):
     recent_invoices: List[DashboardRecentInvoice]
     pending_tasks: List[DashboardPendingTask]
 
+
+# ================= TEAM & TECHNICIANS =================
+class TechnicianResponse(BaseModel):
+    id: int
+    name: str
+    email: str
+    phone: Optional[str] = None
+    role: str
+    is_active: bool = True
+    active_tasks_count: int = 0
+    completed_tasks_count: int = 0
+    created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class TaskAssignRequest(BaseModel):
+    assigned_to_user_id: int
+
+class TeamTaskResponse(BaseModel):
+    id: int
+    project_id: int
+    project_name: Optional[str] = None
+    project_code: Optional[str] = None
+    title: str
+    description: Optional[str] = None
+    status: str
+    due_date: Optional[datetime] = None
+    assigned_to: Optional[int] = None
+    assigned_technician_name: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class TeamOverviewKPIs(BaseModel):
+    total_technicians: int
+    in_progress_tasks: int
+    completed_tasks_this_month: int
+
+

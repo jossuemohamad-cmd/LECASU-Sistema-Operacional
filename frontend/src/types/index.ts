@@ -160,3 +160,40 @@ export interface DashboardOverview {
   pending_tasks: DashboardPendingTask[];
 }
 
+export interface Technician {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string | null;
+  role: string;
+  is_active: boolean;
+  active_tasks_count: number;
+  completed_tasks_count: number;
+  created_at?: string;
+}
+
+export interface TaskAssignInput {
+  assigned_to_user_id: number;
+}
+
+export interface TeamTask {
+  id: number;
+  project_id: number;
+  project_name?: string | null;
+  project_code?: string | null;
+  title: string;
+  description?: string | null;
+  status: 'TODO' | 'IN_PROGRESS' | 'DONE' | string;
+  due_date?: string | null;
+  assigned_to?: number | null;
+  assigned_technician_name?: string | null;
+  created_at?: string | null;
+}
+
+export interface TeamKPIs {
+  total_technicians: number;
+  in_progress_tasks: number;
+  completed_tasks_this_month: number;
+}
+
+

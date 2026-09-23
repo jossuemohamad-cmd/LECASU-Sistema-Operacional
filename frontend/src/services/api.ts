@@ -8,8 +8,12 @@ import type {
   Task, 
   TaskCreateInput, 
   TaskUpdateInput,
-  DashboardOverview
+  DashboardOverview,
+  Technician,
+  TeamTask,
+  TeamKPIs
 } from '../types';
+
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
 
@@ -159,3 +163,55 @@ export async function deleteTask(taskId: number): Promise<void> {
     throw new Error(`Falha ao remover tarefa (${res.status})`);
   }
 }
+
+// ================= TEAM & TECHNICIANS =================
+export async function fetchTechnicians(): Promise<Technician[]> {
+  const res = await fetch(`${API_BASE_URL}/team/technicians`, {
+    headers: { 'Accept': 'application/json' }
+  });
+  return handleResponse<Technician[]>(res);
+}
+
+export async function fetchTeamKPIs(): Promise<TeamKPIs> {
+  const res = await fetch(`${API_BASE_URL}/team/overview`, {
+    headers: { 'Accept': 'application/json' }
+  });
+  return handleResponse<TeamKPIs>(res);
+}
+
+export async function fetchTeamTasks(params?: {
+  technicianId?: number;
+  projectId?: number;
+  status?: string;
+}): Promise<TeamTask[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.technicianId !== undefined && params.technicianId !== null) {
+    searchParams.append('technician_id', params.technicianId.toString());
+  }
+  if (params?.projectId !== undefined && params.projectId !== null) {
+    searchParams.append('project_id', params.projectId.toString());
+  }
+  if (params?.status) {
+    searchParams.append('status', params.status);
+  }
+
+  const query = searchParams.toString();
+  const url = `${API_BASE_URL}/team/tasks${query ? `?${query}` : ''}`;
+  const res = await fetch(url, {
+    headers: { 'Accept': 'application/json' }
+  });
+  return handleResponse<TeamTask[]>(res);
+}
+
+export async function assignTask(taskId: number, assignedToUserId: number): Promise<TeamTask> {
+  const res = await fetch(`${API_BASE_URL}/tasks/${taskId}/assign`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify({ assigned_to_user_id: assignedToUserId })
+  });
+  return handleResponse<TeamTask>(res);
+}
+
