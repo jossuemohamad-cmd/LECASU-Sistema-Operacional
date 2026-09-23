@@ -11,8 +11,13 @@ import type {
   DashboardOverview,
   Technician,
   TeamTask,
-  TeamKPIs
+  TeamKPIs,
+  Service,
+  ServiceCreateInput,
+  ServiceUpdateInput,
+  ServiceKPIs
 } from '../types';
+
 
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
@@ -214,4 +219,68 @@ export async function assignTask(taskId: number, assignedToUserId: number): Prom
   });
   return handleResponse<TeamTask>(res);
 }
+
+// ================= SERVICES =================
+export async function fetchServices(params?: {
+  category?: string;
+  isActive?: boolean;
+  search?: string;
+}): Promise<Service[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.category && params.category !== 'ALL') {
+    searchParams.append('category', params.category);
+  }
+  if (params?.isActive !== undefined && params.isActive !== null) {
+    searchParams.append('is_active', params.isActive.toString());
+  }
+  if (params?.search && params.search.trim()) {
+    searchParams.append('search', params.search.trim());
+  }
+
+  const query = searchParams.toString();
+  const url = `${API_BASE_URL}/services${query ? `?${query}` : ''}`;
+  const res = await fetch(url, {
+    headers: { 'Accept': 'application/json' }
+  });
+  return handleResponse<Service[]>(res);
+}
+
+export async function fetchServiceCategories(): Promise<string[]> {
+  const res = await fetch(`${API_BASE_URL}/services/categories`, {
+    headers: { 'Accept': 'application/json' }
+  });
+  return handleResponse<string[]>(res);
+}
+
+export async function fetchServiceKPIs(): Promise<ServiceKPIs> {
+  const res = await fetch(`${API_BASE_URL}/services/overview`, {
+    headers: { 'Accept': 'application/json' }
+  });
+  return handleResponse<ServiceKPIs>(res);
+}
+
+export async function createService(payload: ServiceCreateInput): Promise<Service> {
+  const res = await fetch(`${API_BASE_URL}/services`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  return handleResponse<Service>(res);
+}
+
+export async function updateService(serviceId: number, payload: ServiceUpdateInput): Promise<Service> {
+  const res = await fetch(`${API_BASE_URL}/services/${serviceId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  return handleResponse<Service>(res);
+}
+
 

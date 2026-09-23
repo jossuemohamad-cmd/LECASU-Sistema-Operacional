@@ -196,4 +196,43 @@ export interface TeamKPIs {
   completed_tasks_this_month: number;
 }
 
+export interface Service {
+  id: number;
+  code?: string | null;
+  name: string;
+  category: string;
+  description?: string | null;
+  unit: string;
+  base_price: number;
+  is_active: boolean;
+  created_at?: string;
+}
+
+export interface ServiceCreateInput {
+  code?: string;
+  name: string;
+  category?: string;
+  description?: string;
+  unit?: string;
+  base_price: number;
+  is_active?: boolean;
+}
+
+export interface ServiceUpdateInput {
+  code?: string;
+  name?: string;
+  category?: string;
+  description?: string;
+  unit?: string;
+  base_price?: number;
+  is_active?: boolean;
+}
+
+export interface ServiceKPIs {
+  total_services: number;
+  active_categories_count: number;
+  average_base_price: number;
+}
+
+
 

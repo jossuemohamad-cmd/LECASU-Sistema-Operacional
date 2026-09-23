@@ -19,6 +19,8 @@ import { ClientsProposalsView } from './components/clients/ClientsProposalsView'
 import { ProjectsView } from './components/projects/ProjectsView';
 import { DashboardView } from './components/dashboard/DashboardView';
 import { TechnicalTeamView } from './components/team/TechnicalTeamView';
+import { ServicesView } from './components/services/ServicesView';
+
 
 
 const TABS = [
@@ -143,11 +145,14 @@ export default function App() {
                 onResetOpenNewClientModal={() => setOpenNewRecordTrigger(false)}
                 onNavigateToProjects={() => setActiveTab('projetos')}
               />
+            ) : activeTab === 'servicos' ? (
+              <ServicesView />
             ) : activeTab === 'projetos' ? (
               <ProjectsView />
             ) : activeTab === 'equipa' ? (
               <TechnicalTeamView />
             ) : (
+
 
 
               <div>

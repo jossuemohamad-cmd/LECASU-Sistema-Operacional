@@ -304,3 +304,73 @@ class TeamOverviewKPIs(BaseModel):
     completed_tasks_this_month: int
 
 
+# ================= SERVICES =================
+class ServiceCreate(BaseModel):
+    code: Optional[str] = None
+    name: str
+    category: Optional[str] = 'Geral'
+    description: Optional[str] = None
+    unit: Optional[str] = 'Projeto'
+    base_price: float = 0.0
+    is_active: bool = True
+
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        v = v.strip()
+        if len(v) < 2:
+            raise ValueError('O nome do serviço deve ter no mínimo 2 caracteres.')
+        return v
+
+    @field_validator('base_price')
+    @classmethod
+    def validate_base_price(cls, v: float) -> float:
+        if v < 0:
+            raise ValueError('O preço base não pode ser negativo.')
+        return v
+
+class ServiceUpdate(BaseModel):
+    code: Optional[str] = None
+    name: Optional[str] = None
+    category: Optional[str] = None
+    description: Optional[str] = None
+    unit: Optional[str] = None
+    base_price: Optional[float] = None
+    is_active: Optional[bool] = None
+
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            v = v.strip()
+            if len(v) < 2:
+                raise ValueError('O nome do serviço deve ter no mínimo 2 caracteres.')
+        return v
+
+    @field_validator('base_price')
+    @classmethod
+    def validate_base_price(cls, v: Optional[float]) -> Optional[float]:
+        if v is not None and v < 0:
+            raise ValueError('O preço base não pode ser negativo.')
+        return v
+
+class ServiceResponse(BaseModel):
+    id: int
+    code: Optional[str] = None
+    name: str
+    category: str
+    description: Optional[str] = None
+    unit: str
+    base_price: float
+    is_active: bool
+    created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class ServiceOverviewKPIs(BaseModel):
+    total_services: int
+    active_categories_count: int
+    average_base_price: float
+
+
+

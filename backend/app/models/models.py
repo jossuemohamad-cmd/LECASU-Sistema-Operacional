@@ -80,3 +80,16 @@ class Invoice(Base):
     client = relationship('Client')
     project = relationship('Project')
 
+class Service(Base):
+    __tablename__ = 'services'
+    id = Column(Integer, primary_key=True, index=True)
+    code = Column(String(50), unique=True, index=True)
+    name = Column(String(150), nullable=False)
+    category = Column(String(100), default='Geral')
+    description = Column(Text, nullable=True)
+    unit = Column(String(20), default='Projeto')
+    base_price = Column(Numeric(14, 2), default=0.00)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
