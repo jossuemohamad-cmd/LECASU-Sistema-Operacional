@@ -1,5 +1,17 @@
 import React, { useState } from 'react';
-import { Lock, Mail, ArrowRight, ShieldCheck, AlertCircle, KeyRound, CheckCircle2, X, RefreshCw } from 'lucide-react';
+import { 
+  Lock, 
+  Mail, 
+  ArrowRight, 
+  ShieldCheck, 
+  AlertCircle, 
+  KeyRound, 
+  CheckCircle2, 
+  X, 
+  RefreshCw,
+  Eye,
+  EyeOff
+} from 'lucide-react';
 import type { User } from '../../types';
 import { loginUser, forgotPassword, resetPassword } from '../../services/api';
 
@@ -8,8 +20,10 @@ interface LoginViewProps {
 }
 
 export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => localStorage.getItem('lecasu_remember_email') || '');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(() => Boolean(localStorage.getItem('lecasu_remember_email')));
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -20,6 +34,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [forgotToken, setForgotToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotError, setForgotError] = useState<string | null>(null);
   const [forgotSuccess, setForgotSuccess] = useState<string | null>(null);
@@ -35,6 +50,13 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     try {
       setIsLoading(true);
       setErrorMessage(null);
+      
+      if (rememberMe) {
+        localStorage.setItem('lecasu_remember_email', email.trim());
+      } else {
+        localStorage.removeItem('lecasu_remember_email');
+      }
+
       const res = await loginUser({ email, password });
       onLoginSuccess(res.user);
     } catch (err: any) {
@@ -51,6 +73,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     setForgotToken('');
     setNewPassword('');
     setConfirmPassword('');
+    setShowNewPassword(false);
     setForgotError(null);
     setForgotSuccess(null);
     setTempCodeNotice(null);
@@ -189,7 +212,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               </div>
             </div>
 
-            {/* SENHA */}
+            {/* SENHA COM BOTÃO VER SENHA */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-xs font-semibold text-slate-300">
@@ -198,7 +221,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 <button
                   type="button"
                   onClick={handleOpenForgotModal}
-                  className="text-[11px] text-orange-400 hover:text-orange-300 hover:underline transition font-medium"
+                  className="text-[11px] text-orange-400 hover:text-orange-300 hover:underline transition font-medium cursor-pointer"
                 >
                   Esqueceu-se da palavra-passe?
                 </button>
@@ -208,14 +231,35 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   <Lock size={15} />
                 </div>
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
                   placeholder="••••••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-9 pr-3 py-2 text-xs bg-slate-950/80 border border-slate-700 rounded-md text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition"
+                  className="block w-full pl-9 pr-10 py-2 text-xs bg-slate-950/80 border border-slate-700 rounded-md text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 transition cursor-pointer"
+                  title={showPassword ? 'Ocultar palavra-passe' : 'Ver palavra-passe'}
+                >
+                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
               </div>
+            </div>
+
+            {/* CHECKBOX LEMBRAR-ME */}
+            <div className="flex items-center justify-between pt-1">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded border-slate-700 bg-slate-950 text-orange-600 focus:ring-orange-500 focus:ring-offset-slate-900 cursor-pointer accent-orange-600"
+                />
+                <span className="text-xs text-slate-300 font-medium">Lembrar o meu e-mail</span>
+              </label>
             </div>
 
             {/* SUBMIT BUTTON */}
@@ -251,7 +295,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
             <button
               onClick={handleCloseForgotModal}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+              className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer"
             >
               <X size={18} />
             </button>
@@ -367,13 +411,21 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                       <Lock size={15} />
                     </div>
                     <input
-                      type="password"
+                      type={showNewPassword ? 'text' : 'password'}
                       required
                       placeholder="Mínimo 6 caracteres"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      className="block w-full pl-9 pr-3 py-2 text-xs bg-slate-950/80 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition"
+                      className="block w-full pl-9 pr-10 py-2 text-xs bg-slate-950/80 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 transition cursor-pointer"
+                      title={showNewPassword ? 'Ocultar palavra-passe' : 'Ver palavra-passe'}
+                    >
+                      {showNewPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
                   </div>
                 </div>
 
@@ -386,7 +438,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                       <Lock size={15} />
                     </div>
                     <input
-                      type="password"
+                      type={showNewPassword ? 'text' : 'password'}
                       required
                       placeholder="Confirme a nova palavra-passe"
                       value={confirmPassword}
@@ -400,7 +452,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   <button
                     type="button"
                     onClick={() => setForgotStep(1)}
-                    className="text-xs font-medium text-orange-400 hover:text-orange-300 hover:underline transition"
+                    className="text-xs font-medium text-orange-400 hover:text-orange-300 hover:underline transition cursor-pointer"
                   >
                     ← Voltar ao e-mail
                   </button>
