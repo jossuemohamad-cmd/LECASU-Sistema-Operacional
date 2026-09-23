@@ -13,7 +13,6 @@ import {
   Menu, 
   Search, 
   Bell, 
-  UserCircle,
   LogOut
 } from 'lucide-react';
 import { ClientsProposalsView } from './components/clients/ClientsProposalsView';

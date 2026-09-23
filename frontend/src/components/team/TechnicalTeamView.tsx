@@ -7,15 +7,13 @@ import {
   Search, 
   RefreshCw, 
   UserCheck, 
-  ChevronRight, 
   Calendar, 
   AlertCircle,
   Phone,
   Mail,
   Filter,
   ArrowRightLeft,
-  X,
-  Briefcase
+  X
 } from 'lucide-react';
 import type { Technician, TeamTask, TeamKPIs, ToastMessage } from '../../types';
 import { fetchTechnicians, fetchTeamKPIs, fetchTeamTasks, assignTask } from '../../services/api';
