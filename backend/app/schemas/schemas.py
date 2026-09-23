@@ -373,4 +373,78 @@ class ServiceOverviewKPIs(BaseModel):
     average_base_price: float
 
 
+# ================= USERS & AUTHENTICATION =================
+class UserResponse(BaseModel):
+    id: int
+    name: str
+    email: str
+    role: str
+    phone: Optional[str] = None
+    is_active: bool
+    created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        v = v.strip().lower()
+        if not v or '@' not in v:
+            raise ValueError('Informe um endereço de e-mail válido.')
+        return v
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
+
+class UserCreate(BaseModel):
+    name: str
+    email: str
+    password: str
+    role: Optional[str] = "tecnico"
+    phone: Optional[str] = None
+    is_active: bool = True
+
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        v = v.strip()
+        if len(v) < 2:
+            raise ValueError('O nome deve ter no mínimo 2 caracteres.')
+        return v
+
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        v = v.strip().lower()
+        if not re.match(r'^[\w.-]+@[\w.-]+\.\w+$', v):
+            raise ValueError('O endereço de e-mail informado é inválido.')
+        return v
+
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        if len(v) < 6:
+            raise ValueError('A senha deve conter no mínimo 6 caracteres.')
+        return v
+
+    @field_validator('role')
+    @classmethod
+    def validate_role(cls, v: Optional[str]) -> str:
+        role = (v or 'tecnico').strip().lower()
+        valid_roles = ['admin', 'direcao', 'financeiro', 'tecnico', 'engenheiro']
+        if role not in valid_roles:
+            raise ValueError(f"Perfil inválido. Perfis permitidos: {', '.join(valid_roles)}.")
+        return role
+
+class UserUpdateStatus(BaseModel):
+    is_active: bool
+
+
+
 

@@ -15,12 +15,40 @@ import type {
   Service,
   ServiceCreateInput,
   ServiceUpdateInput,
-  ServiceKPIs
+  ServiceKPIs,
+  User,
+  LoginCredentials,
+  AuthResponse,
+  UserCreateInput
 } from '../types';
 
-
-
 const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
+
+export function getAuthToken(): string | null {
+  return localStorage.getItem('lecasu_auth_token');
+}
+
+export function setAuthToken(token: string): void {
+  localStorage.setItem('lecasu_auth_token', token);
+}
+
+export function removeAuthToken(): void {
+  localStorage.removeItem('lecasu_auth_token');
+  localStorage.removeItem('lecasu_auth_user');
+}
+
+export function getAuthHeaders(customHeaders: Record<string, string> = {}): Record<string, string> {
+  const token = getAuthToken();
+  const headers: Record<string, string> = {
+    'Accept': 'application/json',
+    ...customHeaders
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 
 // ================= DASHBOARD =================
 export async function fetchDashboardOverview(): Promise<DashboardOverview> {
@@ -274,13 +302,67 @@ export async function createService(payload: ServiceCreateInput): Promise<Servic
 export async function updateService(serviceId: number, payload: ServiceUpdateInput): Promise<Service> {
   const res = await fetch(`${API_BASE_URL}/services/${serviceId}`, {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    },
+    headers: getAuthHeaders({
+      'Content-Type': 'application/json'
+    }),
     body: JSON.stringify(payload)
   });
   return handleResponse<Service>(res);
 }
+
+// ================= AUTHENTICATION & USERS =================
+export async function loginUser(credentials: LoginCredentials): Promise<AuthResponse> {
+  const res = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify(credentials)
+  });
+  const data = await handleResponse<AuthResponse>(res);
+  if (data.access_token) {
+    setAuthToken(data.access_token);
+    localStorage.setItem('lecasu_auth_user', JSON.stringify(data.user));
+  }
+  return data;
+}
+
+export async function fetchCurrentUser(): Promise<User> {
+  const res = await fetch(`${API_BASE_URL}/auth/me`, {
+    headers: getAuthHeaders()
+  });
+  return handleResponse<User>(res);
+}
+
+export async function fetchUsers(): Promise<User[]> {
+  const res = await fetch(`${API_BASE_URL}/users`, {
+    headers: getAuthHeaders()
+  });
+  return handleResponse<User[]>(res);
+}
+
+export async function createUser(payload: UserCreateInput): Promise<User> {
+  const res = await fetch(`${API_BASE_URL}/users`, {
+    method: 'POST',
+    headers: getAuthHeaders({
+      'Content-Type': 'application/json'
+    }),
+    body: JSON.stringify(payload)
+  });
+  return handleResponse<User>(res);
+}
+
+export async function toggleUserStatus(userId: number, isActive: boolean): Promise<User> {
+  const res = await fetch(`${API_BASE_URL}/users/${userId}/status`, {
+    method: 'PATCH',
+    headers: getAuthHeaders({
+      'Content-Type': 'application/json'
+    }),
+    body: JSON.stringify({ is_active: isActive })
+  });
+  return handleResponse<User>(res);
+}
+
 
 

@@ -234,5 +234,36 @@ export interface ServiceKPIs {
   average_base_price: number;
 }
 
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: 'admin' | 'direcao' | 'financeiro' | 'tecnico' | 'engenheiro' | string;
+  phone?: string | null;
+  is_active: boolean;
+  created_at?: string;
+}
+
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  user: User;
+}
+
+export interface UserCreateInput {
+  name: string;
+  email: string;
+  password: string;
+  role: string;
+  phone?: string;
+  is_active?: boolean;
+}
+
+
 
 

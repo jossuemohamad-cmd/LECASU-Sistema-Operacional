@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, 
   Users, 
@@ -13,15 +13,18 @@ import {
   Menu, 
   Search, 
   Bell, 
-  UserCircle 
+  UserCircle,
+  LogOut
 } from 'lucide-react';
 import { ClientsProposalsView } from './components/clients/ClientsProposalsView';
 import { ProjectsView } from './components/projects/ProjectsView';
 import { DashboardView } from './components/dashboard/DashboardView';
 import { TechnicalTeamView } from './components/team/TechnicalTeamView';
 import { ServicesView } from './components/services/ServicesView';
-
-
+import { SettingsView } from './components/settings/SettingsView';
+import { LoginView } from './components/auth/LoginView';
+import { getAuthToken, removeAuthToken, fetchCurrentUser } from './services/api';
+import type { User } from './types';
 
 const TABS = [
   { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard },
@@ -37,9 +40,55 @@ const TABS = [
 ];
 
 export default function App() {
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    const saved = localStorage.getItem('lecasu_auth_user');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  });
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => !!getAuthToken());
+
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [openNewRecordTrigger, setOpenNewRecordTrigger] = useState(false);
+
+  useEffect(() => {
+    const token = getAuthToken();
+    if (token && !currentUser) {
+      fetchCurrentUser()
+        .then(user => {
+          setCurrentUser(user);
+          setIsAuthenticated(true);
+        })
+        .catch(() => {
+          removeAuthToken();
+          setIsAuthenticated(false);
+          setCurrentUser(null);
+        });
+    }
+  }, []);
+
+  const handleLogout = () => {
+    removeAuthToken();
+    setCurrentUser(null);
+    setIsAuthenticated(false);
+  };
+
+  const handleLoginSuccess = (user: User) => {
+    setCurrentUser(user);
+    setIsAuthenticated(true);
+    setActiveTab('dashboard');
+  };
+
+  if (!isAuthenticated) {
+    return <LoginView onLoginSuccess={handleLoginSuccess} />;
+  }
+
 
 
   return (
@@ -124,12 +173,25 @@ export default function App() {
               <Bell size={18} />
               <span className="absolute top-1 right-1 w-2 h-2 bg-orange-600 rounded-full"></span>
             </button>
-            <div className="flex items-center space-x-2 border-l border-slate-200 pl-4">
-              <UserCircle size={28} className="text-slate-400" />
-              <div className="text-left text-xs">
-                <p className="font-semibold text-slate-800 leading-tight">Admin LECASU</p>
-                <p className="text-slate-500 text-[11px]">Direção Geral</p>
+            <div className="flex items-center space-x-3 border-l border-slate-200 pl-4">
+              <div className="w-8 h-8 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center flex-shrink-0">
+                {(currentUser?.name || 'A').charAt(0).toUpperCase()}
               </div>
+              <div className="text-left text-xs">
+                <p className="font-semibold text-slate-800 leading-tight">
+                  {currentUser?.name || 'Admin LECASU'}
+                </p>
+                <p className="text-slate-500 text-[11px] capitalize">
+                  {currentUser?.role ? `Perfil: ${currentUser.role}` : 'Direção Geral'}
+                </p>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition ml-1"
+                title="Terminar Sessão"
+              >
+                <LogOut size={16} />
+              </button>
             </div>
           </div>
         </header>
@@ -151,7 +213,10 @@ export default function App() {
               <ProjectsView />
             ) : activeTab === 'equipa' ? (
               <TechnicalTeamView />
+            ) : activeTab === 'definicoes' ? (
+              <SettingsView />
             ) : (
+
 
 
 
