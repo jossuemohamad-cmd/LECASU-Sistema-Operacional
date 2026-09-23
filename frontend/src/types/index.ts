@@ -264,6 +264,22 @@ export interface UserCreateInput {
   is_active?: boolean;
 }
 
+export interface ForgotPasswordInput {
+  email: string;
+}
 
+export interface ResetPasswordInput {
+  email: string;
+  token: string;
+  new_password: string;
+}
 
+export interface AdminResetPasswordInput {
+  new_password: string;
+}
 
+export interface GenericMessageResponse {
+  message: string;
+  status: string;
+  temp_code?: string | null;
+}

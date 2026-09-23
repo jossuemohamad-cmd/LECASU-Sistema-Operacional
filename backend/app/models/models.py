@@ -12,8 +12,11 @@ class User(Base):
     hashed_password = Column(String(255), nullable=True)
     role = Column(String(50), default='tecnico')  # admin, direcao, financeiro, tecnico, engenheiro
     is_active = Column(Boolean, default=True)
+    reset_token = Column(String(100), nullable=True)
+    reset_token_expires = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     tasks = relationship('Task', back_populates='technician')
+
 
 class Client(Base):
     __tablename__ = 'clients'

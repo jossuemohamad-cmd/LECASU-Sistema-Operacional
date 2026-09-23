@@ -15,10 +15,11 @@ import {
   Lock,
   Globe,
   Coins,
-  Clock
+  Clock,
+  KeyRound
 } from 'lucide-react';
 import type { User, UserCreateInput, ToastMessage } from '../../types';
-import { fetchUsers, createUser, toggleUserStatus } from '../../services/api';
+import { fetchUsers, createUser, toggleUserStatus, adminResetPassword } from '../../services/api';
 import { Toast } from '../common/Toast';
 
 export const SettingsView: React.FC = () => {
@@ -27,11 +28,11 @@ export const SettingsView: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Modal State
+  // Modal State - Create User
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Form State
+  // Form State - Create User
   const [formData, setFormData] = useState<UserCreateInput>({
     name: '',
     email: '',
@@ -40,6 +41,13 @@ export const SettingsView: React.FC = () => {
     phone: '',
     is_active: true
   });
+
+  // Modal State - Admin Password Reset
+  const [userToReset, setUserToReset] = useState<User | null>(null);
+  const [adminNewPassword, setAdminNewPassword] = useState('');
+  const [adminConfirmPassword, setAdminConfirmPassword] = useState('');
+  const [isAdminResetting, setIsAdminResetting] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   // Toasts
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -127,6 +135,40 @@ export const SettingsView: React.FC = () => {
     }
   };
 
+  const handleOpenResetModal = (user: User) => {
+    setUserToReset(user);
+    setAdminNewPassword('');
+    setAdminConfirmPassword('');
+    setResetError(null);
+  };
+
+  const handleAdminResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userToReset) return;
+
+    if (adminNewPassword.length < 6) {
+      setResetError('A nova palavra-passe deve ter no mínimo 6 caracteres.');
+      return;
+    }
+    if (adminNewPassword !== adminConfirmPassword) {
+      setResetError('A confirmação da palavra-passe não coincide.');
+      return;
+    }
+
+    try {
+      setIsAdminResetting(true);
+      setResetError(null);
+      const res = await adminResetPassword(userToReset.id, { new_password: adminNewPassword });
+      addToast('success', 'Palavra-passe Redefinida', res.message || `Nova senha atribuída para ${userToReset.name}.`);
+      setUserToReset(null);
+    } catch (err: any) {
+      console.error('Erro na redefinição administrativa:', err);
+      setResetError(err.message || 'Erro ao redefinir a palavra-passe do utilizador.');
+    } finally {
+      setIsAdminResetting(false);
+    }
+  };
+
   const getRoleBadge = (role: string) => {
     switch (role?.toLowerCase()) {
       case 'admin':
@@ -165,7 +207,7 @@ export const SettingsView: React.FC = () => {
           <button
             onClick={() => loadUsers(true)}
             disabled={isLoading}
-            className="flex items-center space-x-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold px-3 py-2 rounded-md shadow-2xs transition disabled:opacity-50"
+            className="flex items-center space-x-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold px-3 py-2 rounded-md shadow-2xs transition disabled:opacity-50 cursor-pointer"
             title="Atualizar lista de utilizadores"
           >
             <RefreshCw size={14} className={isLoading ? 'animate-spin text-orange-600' : 'text-slate-500'} />
@@ -175,7 +217,7 @@ export const SettingsView: React.FC = () => {
           {activeSubTab === 'users' && (
             <button
               onClick={handleOpenCreateModal}
-              className="flex items-center space-x-1.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold px-4 py-2 rounded-md shadow-xs transition"
+              className="flex items-center space-x-1.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold px-4 py-2 rounded-md shadow-xs transition cursor-pointer"
             >
               <Plus size={15} />
               <span>+ Novo Utilizador</span>
@@ -194,7 +236,7 @@ export const SettingsView: React.FC = () => {
           </div>
           <button 
             onClick={() => loadUsers(true)} 
-            className="underline font-semibold hover:text-red-900 ml-2"
+            className="underline font-semibold hover:text-red-900 ml-2 cursor-pointer"
           >
             Tentar novamente
           </button>
@@ -205,7 +247,7 @@ export const SettingsView: React.FC = () => {
       <div className="flex border-b border-slate-200 space-x-6 text-xs font-medium">
         <button
           onClick={() => setActiveSubTab('users')}
-          className={`pb-3 flex items-center space-x-2 border-b-2 transition ${
+          className={`pb-3 flex items-center space-x-2 border-b-2 transition cursor-pointer ${
             activeSubTab === 'users'
               ? 'border-orange-600 text-orange-600 font-bold'
               : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -220,7 +262,7 @@ export const SettingsView: React.FC = () => {
 
         <button
           onClick={() => setActiveSubTab('company')}
-          className={`pb-3 flex items-center space-x-2 border-b-2 transition ${
+          className={`pb-3 flex items-center space-x-2 border-b-2 transition cursor-pointer ${
             activeSubTab === 'company'
               ? 'border-orange-600 text-orange-600 font-bold'
               : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -255,7 +297,7 @@ export const SettingsView: React.FC = () => {
                   <th className="py-2.5 px-3">Contacto</th>
                   <th className="py-2.5 px-3">Perfil de Acesso</th>
                   <th className="py-2.5 px-3">Status</th>
-                  <th className="py-2.5 px-4 text-right">Ações</th>
+                  <th className="py-2.5 px-4 text-right">Ações Rápidas</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
@@ -316,16 +358,29 @@ export const SettingsView: React.FC = () => {
                     </td>
 
                     <td className="py-3 px-4 text-right">
-                      <button
-                        onClick={() => handleToggleUserStatus(user)}
-                        className={`text-[11px] font-semibold px-2.5 py-1 rounded transition border ${
-                          user.is_active
-                            ? 'bg-white hover:bg-rose-50 text-rose-700 border-slate-200 hover:border-rose-300'
-                            : 'bg-white hover:bg-emerald-50 text-emerald-700 border-slate-200 hover:border-emerald-300'
-                        }`}
-                      >
-                        {user.is_active ? 'Desativar' : 'Ativar'}
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        {/* BOTÃO REDEFINIR SENHA (ADMIN) */}
+                        <button
+                          onClick={() => handleOpenResetModal(user)}
+                          className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded bg-white hover:bg-orange-50 text-orange-700 border border-slate-200 hover:border-orange-300 transition cursor-pointer"
+                          title="Redefinir Palavra-passe do Utilizador"
+                        >
+                          <KeyRound size={12} className="text-orange-600" />
+                          <span>Redefinir Senha</span>
+                        </button>
+
+                        {/* ATIVAR/DESATIVAR */}
+                        <button
+                          onClick={() => handleToggleUserStatus(user)}
+                          className={`text-[11px] font-semibold px-2.5 py-1 rounded transition border cursor-pointer ${
+                            user.is_active
+                              ? 'bg-white hover:bg-rose-50 text-rose-700 border-slate-200 hover:border-rose-300'
+                              : 'bg-white hover:bg-emerald-50 text-emerald-700 border-slate-200 hover:border-emerald-300'
+                          }`}
+                        >
+                          {user.is_active ? 'Desativar' : 'Ativar'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -416,7 +471,7 @@ export const SettingsView: React.FC = () => {
               </div>
               <button
                 onClick={() => setIsCreateModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded transition"
+                className="text-slate-400 hover:text-slate-600 p-1 rounded transition cursor-pointer"
               >
                 <X size={16} />
               </button>
@@ -515,16 +570,112 @@ export const SettingsView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-3 py-1.5 border border-slate-300 rounded text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+                  className="px-3 py-1.5 border border-slate-300 rounded text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded text-xs font-semibold shadow-xs transition disabled:opacity-50"
+                  className="px-4 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded text-xs font-semibold shadow-xs transition disabled:opacity-50 cursor-pointer"
                 >
                   {isSubmitting ? 'A criar...' : 'Criar Utilizador'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL REDEFINIÇÃO ADMINISTRATIVA DE PALAVRA-PASSE */}
+      {userToReset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in">
+          <div className="bg-white rounded-lg shadow-xl border border-slate-200 max-w-md w-full overflow-hidden animate-in zoom-in-95">
+            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center space-x-2">
+                <div className="p-1.5 bg-orange-100 text-orange-700 rounded-md">
+                  <KeyRound size={16} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900">Redefinir Palavra-passe</h3>
+                  <p className="text-[11px] text-slate-500">Alteração direta por Administrador</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setUserToReset(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded transition cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAdminResetPassword} className="p-5 space-y-4">
+              <div className="bg-slate-50 p-3 rounded-md border border-slate-200 text-xs">
+                <div className="font-semibold text-slate-800">{userToReset.name}</div>
+                <div className="text-slate-500 text-[11px] font-mono mt-0.5">{userToReset.email}</div>
+              </div>
+
+              {resetError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-md flex items-start space-x-2 text-xs">
+                  <AlertCircle size={15} className="flex-shrink-0 mt-0.5 text-red-500" />
+                  <span>{resetError}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Nova Palavra-passe *
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <Lock size={14} />
+                  </div>
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    placeholder="Mínimo 6 caracteres"
+                    value={adminNewPassword}
+                    onChange={(e) => setAdminNewPassword(e.target.value)}
+                    className="w-full text-xs pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Confirmar Nova Palavra-passe *
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <Lock size={14} />
+                  </div>
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    placeholder="Repita a nova palavra-passe"
+                    value={adminConfirmPassword}
+                    onChange={(e) => setAdminConfirmPassword(e.target.value)}
+                    className="w-full text-xs pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setUserToReset(null)}
+                  className="px-3 py-1.5 border border-slate-300 rounded text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isAdminResetting}
+                  className="px-4 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded text-xs font-semibold shadow-xs transition disabled:opacity-50 cursor-pointer"
+                >
+                  {isAdminResetting ? 'A atualizar...' : 'Salvar Nova Senha'}
                 </button>
               </div>
             </form>

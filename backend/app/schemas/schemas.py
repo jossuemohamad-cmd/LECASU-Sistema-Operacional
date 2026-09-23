@@ -445,6 +445,61 @@ class UserCreate(BaseModel):
 class UserUpdateStatus(BaseModel):
     is_active: bool
 
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        v = v.strip().lower()
+        if not v or '@' not in v:
+            raise ValueError('Informe um endereço de e-mail válido.')
+        return v
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    token: str
+    new_password: str
+
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        v = v.strip().lower()
+        if not v or '@' not in v:
+            raise ValueError('Informe um endereço de e-mail válido.')
+        return v
+
+    @field_validator('token')
+    @classmethod
+    def validate_token(cls, v: str) -> str:
+        v = v.strip()
+        if len(v) < 4:
+            raise ValueError('Código de recuperação inválido.')
+        return v
+
+    @field_validator('new_password')
+    @classmethod
+    def validate_new_password(cls, v: str) -> str:
+        if len(v) < 6:
+            raise ValueError('A nova palavra-passe deve conter no mínimo 6 caracteres.')
+        return v
+
+class AdminResetPasswordRequest(BaseModel):
+    new_password: str
+
+    @field_validator('new_password')
+    @classmethod
+    def validate_new_password(cls, v: str) -> str:
+        if len(v) < 6:
+            raise ValueError('A nova palavra-passe deve conter no mínimo 6 caracteres.')
+        return v
+
+class GenericMessageResponse(BaseModel):
+    message: str
+    status: str = "success"
+    temp_code: Optional[str] = None
+
+
 
 
 

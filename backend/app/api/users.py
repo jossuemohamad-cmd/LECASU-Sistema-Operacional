@@ -5,8 +5,8 @@ from datetime import datetime
 
 from app.core.database import get_db
 from app.models.models import User
-from app.core.security import get_password_hash
-from app.schemas.schemas import UserCreate, UserUpdateStatus, UserResponse
+from app.core.security import get_password_hash, get_current_user
+from app.schemas.schemas import UserCreate, UserUpdateStatus, UserResponse, AdminResetPasswordRequest, GenericMessageResponse
 
 router = APIRouter()
 
@@ -90,4 +90,34 @@ def update_user_status(user_id: int, payload: UserUpdateStatus, db: Session = De
         phone=user.phone,
         is_active=user.is_active,
         created_at=user.created_at
+    )
+
+@router.post('/users/{user_id}/admin-reset-password', response_model=GenericMessageResponse, summary='Redefinição administrativa de senha por um Administrador')
+def admin_reset_password(
+    user_id: int, 
+    payload: AdminResetPasswordRequest, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role != 'admin':
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Apenas administradores podem redefinir a palavra-passe de utilizadores."
+        )
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Utilizador não encontrado."
+        )
+
+    user.hashed_password = get_password_hash(payload.new_password)
+    user.reset_token = None
+    user.reset_token_expires = None
+    db.commit()
+
+    return GenericMessageResponse(
+        message=f"Palavra-passe do utilizador '{user.name}' redefinida com sucesso.",
+        status="success"
     )

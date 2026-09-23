@@ -19,7 +19,11 @@ import type {
   User,
   LoginCredentials,
   AuthResponse,
-  UserCreateInput
+  UserCreateInput,
+  ForgotPasswordInput,
+  ResetPasswordInput,
+  AdminResetPasswordInput,
+  GenericMessageResponse
 } from '../types';
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
@@ -363,6 +367,43 @@ export async function toggleUserStatus(userId: number, isActive: boolean): Promi
   });
   return handleResponse<User>(res);
 }
+
+export async function forgotPassword(payload: ForgotPasswordInput): Promise<GenericMessageResponse> {
+  const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  return handleResponse<GenericMessageResponse>(res);
+}
+
+export async function resetPassword(payload: ResetPasswordInput): Promise<GenericMessageResponse> {
+  const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  return handleResponse<GenericMessageResponse>(res);
+}
+
+export async function adminResetPassword(userId: number, payload: AdminResetPasswordInput): Promise<GenericMessageResponse> {
+  const res = await fetch(`${API_BASE_URL}/users/${userId}/admin-reset-password`, {
+    method: 'POST',
+    headers: getAuthHeaders({
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    }),
+    body: JSON.stringify(payload)
+  });
+  return handleResponse<GenericMessageResponse>(res);
+}
+
 
 
 

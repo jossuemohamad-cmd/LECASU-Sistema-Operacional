@@ -5,7 +5,16 @@ from datetime import datetime
 from app.core.database import get_db
 from app.models.models import User
 from app.core.security import verify_password, get_password_hash, create_access_token, get_current_user
-from app.schemas.schemas import LoginRequest, TokenResponse, UserResponse
+import secrets
+from datetime import timedelta
+from app.schemas.schemas import (
+    LoginRequest, 
+    TokenResponse, 
+    UserResponse,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
+    GenericMessageResponse
+)
 
 router = APIRouter()
 
@@ -98,3 +107,61 @@ def get_me(current_user: User = Depends(get_current_user)):
         is_active=current_user.is_active if current_user.is_active is not None else True,
         created_at=current_user.created_at
     )
+
+@router.post('/auth/forgot-password', response_model=GenericMessageResponse, summary='Solicitar código de recuperação de palavra-passe')
+def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    email_clean = payload.email.strip().lower()
+    user = db.query(User).filter(User.email == email_clean).first()
+
+    temp_code = None
+    if user and user.is_active:
+        # Generate 6-digit secure recovery code
+        temp_code = f"{secrets.randbelow(900000) + 100000:06d}"
+        user.reset_token = temp_code
+        user.reset_token_expires = datetime.utcnow() + timedelta(minutes=15)
+        db.commit()
+
+    return GenericMessageResponse(
+        message="Se o e-mail estiver registado, o código de redefinição de 6 dígitos foi gerado com sucesso (validade 15 minutos).",
+        status="success",
+        temp_code=temp_code
+    )
+
+@router.post('/auth/reset-password', response_model=GenericMessageResponse, summary='Redefinir palavra-passe com código de recuperação')
+def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db)):
+    email_clean = payload.email.strip().lower()
+    token_clean = payload.token.strip()
+
+    user = db.query(User).filter(User.email == email_clean).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Solicitação inválida ou utilizador não encontrado."
+        )
+
+    if not user.reset_token or user.reset_token != token_clean:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Código de recuperação inválido ou não coincide."
+        )
+
+    if not user.reset_token_expires or user.reset_token_expires < datetime.utcnow():
+        user.reset_token = None
+        user.reset_token_expires = None
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="O código de recuperação expirou. Por favor solicite um novo código."
+        )
+
+    # Update password and clear token
+    user.hashed_password = get_password_hash(payload.new_password)
+    user.reset_token = None
+    user.reset_token_expires = None
+    db.commit()
+
+    return GenericMessageResponse(
+        message="Palavra-passe redefinida com sucesso. Pode agora iniciar sessão com as novas credenciais.",
+        status="success"
+    )
+
