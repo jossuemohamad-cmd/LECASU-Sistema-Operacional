@@ -159,6 +159,7 @@ export const GEDView: React.FC = () => {
   const [historyIndex, setHistoryIndex] = useState<number>(0);
   const [isTreeExpanded, setIsTreeExpanded] = useState<boolean>(true);
   const [selectedDocIds, setSelectedDocIds] = useState<number[]>([]);
+  const [selectedFolderIds, setSelectedFolderIds] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
   // Modals
@@ -346,14 +347,26 @@ export const GEDView: React.FC = () => {
   // Selection
   const handleSelectAll = () => {
     setSelectedDocIds(currentFolderDocuments.map(d => d.id));
+    if (currentPath === '/') {
+      setSelectedFolderIds(activeFolders.map(f => f.id));
+    } else if (currentPath === '/trash') {
+      setSelectedFolderIds(trashedFolders.map(f => f.id));
+    }
   };
 
   const handleDeselectAll = () => {
     setSelectedDocIds([]);
+    setSelectedFolderIds([]);
   };
 
   const toggleSelectDoc = (id: number) => {
     setSelectedDocIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectFolder = (id: string) => {
+    setSelectedFolderIds(prev => 
       prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
     );
   };
@@ -569,28 +582,65 @@ export const GEDView: React.FC = () => {
     }
   };
 
-  // Official Category Icons Helper
-  const getCategoryIcon = (iconType: string, className = "w-4 h-4") => {
-    switch (iconType) {
-      case 'pdf':
-        return <FileText className={`${className} text-rose-500`} />;
-      case 'excel':
-        return <FileSpreadsheet className={`${className} text-emerald-600`} />;
-      case 'word':
-        return <FileText className={`${className} text-blue-600`} />;
-      case 'image':
-        return <FileImage className={`${className} text-indigo-500`} />;
-      case 'cad':
-        return <Compass className={`${className} text-purple-600`} />;
-      case 'contract':
-        return <FileCheck2 className={`${className} text-cyan-600`} />;
-      case 'rh':
-        return <Users className={`${className} text-teal-600`} />;
-      case 'brand':
-        return <Sparkles className={`${className} text-amber-500`} />;
-      default:
-        return <Folder className={`${className} text-amber-500`} />;
-    }
+  // Folder Icon with Category Corner Badge (cPanel-style)
+  const renderFolderWithBadge = (iconType: string, folderSize = "w-5 h-5", badgeSize = "w-2.5 h-2.5") => {
+    return (
+      <div className="relative inline-flex items-center justify-center shrink-0">
+        <Folder className={`${folderSize} text-amber-500 fill-amber-400/20 shrink-0`} />
+        {iconType === 'pdf' && (
+          <span className="absolute -bottom-1 -right-1 bg-rose-500 text-white rounded-full p-[1.5px] ring-1 ring-white shadow-2xs" title="Documentos PDF">
+            <FileText className={badgeSize} />
+          </span>
+        )}
+        {iconType === 'excel' && (
+          <span className="absolute -bottom-1 -right-1 bg-emerald-600 text-white rounded-full p-[1.5px] ring-1 ring-white shadow-2xs" title="Folhas de Cálculo Excel">
+            <FileSpreadsheet className={badgeSize} />
+          </span>
+        )}
+        {iconType === 'word' && (
+          <span className="absolute -bottom-1 -right-1 bg-blue-600 text-white rounded-full p-[1.5px] ring-1 ring-white shadow-2xs" title="Documentos Word">
+            <FileText className={badgeSize} />
+          </span>
+        )}
+        {iconType === 'image' && (
+          <span className="absolute -bottom-1 -right-1 bg-indigo-500 text-white rounded-full p-[1.5px] ring-1 ring-white shadow-2xs" title="Imagens & Fotografias">
+            <FileImage className={badgeSize} />
+          </span>
+        )}
+        {iconType === 'cad' && (
+          <span className="absolute -bottom-1 -right-1 bg-purple-600 text-white rounded-full p-[1.5px] ring-1 ring-white shadow-2xs" title="Projetos CAD & DWG">
+            <Compass className={badgeSize} />
+          </span>
+        )}
+        {iconType === 'contract' && (
+          <span className="absolute -bottom-1 -right-1 bg-cyan-600 text-white rounded-full p-[1.5px] ring-1 ring-white shadow-2xs" title="Contratos & Jurídico">
+            <FileCheck2 className={badgeSize} />
+          </span>
+        )}
+        {iconType === 'rh' && (
+          <span className="absolute -bottom-1 -right-1 bg-teal-600 text-white rounded-full p-[1.5px] ring-1 ring-white shadow-2xs" title="RH & Pessoal">
+            <Users className={badgeSize} />
+          </span>
+        )}
+        {iconType === 'brand' && (
+          <span className="absolute -bottom-1 -right-1 bg-amber-500 text-white rounded-full p-[1.5px] ring-1 ring-white shadow-2xs" title="Logotipos & Marcas">
+            <Sparkles className={badgeSize} />
+          </span>
+        )}
+        {iconType === 'google_drive' && (
+          <span className="absolute -bottom-1 -right-1 bg-white rounded-full p-[1.5px] ring-1 ring-neutral-300 shadow-2xs" title="Google Drive">
+            <svg className={badgeSize} viewBox="0 0 87.3 78" fill="none">
+              <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.9 2.5 3.2 3.3l16.3-28.2H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066DA"/>
+              <path d="M43.65 25 29.8 1c-1.3.8-2.4 1.9-3.2 3.3L1.2 48.2c-.8 1.4-1.2 2.95-1.2 4.5h29.95z" fill="#00AC47"/>
+              <path d="m73.55 76.8c1.3-.8 2.4-1.9 3.2-3.3l1.6-2.75 7.75-13.45c.8-1.4 1.2-2.95 1.2-4.5H57.35l6.55 11.35z" fill="#EA4335"/>
+              <path d="M43.65 25 57.5 1c-1.3-.8-2.4-1.9-3.2-3.3H33c-1.55 0-3.1.4-4.5 1.2z" fill="#00832D"/>
+              <path d="M87.3 48.2 72.8 23.05c-.8-1.4-1.9-2.5-3.2-3.3L57.5 44.9h29.8z" fill="#FFBA00"/>
+              <path d="M57.35 44.9H27.45L13.65 68.8c.8 1.4 1.9 2.5 3.2 3.3h53.7c1.55 0 3.1-.4 4.5-1.2z" fill="#2684FC"/>
+            </svg>
+          </span>
+        )}
+      </div>
+    );
   };
 
   // File type icons
@@ -899,7 +949,7 @@ export const GEDView: React.FC = () => {
                       }`}
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        {getCategoryIcon(folder.iconType, "w-4 h-4")}
+                        {renderFolderWithBadge(folder.iconType, "w-4 h-4", "w-2 h-2")}
                         <span className="font-mono text-xs truncate">
                           {folder.name}
                         </span>
@@ -1089,7 +1139,13 @@ export const GEDView: React.FC = () => {
                     <th className="w-8 px-3 text-center bg-[#FAFAF9]">
                       <input
                         type="checkbox"
-                        checked={currentFolderDocuments.length > 0 && selectedDocIds.length === currentFolderDocuments.length}
+                        checked={
+                          currentPath === '/' 
+                            ? (activeFolders.length > 0 && selectedFolderIds.length === activeFolders.length)
+                            : currentPath === '/trash'
+                            ? ((trashedFolders.length + trashedDocuments.length > 0) && (selectedFolderIds.length + selectedDocIds.length === trashedFolders.length + trashedDocuments.length))
+                            : (currentFolderDocuments.length > 0 && selectedDocIds.length === currentFolderDocuments.length)
+                        }
                         onChange={(e) => e.target.checked ? handleSelectAll() : handleDeselectAll()}
                         className="rounded border-[#E2E2DE] text-[#FF8000] focus:ring-[#FF8000] accent-[#FF8000] cursor-pointer"
                       />
@@ -1127,36 +1183,49 @@ export const GEDView: React.FC = () => {
                   {/* Listar Pastas Principais se estiver na Raiz */}
                   {currentPath === '/' && !searchTerm && (
                     <>
-                      {/* Pastas de Armazenamento Ativas */}
+                      {/* Pastas de Armazenamento Ativas com Checkbox */}
                       {activeFolders.map((folder) => {
                         const count = folderCounts[folder.id] || 0;
+                        const isFolderSelected = selectedFolderIds.includes(folder.id);
+
                         return (
                           <tr
                             key={folder.id}
                             onDoubleClick={() => navigateTo(folder.path)}
-                            className="hover:bg-[#FFF8F2] transition-colors cursor-pointer group"
+                            className={`hover:bg-[#FFF8F2] transition-colors cursor-pointer group ${isFolderSelected ? 'bg-[#FFF2E5]/50' : ''}`}
                             title="Duplo clique para abrir a pasta"
                           >
                             <td className="px-3 text-center">
-                              {getCategoryIcon(folder.iconType, "w-4 h-4 mx-auto")}
+                              <input
+                                type="checkbox"
+                                checked={isFolderSelected}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  toggleSelectFolder(folder.id);
+                                }}
+                                className="rounded border-[#E2E2DE] text-[#FF8000] focus:ring-[#FF8000] accent-[#FF8000] cursor-pointer"
+                              />
                             </td>
                             <td className="px-4 py-3">
                               <button
                                 type="button"
                                 onClick={() => navigateTo(folder.path)}
-                                className="text-left group-hover:text-[#FF8000] transition"
+                                className="text-left group-hover:text-[#FF8000] transition flex items-center gap-3"
                               >
-                                <div className="flex items-center gap-2">
-                                  <span className="font-bold text-sm text-[#101010] font-mono group-hover:text-[#FF8000]">
-                                    {folder.name}
-                                  </span>
-                                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600">
-                                    {folder.category}
-                                  </span>
+                                {renderFolderWithBadge(folder.iconType, "w-5 h-5", "w-2.5 h-2.5")}
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-sm text-[#101010] font-mono group-hover:text-[#FF8000]">
+                                      {folder.name}
+                                    </span>
+                                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600">
+                                      {folder.category}
+                                    </span>
+                                  </div>
+                                  <p className="text-[11px] text-[#737370] mt-0.5">
+                                    {folder.description}
+                                  </p>
                                 </div>
-                                <p className="text-[11px] text-[#737370] mt-0.5">
-                                  {folder.description}
-                                </p>
                               </button>
                             </td>
                             <td className="px-4 font-mono text-[11px] text-neutral-500">
@@ -1205,32 +1274,32 @@ export const GEDView: React.FC = () => {
                         className="hover:bg-blue-50/50 transition-colors cursor-pointer group"
                       >
                         <td className="px-3 text-center">
-                          <svg className="w-4 h-4 mx-auto" viewBox="0 0 87.3 78" fill="none">
-                            <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.9 2.5 3.2 3.3l16.3-28.2H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066DA"/>
-                            <path d="M43.65 25 29.8 1c-1.3.8-2.4 1.9-3.2 3.3L1.2 48.2c-.8 1.4-1.2 2.95-1.2 4.5h29.95z" fill="#00AC47"/>
-                            <path d="m73.55 76.8c1.3-.8 2.4-1.9 3.2-3.3l1.6-2.75 7.75-13.45c.8-1.4 1.2-2.95 1.2-4.5H57.35l6.55 11.35z" fill="#EA4335"/>
-                            <path d="M43.65 25 57.5 1c-1.3-.8-2.4-1.9-3.2-3.3H33c-1.55 0-3.1.4-4.5 1.2z" fill="#00832D"/>
-                            <path d="M87.3 48.2 72.8 23.05c-.8-1.4-1.9-2.5-3.2-3.3L57.5 44.9h29.8z" fill="#FFBA00"/>
-                            <path d="M57.35 44.9H27.45L13.65 68.8c.8 1.4 1.9 2.5 3.2 3.3h53.7c1.55 0 3.1-.4 4.5-1.2z" fill="#2684FC"/>
-                          </svg>
+                          <input
+                            type="checkbox"
+                            disabled
+                            className="rounded border-[#E2E2DE] opacity-25 cursor-not-allowed"
+                          />
                         </td>
                         <td className="px-4 py-3">
                           <button
                             type="button"
                             onClick={() => setIsGoogleDriveModalOpen(true)}
-                            className="text-left group-hover:text-blue-600 transition"
+                            className="text-left group-hover:text-blue-600 transition flex items-center gap-3"
                           >
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-sm text-[#101010] font-mono group-hover:text-blue-600">
-                                Google Drive
-                              </span>
-                              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${isGoogleConnected ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
-                                {isGoogleConnected ? 'Sincronizado' : 'OAuth 2.0'}
-                              </span>
+                            {renderFolderWithBadge('google_drive', "w-5 h-5", "w-2.5 h-2.5")}
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-sm text-[#101010] font-mono group-hover:text-blue-600">
+                                  Google Drive
+                                </span>
+                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${isGoogleConnected ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+                                  {isGoogleConnected ? 'Sincronizado' : 'OAuth 2.0'}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-[#737370] mt-0.5">
+                                Navegue e importe ficheiros diretamente da sua conta Google Drive
+                              </p>
                             </div>
-                            <p className="text-[11px] text-[#737370] mt-0.5">
-                              Navegue e importe ficheiros diretamente da sua conta Google Drive
-                            </p>
                           </button>
                         </td>
                         <td className="px-4 font-mono text-[11px] text-neutral-500">Cloud Storage</td>
@@ -1250,45 +1319,59 @@ export const GEDView: React.FC = () => {
                   )}
 
                   {/* Pastas na Lixeira se estiver na Lixeira */}
-                  {currentPath === '/trash' && trashedFolders.map((f) => (
-                    <tr key={f.id} className="bg-rose-50/40 hover:bg-rose-50 transition-colors">
-                      <td className="px-3 text-center">
-                        <Folder className="w-4 h-4 text-rose-500 mx-auto" />
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="font-bold text-sm text-rose-900 font-mono">
-                          {f.name} (Pasta Eliminada)
-                        </span>
-                        <p className="text-[11px] text-rose-600 mt-0.5">
-                          {f.description}
-                        </p>
-                      </td>
-                      <td className="px-4 font-mono text-[11px] text-neutral-500">—</td>
-                      <td className="px-4 text-neutral-400 text-[11px]">{f.createdAt}</td>
-                      <td className="px-4 text-rose-600 text-[11px]">Pasta na Lixeira</td>
-                      <td className="px-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            type="button"
-                            onClick={() => handleRestoreItem({ type: 'folder', id: f.id, name: f.name })}
-                            className="btn-secondary btn-sm text-[11px] py-1 px-2 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
-                            title="Restaurar Pasta"
-                          >
-                            <RotateCcw className="w-3 h-3 mr-1 text-emerald-600 inline" />
-                            Restaurar
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handlePermanentDelete({ type: 'folder', id: f.id, name: f.name })}
-                            className="btn-danger btn-icon-sm"
-                            title="Eliminar Permanentemente"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {currentPath === '/trash' && trashedFolders.map((f) => {
+                    const isTrashedFolderSelected = selectedFolderIds.includes(f.id);
+
+                    return (
+                      <tr key={f.id} className={`bg-rose-50/40 hover:bg-rose-50 transition-colors ${isTrashedFolderSelected ? 'bg-rose-100/50' : ''}`}>
+                        <td className="px-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={isTrashedFolderSelected}
+                            onChange={() => toggleSelectFolder(f.id)}
+                            className="rounded border-rose-300 text-rose-600 focus:ring-rose-500 accent-rose-600 cursor-pointer"
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            {renderFolderWithBadge(f.iconType, "w-5 h-5", "w-2.5 h-2.5")}
+                            <div>
+                              <span className="font-bold text-sm text-rose-900 font-mono">
+                                {f.name} (Pasta Eliminada)
+                              </span>
+                              <p className="text-[11px] text-rose-600 mt-0.5">
+                                {f.description}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 font-mono text-[11px] text-neutral-500">—</td>
+                        <td className="px-4 text-neutral-400 text-[11px]">{f.createdAt}</td>
+                        <td className="px-4 text-rose-600 text-[11px]">Pasta na Lixeira</td>
+                        <td className="px-4 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleRestoreItem({ type: 'folder', id: f.id, name: f.name })}
+                              className="btn-secondary btn-sm text-[11px] py-1 px-2 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                              title="Restaurar Pasta"
+                            >
+                              <RotateCcw className="w-3 h-3 mr-1 text-emerald-600 inline" />
+                              Restaurar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handlePermanentDelete({ type: 'folder', id: f.id, name: f.name })}
+                              className="btn-danger btn-icon-sm"
+                              title="Eliminar Permanentemente"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
 
                   {/* Lista de Ficheiros */}
                   {isLoading ? (
@@ -1461,7 +1544,7 @@ export const GEDView: React.FC = () => {
                           >
                             <div className="flex items-start justify-between">
                               <div className="p-2.5 rounded-xl bg-white border border-[#E2E2DE] shadow-2xs group-hover:scale-105 transition">
-                                {getCategoryIcon(folder.iconType, "w-6 h-6")}
+                                {renderFolderWithBadge(folder.iconType, "w-7 h-7", "w-3.5 h-3.5")}
                               </div>
                               <div className="flex items-center gap-1">
                                 <button
@@ -1500,15 +1583,8 @@ export const GEDView: React.FC = () => {
                         className="bg-blue-50/50 hover:bg-white border border-blue-200 hover:border-blue-500 hover:shadow-md rounded-xl p-3.5 transition cursor-pointer flex flex-col justify-between group"
                       >
                         <div className="flex items-start justify-between">
-                          <div className="p-2 rounded-xl bg-white border border-blue-200 shadow-2xs group-hover:scale-105 transition">
-                            <svg className="w-6 h-6" viewBox="0 0 87.3 78" fill="none">
-                              <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.9 2.5 3.2 3.3l16.3-28.2H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066DA"/>
-                              <path d="M43.65 25 29.8 1c-1.3.8-2.4 1.9-3.2 3.3L1.2 48.2c-.8 1.4-1.2 2.95-1.2 4.5h29.95z" fill="#00AC47"/>
-                              <path d="m73.55 76.8c1.3-.8 2.4-1.9 3.2-3.3l1.6-2.75 7.75-13.45c.8-1.4 1.2-2.95 1.2-4.5H57.35l6.55 11.35z" fill="#EA4335"/>
-                              <path d="M43.65 25 57.5 1c-1.3-.8-2.4-1.9-3.2-3.3H33c-1.55 0-3.1.4-4.5 1.2z" fill="#00832D"/>
-                              <path d="M87.3 48.2 72.8 23.05c-.8-1.4-1.9-2.5-3.2-3.3L57.5 44.9h29.8z" fill="#FFBA00"/>
-                              <path d="M57.35 44.9H27.45L13.65 68.8c.8 1.4 1.9 2.5 3.2 3.3h53.7c1.55 0 3.1-.4 4.5-1.2z" fill="#2684FC"/>
-                            </svg>
+                          <div className="p-2.5 rounded-xl bg-white border border-blue-200 shadow-2xs group-hover:scale-105 transition">
+                            {renderFolderWithBadge('google_drive', "w-7 h-7", "w-3.5 h-3.5")}
                           </div>
                           <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${isGoogleConnected ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
                             {isGoogleConnected ? 'Ativo' : 'Conectar'}
