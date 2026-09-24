@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
-  FolderArchive, 
   HardDrive, 
   UploadCloud, 
   Search, 
@@ -16,23 +15,24 @@ import {
   X, 
   Loader2, 
   Folder, 
-  FolderOpen, 
   FolderPlus,
   ShieldCheck, 
-  ChevronRight, 
   ArrowUp, 
   ArrowLeft, 
   ArrowRight, 
   CheckSquare, 
   Square,
-  LayoutGrid,
-  List,
   Edit2,
   RotateCcw,
-  Sparkles,
-  Users,
   Compass,
-  FileCheck2
+  Home,
+  Plus,
+  Copy,
+  Move,
+  Key,
+  Eye,
+  Globe,
+  Mail
 } from 'lucide-react';
 import type { 
   GEDDocument, 
@@ -53,7 +53,11 @@ import {
 } from '../../services/api';
 import { Toast } from '../common/Toast';
 import { ConfirmationModal } from '../common/ConfirmationModal';
-import { GoogleDriveExplorerModal, getStoredGoogleToken } from './GoogleDriveExplorerModal';
+import { 
+  getStoredGoogleToken, 
+  setStoredGoogleToken, 
+  removeStoredGoogleToken 
+} from './GoogleDriveExplorerModal';
 
 export interface CustomFolder {
   id: string;
@@ -62,21 +66,40 @@ export interface CustomFolder {
   category: string;
   iconType: string;
   color: string;
-  description: string;
+  permissions: string;
   createdAt: string;
 }
 
+interface GoogleDriveFile {
+  id: string;
+  name: string;
+  mimeType: string;
+  size?: string;
+  modifiedTime?: string;
+  thumbnailLink?: string;
+  iconLink?: string;
+}
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '317708028649-gl3gp5ejeft9gq9gn7piqsmole32v1p4.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
+
 const DEFAULT_SYSTEM_FOLDERS: CustomFolder[] = [
-  { id: 'pdf', name: 'pdf', path: '/pdf', category: 'Documentos PDF', iconType: 'pdf', color: 'text-rose-500', description: 'Documentos, Relatórios e Especificações Técnicas', createdAt: '2026-01-01' },
-  { id: 'planilhas', name: 'planilhas', path: '/planilhas', category: 'Folhas de Cálculo', iconType: 'excel', color: 'text-emerald-500', description: 'Folhas de Cálculo, Medições e Orçamentos Excel', createdAt: '2026-01-01' },
-  { id: 'word', name: 'word', path: '/word', category: 'Documentos Word', iconType: 'word', color: 'text-blue-600', description: 'Minutas, Cartas e Textos Formatados', createdAt: '2026-01-01' },
-  { id: 'png', name: 'png', path: '/png', category: 'Imagens PNG', iconType: 'image', color: 'text-sky-500', description: 'Imagens e Gráficos com Transparência', createdAt: '2026-01-01' },
-  { id: 'jpg', name: 'jpg', path: '/jpg', category: 'Fotografias JPEG', iconType: 'image', color: 'text-indigo-500', description: 'Fotografias de Obras e Imagens de Campo', createdAt: '2026-01-01' },
-  { id: 'logos', name: 'logos', path: '/logos', category: 'Logotipos & Marcas', iconType: 'brand', color: 'text-amber-500', description: 'Identidade Visual e Marcas da Empresa', createdAt: '2026-01-01' },
-  { id: 'projetos_cad', name: 'projetos_cad', path: '/projetos_cad', category: 'Projetos CAD', iconType: 'cad', color: 'text-purple-500', description: 'Plantas de Engenharia, DWG e Modelos Técnicos', createdAt: '2026-01-01' },
-  { id: 'contratos', name: 'contratos', path: '/contratos', category: 'Contratos & Jurídico', iconType: 'contract', color: 'text-cyan-600', description: 'Contratos, Acordos e Documentação Jurídica', createdAt: '2026-01-01' },
-  { id: 'rh_pessoal', name: 'rh_pessoal', path: '/rh_pessoal', category: 'RH & Pessoal', iconType: 'rh', color: 'text-teal-500', description: 'Fichas de Colaboradores e Documentos RH', createdAt: '2026-01-01' },
-  { id: 'geral', name: 'geral', path: '/geral', category: 'Geral', iconType: 'folder', color: 'text-neutral-500', description: 'Outros Ficheiros e Documentos Diversos', createdAt: '2026-01-01' },
+  { id: 'etc', name: 'Etc', path: '/etc', category: 'Configurações', iconType: 'folder', color: 'text-amber-500', permissions: '0750', createdAt: '2026-09-23 23:07' },
+  { id: 'logs', name: 'Logs', path: '/logs', category: 'Registos do Sistema', iconType: 'folder', color: 'text-amber-500', permissions: '0700', createdAt: '2026-09-24 09:17' },
+  { id: 'mail', name: 'Mail', path: '/mail', category: 'Correio Eletrónico', iconType: 'mail', color: 'text-blue-500', permissions: '0751', createdAt: '2026-09-08 01:12' },
+  { id: 'public_html', name: 'Public_html', path: '/public_html', category: 'Ficheiros Web Públicos', iconType: 'web', color: 'text-sky-500', permissions: '0755', createdAt: '2026-09-25 00:57' },
+  { id: 'pdf', name: 'Pdf', path: '/pdf', category: 'Documentos PDF', iconType: 'pdf', color: 'text-rose-500', permissions: '0755', createdAt: '2026-09-19 13:13' },
+  { id: 'planilhas', name: 'Planilhas', path: '/planilhas', category: 'Folhas de Cálculo', iconType: 'excel', color: 'text-emerald-500', permissions: '0755', createdAt: '2026-09-20 17:11' },
+  { id: 'word', name: 'Word', path: '/word', category: 'Documentos Word', iconType: 'word', color: 'text-blue-600', permissions: '0755', createdAt: '2026-09-23 00:07' },
+  { id: 'png', name: 'Png', path: '/png', category: 'Imagens PNG', iconType: 'image', color: 'text-sky-500', permissions: '0755', createdAt: '2026-09-19 03:33' },
+  { id: 'jpg', name: 'Jpg', path: '/jpg', category: 'Fotografias JPEG', iconType: 'image', color: 'text-indigo-500', permissions: '0755', createdAt: '2026-09-19 03:47' },
+  { id: 'logos', name: 'Logos', path: '/logos', category: 'Logotipos & Marcas', iconType: 'brand', color: 'text-amber-500', permissions: '0755', createdAt: '2026-09-10 11:08' },
+  { id: 'projetos_cad', name: 'Projetos_cad', path: '/projetos_cad', category: 'Projetos CAD', iconType: 'cad', color: 'text-purple-500', permissions: '0755', createdAt: '2026-09-02 10:23' },
+  { id: 'contratos', name: 'Contratos', path: '/contratos', category: 'Contratos & Jurídico', iconType: 'contract', color: 'text-cyan-600', permissions: '0755', createdAt: '2026-09-19 18:01' },
+  { id: 'rh_pessoal', name: 'Rh_pessoal', path: '/rh_pessoal', category: 'RH & Pessoal', iconType: 'rh', color: 'text-teal-500', permissions: '0755', createdAt: '2026-09-19 12:00' },
+  { id: 'ssl', name: 'Ssl', path: '/ssl', category: 'Certificados Digitais', iconType: 'folder', color: 'text-amber-500', permissions: '0755', createdAt: '2026-09-25 00:58' },
+  { id: 'tmp', name: 'Tmp', path: '/tmp', category: 'Ficheiros Temporários', iconType: 'folder', color: 'text-amber-500', permissions: '0755', createdAt: '2026-09-24 01:24' },
+  { id: 'geral', name: 'Geral', path: '/geral', category: 'Geral', iconType: 'folder', color: 'text-neutral-500', permissions: '0755', createdAt: '2026-09-19 03:33' },
 ];
 
 const CATEGORIES = [
@@ -108,7 +131,10 @@ export const GEDView: React.FC = () => {
   const [folders, setFolders] = useState<CustomFolder[]>(() => {
     try {
       const saved = localStorage.getItem('lecasu_ged_folders');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
     } catch (e) {
       console.error(e);
     }
@@ -150,40 +176,45 @@ export const GEDView: React.FC = () => {
     localStorage.setItem('lecasu_ged_trash_folder_ids', JSON.stringify(trashedFolderIds));
   }, [trashedFolderIds]);
 
-  // View Mode: 'list' (Table) or 'grid' (Cards)
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-
   // File Manager Navigation State
-  const [currentPath, setCurrentPath] = useState<string>('/'); // '/' is root, '/pdf', '/trash', etc.
+  const [currentPath, setCurrentPath] = useState<string>('/'); // '/' is root, '/pdf', '/google-drive', '/trash', etc.
+  const [pathInputText, setPathInputText] = useState<string>('/home/lecasu-storage');
   const [history, setHistory] = useState<string[]>(['/']);
   const [historyIndex, setHistoryIndex] = useState<number>(0);
   const [isTreeExpanded, setIsTreeExpanded] = useState<boolean>(true);
+  
+  // Selection State
   const [selectedDocIds, setSelectedDocIds] = useState<number[]>([]);
   const [selectedFolderIds, setSelectedFolderIds] = useState<string[]>([]);
+  const [selectedGDriveFileIds, setSelectedGDriveFileIds] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Google Drive In-Place State
+  const [googleToken, setGoogleToken] = useState<string | null>(() => getStoredGoogleToken());
+  const [gdriveFiles, setGdriveFiles] = useState<GoogleDriveFile[]>([]);
+  const [isGdriveLoading, setIsGdriveLoading] = useState<boolean>(false);
+  const [isGdriveAuthenticating, setIsGdriveAuthenticating] = useState<boolean>(false);
+  const [gdriveImportingId, setGdriveImportingId] = useState<string | null>(null);
 
   // Modals
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isNewFolderModalOpen, setIsNewFolderModalOpen] = useState(false);
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
-  const [isGoogleDriveModalOpen, setIsGoogleDriveModalOpen] = useState(false);
-  const [isOneDriveModalOpen, setIsOneDriveModalOpen] = useState(false);
+  const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
   const [isEmptyTrashModalOpen, setIsEmptyTrashModalOpen] = useState(false);
 
-  // Target item for Rename / Delete
-  const [renameTarget, setRenameTarget] = useState<{ type: 'file' | 'folder'; id: number | string; name: string; description?: string } | null>(null);
+  // Target item for Rename / Delete / Permissions
+  const [renameTarget, setRenameTarget] = useState<{ type: 'file' | 'folder'; id: number | string; name: string } | null>(null);
   const [itemToDelete, setItemToDelete] = useState<{ type: 'file' | 'folder'; id: number | string; name: string } | null>(null);
   const [itemToPermanentDelete, setItemToPermanentDelete] = useState<{ type: 'file' | 'folder'; id: number | string; name: string } | null>(null);
+  const [permissionsTarget, setPermissionsTarget] = useState<{ name: string; permissions: string } | null>(null);
 
   // Form Data for New Folder
   const [newFolderName, setNewFolderName] = useState('');
   const [newFolderCategory, setNewFolderCategory] = useState('Geral');
-  const [newFolderIcon, setNewFolderIcon] = useState('folder');
-  const [newFolderColor, setNewFolderColor] = useState('text-amber-500');
 
   // Form Data for Rename
   const [renameValue, setRenameValue] = useState('');
-  const [renameDescValue, setRenameDescValue] = useState('');
 
   // Form Data for Upload
   const [formData, setFormData] = useState({
@@ -222,7 +253,7 @@ export const GEDView: React.FC = () => {
       setProjects(projectsData);
       setClients(clientsData);
       if (showToastFeedback) {
-        showToast('success', 'Repositório Atualizado', 'Gestor de ficheiros sincronizado com o Storage Neon.');
+        showToast('success', 'Repositório Atualizado', 'Ficheiros e diretórios sincronizados.');
       }
     } catch (err: any) {
       console.error('Erro ao carregar dados do GED:', err);
@@ -236,13 +267,164 @@ export const GEDView: React.FC = () => {
     loadAllData();
   }, []);
 
-  // Helper to determine which folder a document belongs to
+  // Sync Path Input display
+  useEffect(() => {
+    if (currentPath === '/') {
+      setPathInputText('/home/lecasu-storage');
+    } else if (currentPath === '/trash') {
+      setPathInputText('/home/lecasu-storage/.trash');
+    } else if (currentPath === '/google-drive') {
+      setPathInputText('/cloud/google-drive');
+    } else if (currentPath === '/onedrive') {
+      setPathInputText('/cloud/onedrive');
+    } else {
+      setPathInputText(`/home/lecasu-storage${currentPath}`);
+    }
+  }, [currentPath]);
+
+  // Fetch Google Drive Files In-Place
+  const fetchGoogleDriveFiles = async (token: string) => {
+    setIsGdriveLoading(true);
+    try {
+      const q = "trashed = false and mimeType != 'application/vnd.google-apps.folder'";
+      const url = `https://www.googleapis.com/drive/v3/files?pageSize=50&fields=files(id,name,mimeType,size,modifiedTime,thumbnailLink,iconLink)&q=${encodeURIComponent(q)}&orderBy=modifiedTime desc`;
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          removeStoredGoogleToken();
+          setGoogleToken(null);
+          showToast('error', 'Sessão Google Expirada', 'Por favor, autentique novamente a conta Google.');
+          return;
+        }
+        throw new Error(`Google API: ${res.statusText}`);
+      }
+
+      const data = await res.json();
+      setGdriveFiles(data.files || []);
+    } catch (err: any) {
+      console.error('Erro Google Drive:', err);
+      showToast('error', 'Google Drive', err.message || 'Erro ao listar arquivos do Google Drive.');
+    } finally {
+      setIsGdriveLoading(false);
+    }
+  };
+
+  // Google OAuth In-Place Connect
+  const handleConnectGoogleInPlace = () => {
+    if (!(window as any).google?.accounts?.oauth2) {
+      showToast('error', 'Google OAuth', 'O serviço Google Identity ainda está a inicializar. Tente em 3 segundos.');
+      return;
+    }
+
+    try {
+      setIsGdriveAuthenticating(true);
+      const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_CLIENT_ID,
+        scope: SCOPES,
+        callback: async (resp: any) => {
+          setIsGdriveAuthenticating(false);
+          if (resp.error) {
+            showToast('error', 'Erro Google', 'Não foi possível autenticar a conta Google.');
+            return;
+          }
+          if (resp.access_token) {
+            setStoredGoogleToken(resp.access_token, resp.expires_in);
+            setGoogleToken(resp.access_token);
+            showToast('success', 'Google Drive Conectado', 'Acesso autorizado aos ficheiros da cloud.');
+            await fetchGoogleDriveFiles(resp.access_token);
+          }
+        },
+        error_callback: (err: any) => {
+          setIsGdriveAuthenticating(false);
+          console.error('Google Token Client Error:', err);
+          showToast('error', 'Autenticação Cancelada', 'Janela de login fechada ou bloqueada.');
+        }
+      });
+
+      tokenClient.requestAccessToken({ prompt: '' });
+    } catch (err: any) {
+      setIsGdriveAuthenticating(false);
+      showToast('error', 'Erro de Inicialização', err.message || 'Erro ao inicializar Google Auth.');
+    }
+  };
+
+  useEffect(() => {
+    if (currentPath === '/google-drive') {
+      const stored = getStoredGoogleToken();
+      if (stored) {
+        setGoogleToken(stored);
+        fetchGoogleDriveFiles(stored);
+      }
+    }
+  }, [currentPath]);
+
+  // Import Google Drive file to Neon S3
+  const handleImportGDriveFile = async (driveFile: GoogleDriveFile) => {
+    if (!googleToken) {
+      handleConnectGoogleInPlace();
+      return;
+    }
+    setGdriveImportingId(driveFile.id);
+    try {
+      let downloadUrl = `https://www.googleapis.com/drive/v3/files/${driveFile.id}?alt=media`;
+      let finalName = driveFile.name;
+      let finalMime = driveFile.mimeType;
+
+      if (driveFile.mimeType === 'application/vnd.google-apps.document') {
+        downloadUrl = `https://www.googleapis.com/drive/v3/files/${driveFile.id}/export?mimeType=application/pdf`;
+        finalMime = 'application/pdf';
+        if (!finalName.toLowerCase().endsWith('.pdf')) finalName = `${finalName}.pdf`;
+      } else if (driveFile.mimeType === 'application/vnd.google-apps.spreadsheet') {
+        downloadUrl = `https://www.googleapis.com/drive/v3/files/${driveFile.id}/export?mimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`;
+        finalMime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        if (!finalName.toLowerCase().endsWith('.xlsx')) finalName = `${finalName}.xlsx`;
+      } else if (driveFile.mimeType === 'application/vnd.google-apps.presentation') {
+        downloadUrl = `https://www.googleapis.com/drive/v3/files/${driveFile.id}/export?mimeType=application/pdf`;
+        finalMime = 'application/pdf';
+        if (!finalName.toLowerCase().endsWith('.pdf')) finalName = `${finalName}.pdf`;
+      }
+
+      const fileRes = await fetch(downloadUrl, {
+        headers: { Authorization: `Bearer ${googleToken}` }
+      });
+
+      if (!fileRes.ok) {
+        throw new Error(`Erro ao baixar da Google (${fileRes.status}): ${fileRes.statusText}`);
+      }
+
+      const blob = await fileRes.blob();
+      const fileObj = new File([blob], finalName, { type: finalMime });
+
+      const data = new FormData();
+      data.append('file', fileObj);
+      data.append('title', driveFile.name.substring(0, driveFile.name.lastIndexOf('.')) || driveFile.name);
+      data.append('category', 'Projetos Técnicos');
+      data.append('version', 'v1.0');
+
+      await uploadDocument(data);
+      showToast('success', 'Ficheiro Importado', `"${finalName}" sincronizado para o Neon S3.`);
+      loadAllData();
+    } catch (err: any) {
+      console.error(err);
+      showToast('error', 'Falha na Importação', err.message || 'Erro ao sincronizar ficheiro.');
+    } finally {
+      setGdriveImportingId(null);
+    }
+  };
+
+
+
+  // Helper: Categorize document into folder
   const getDocumentFolderId = (doc: GEDDocument): string => {
     const ext = doc.file_name.split('.').pop()?.toLowerCase() || '';
     const cat = (doc.category || '').toLowerCase();
 
-    // Check custom folders first
-    const customMatch = folders.find(f => f.category.toLowerCase() === cat || f.name.toLowerCase() === cat);
+    const customMatch = folders.find(f => f.category.toLowerCase() === cat || f.name.toLowerCase() === cat || f.id.toLowerCase() === cat);
     if (customMatch) return customMatch.id;
 
     if (ext === 'pdf' || doc.mime_type?.includes('pdf')) return 'pdf';
@@ -274,23 +456,13 @@ export const GEDView: React.FC = () => {
     return folders.filter(f => trashedFolderIds.includes(f.id));
   }, [folders, trashedFolderIds]);
 
-  // Counts per folder
-  const folderCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    activeFolders.forEach(f => {
-      counts[f.id] = 0;
-    });
-    activeDocuments.forEach(doc => {
-      const folderId = getDocumentFolderId(doc);
-      counts[folderId] = (counts[folderId] || 0) + 1;
-    });
-    return counts;
-  }, [activeDocuments, activeFolders]);
-
   // Documents in current path
   const currentFolderDocuments = useMemo(() => {
     if (currentPath === '/trash') {
       return trashedDocuments;
+    }
+    if (currentPath === '/google-drive' || currentPath === '/onedrive') {
+      return [];
     }
 
     let docs = activeDocuments;
@@ -303,8 +475,7 @@ export const GEDView: React.FC = () => {
       const term = searchTerm.toLowerCase();
       docs = docs.filter(doc => 
         doc.title.toLowerCase().includes(term) ||
-        doc.file_name.toLowerCase().includes(term) ||
-        (doc.description && doc.description.toLowerCase().includes(term))
+        doc.file_name.toLowerCase().includes(term)
       );
     }
 
@@ -320,6 +491,8 @@ export const GEDView: React.FC = () => {
     setHistoryIndex(newHistory.length - 1);
     setCurrentPath(path);
     setSelectedDocIds([]);
+    setSelectedFolderIds([]);
+    setSelectedGDriveFileIds([]);
   };
 
   const handleGoBack = () => {
@@ -327,6 +500,8 @@ export const GEDView: React.FC = () => {
       setHistoryIndex(historyIndex - 1);
       setCurrentPath(history[historyIndex - 1]);
       setSelectedDocIds([]);
+      setSelectedFolderIds([]);
+      setSelectedGDriveFileIds([]);
     }
   };
 
@@ -335,6 +510,8 @@ export const GEDView: React.FC = () => {
       setHistoryIndex(historyIndex + 1);
       setCurrentPath(history[historyIndex + 1]);
       setSelectedDocIds([]);
+      setSelectedFolderIds([]);
+      setSelectedGDriveFileIds([]);
     }
   };
 
@@ -344,34 +521,76 @@ export const GEDView: React.FC = () => {
     }
   };
 
-  // Selection
+  const handlePathInputSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = pathInputText.trim().toLowerCase();
+    if (clean.includes('trash') || clean.includes('lixeira')) {
+      navigateTo('/trash');
+    } else if (clean.includes('google')) {
+      navigateTo('/google-drive');
+    } else if (clean.includes('one') || clean.includes('onedrive')) {
+      navigateTo('/onedrive');
+    } else {
+      const matchingFolder = activeFolders.find(f => clean.endsWith(f.name.toLowerCase()) || clean.endsWith(f.id.toLowerCase()));
+      if (matchingFolder) {
+        navigateTo(matchingFolder.path);
+      } else {
+        navigateTo('/');
+      }
+    }
+  };
+
+  // Selection Logic
   const handleSelectAll = () => {
-    setSelectedDocIds(currentFolderDocuments.map(d => d.id));
-    if (currentPath === '/') {
+    if (currentPath === '/google-drive') {
+      setSelectedGDriveFileIds(gdriveFiles.map(f => f.id));
+    } else if (currentPath === '/') {
       setSelectedFolderIds(activeFolders.map(f => f.id));
     } else if (currentPath === '/trash') {
       setSelectedFolderIds(trashedFolders.map(f => f.id));
+      setSelectedDocIds(trashedDocuments.map(d => d.id));
+    } else {
+      setSelectedDocIds(currentFolderDocuments.map(d => d.id));
     }
   };
 
   const handleDeselectAll = () => {
     setSelectedDocIds([]);
     setSelectedFolderIds([]);
+    setSelectedGDriveFileIds([]);
   };
 
   const toggleSelectDoc = (id: number) => {
     setSelectedDocIds(prev => 
       prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
     );
+    setSelectedFolderIds([]);
+    setSelectedGDriveFileIds([]);
   };
 
   const toggleSelectFolder = (id: string) => {
     setSelectedFolderIds(prev => 
       prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
     );
+    setSelectedDocIds([]);
+    setSelectedGDriveFileIds([]);
   };
 
-  // File Upload
+  const toggleSelectGDriveFile = (id: string) => {
+    setSelectedGDriveFileIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+    setSelectedDocIds([]);
+    setSelectedFolderIds([]);
+  };
+
+  // Check currently selected single item for Top Toolbar Actions
+  const selectedSingleDoc = selectedDocIds.length === 1 ? currentFolderDocuments.find(d => d.id === selectedDocIds[0]) || trashedDocuments.find(d => d.id === selectedDocIds[0]) : null;
+  const selectedSingleFolder = selectedFolderIds.length === 1 ? activeFolders.find(f => f.id === selectedFolderIds[0]) || trashedFolders.find(f => f.id === selectedFolderIds[0]) : null;
+  const selectedSingleGDrive = selectedGDriveFileIds.length === 1 ? gdriveFiles.find(f => f.id === selectedGDriveFileIds[0]) : null;
+  const hasSelection = selectedDocIds.length > 0 || selectedFolderIds.length > 0 || selectedGDriveFileIds.length > 0;
+
+  // File Upload Handlers
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -401,12 +620,11 @@ export const GEDView: React.FC = () => {
       data.append('title', formData.title.trim());
       data.append('category', formData.category);
       data.append('version', formData.version || 'v1.0');
-      if (formData.description) data.append('description', formData.description.trim());
       if (formData.project_id) data.append('project_id', formData.project_id);
       if (formData.client_id) data.append('client_id', formData.client_id);
 
       await uploadDocument(data);
-      showToast('success', 'Ficheiro Arquivado!', `"${formData.title}" foi enviado com sucesso para o Neon S3.`);
+      showToast('success', 'Ficheiro Carregado', `"${formData.title}" enviado para o Storage.`);
       setIsUploadModalOpen(false);
       setSelectedFile(null);
       setFormData({
@@ -427,35 +645,37 @@ export const GEDView: React.FC = () => {
     }
   };
 
-  // Create Folder
+  // Create Folder Handler
   const handleCreateFolder = (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanName = newFolderName.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+    const cleanName = newFolderName.trim().replace(/[^a-zA-Z0-9_-]/g, '_');
     if (!cleanName) {
       showToast('error', 'Nome Inválido', 'Insira um nome válido para a pasta.');
       return;
     }
 
-    if (folders.some(f => f.name.toLowerCase() === cleanName && !trashedFolderIds.includes(f.id))) {
+    const formattedCapName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
+
+    if (folders.some(f => f.name.toLowerCase() === formattedCapName.toLowerCase() && !trashedFolderIds.includes(f.id))) {
       showToast('error', 'Pasta Existente', 'Já existe uma pasta com este nome.');
       return;
     }
 
     const newFolder: CustomFolder = {
-      id: cleanName,
-      name: cleanName,
-      path: `/${cleanName}`,
+      id: cleanName.toLowerCase(),
+      name: formattedCapName,
+      path: `/${cleanName.toLowerCase()}`,
       category: newFolderCategory,
-      iconType: newFolderIcon,
-      color: newFolderColor,
-      description: `Pasta personalizada criada para ${newFolderCategory}`,
-      createdAt: new Date().toISOString()
+      iconType: 'folder',
+      color: 'text-amber-500',
+      permissions: '0755',
+      createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16)
     };
 
     setFolders(prev => [...prev, newFolder]);
     setIsNewFolderModalOpen(false);
     setNewFolderName('');
-    showToast('success', 'Pasta Criada', `Pasta "/${cleanName}" pronta para receber ficheiros.`);
+    showToast('success', 'Pasta Criada', `Pasta "${formattedCapName}" criada com sucesso.`);
   };
 
   // Move to Trash (Soft Delete)
@@ -469,11 +689,12 @@ export const GEDView: React.FC = () => {
       const docId = itemToDelete.id as number;
       setTrashedDocIds(prev => [...prev, docId]);
       setSelectedDocIds(prev => prev.filter(id => id !== docId));
-      showToast('info', 'Ficheiro movido para a Lixeira', `"${itemToDelete.name}" foi movido. Pode restaurá-lo a qualquer momento.`);
+      showToast('info', 'Movido para a Lixeira', `"${itemToDelete.name}" foi movido.`);
     } else {
       const folderId = itemToDelete.id as string;
       setTrashedFolderIds(prev => [...prev, folderId]);
-      showToast('info', 'Pasta movida para a Lixeira', `A pasta "${itemToDelete.name}" foi movida para a lixeira.`);
+      setSelectedFolderIds(prev => prev.filter(id => id !== folderId));
+      showToast('info', 'Pasta na Lixeira', `A pasta "${itemToDelete.name}" foi movida para a lixeira.`);
       if (currentPath === `/${folderId}`) {
         navigateTo('/');
       }
@@ -486,11 +707,11 @@ export const GEDView: React.FC = () => {
     if (item.type === 'file') {
       const docId = item.id as number;
       setTrashedDocIds(prev => prev.filter(id => id !== docId));
-      showToast('success', 'Ficheiro Restaurado', `"${item.name}" foi recuperado com sucesso.`);
+      showToast('success', 'Restaurado', `"${item.name}" foi recuperado.`);
     } else {
       const folderId = item.id as string;
       setTrashedFolderIds(prev => prev.filter(id => id !== folderId));
-      showToast('success', 'Pasta Restaurada', `A pasta "${item.name}" foi recuperada.`);
+      showToast('success', 'Pasta Restaurada', `"${item.name}" foi recuperada.`);
     }
   };
 
@@ -507,7 +728,7 @@ export const GEDView: React.FC = () => {
         await deleteDocument(docId);
         setDocuments(prev => prev.filter(d => d.id !== docId));
         setTrashedDocIds(prev => prev.filter(id => id !== docId));
-        showToast('success', 'Ficheiro Eliminado Definitivamente', `"${itemToPermanentDelete.name}" foi apagado do S3 e da base de dados.`);
+        showToast('success', 'Eliminado Definitivamente', `"${itemToPermanentDelete.name}" foi apagado.`);
       } catch (err: any) {
         showToast('error', 'Erro ao Eliminar', err.message || 'Falha ao excluir arquivo.');
       }
@@ -515,7 +736,7 @@ export const GEDView: React.FC = () => {
       const folderId = itemToPermanentDelete.id as string;
       setFolders(prev => prev.filter(f => f.id !== folderId));
       setTrashedFolderIds(prev => prev.filter(id => id !== folderId));
-      showToast('success', 'Pasta Eliminada Definitivamente', `A pasta "${itemToPermanentDelete.name}" foi excluída.`);
+      showToast('success', 'Pasta Eliminada', `A pasta "${itemToPermanentDelete.name}" foi excluída.`);
     }
     setItemToPermanentDelete(null);
   };
@@ -531,7 +752,7 @@ export const GEDView: React.FC = () => {
       setTrashedDocIds([]);
       setTrashedFolderIds([]);
       setIsEmptyTrashModalOpen(false);
-      showToast('success', 'Lixeira Esvaziada', 'Todos os ficheiros e pastas da lixeira foram permanentemente eliminados.');
+      showToast('success', 'Lixeira Esvaziada', 'Todos os ficheiros da lixeira foram permanentemente eliminados.');
       loadAllData();
     } catch (err: any) {
       showToast('error', 'Erro ao Esvaziar', err.message || 'Falha ao esvaziar lixeira.');
@@ -539,10 +760,9 @@ export const GEDView: React.FC = () => {
   };
 
   // Rename
-  const handleOpenRename = (item: { type: 'file' | 'folder'; id: number | string; name: string; description?: string }) => {
+  const handleOpenRename = (item: { type: 'file' | 'folder'; id: number | string; name: string }) => {
     setRenameTarget(item);
     setRenameValue(item.name);
-    setRenameDescValue(item.description || '');
     setIsRenameModalOpen(true);
   };
 
@@ -554,554 +774,636 @@ export const GEDView: React.FC = () => {
       const docId = renameTarget.id as number;
       try {
         await updateDocument(docId, {
-          title: renameValue.trim(),
-          description: renameDescValue.trim()
+          title: renameValue.trim()
         });
-        setDocuments(prev => prev.map(d => d.id === docId ? { ...d, title: renameValue.trim(), description: renameDescValue.trim() } : d));
-        showToast('success', 'Ficheiro Renomeado', `"${renameValue}" atualizado com sucesso.`);
+        setDocuments(prev => prev.map(d => d.id === docId ? { ...d, title: renameValue.trim() } : d));
+        showToast('success', 'Ficheiro Renomeado', `"${renameValue}" atualizado.`);
         setIsRenameModalOpen(false);
       } catch (err: any) {
-        showToast('error', 'Erro ao Renomear', err.message || 'Falha ao atualizar nome do ficheiro.');
+        showToast('error', 'Erro ao Renomear', err.message || 'Falha ao atualizar nome.');
       }
     } else {
       const folderId = renameTarget.id as string;
-      const cleanName = renameValue.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
-      setFolders(prev => prev.map(f => f.id === folderId ? { ...f, name: cleanName, description: renameDescValue.trim() } : f));
-      showToast('success', 'Pasta Renomeada', `Pasta atualizada para "${cleanName}".`);
+      const formatted = renameValue.trim().charAt(0).toUpperCase() + renameValue.trim().slice(1);
+      setFolders(prev => prev.map(f => f.id === folderId ? { ...f, name: formatted } : f));
+      showToast('success', 'Pasta Renomeada', `Pasta atualizada para "${formatted}".`);
       setIsRenameModalOpen(false);
     }
   };
 
-  // Download
-  const handleDownload = async (doc: GEDDocument) => {
-    try {
-      await downloadDocument(doc.id, doc.file_name);
-    } catch (err: any) {
-      console.error('Erro ao descarregar documento:', err);
-      showToast('error', 'Erro no Download', 'Não foi possível descarregar o arquivo.');
+  // Top Toolbar Action Handlers for Selected Item
+  const handleToolbarDownload = () => {
+    if (selectedSingleDoc) {
+      downloadDocument(selectedSingleDoc.id, selectedSingleDoc.file_name).catch(() => {
+        showToast('error', 'Erro no Download', 'Não foi possível descarregar o arquivo.');
+      });
+    } else if (selectedSingleGDrive) {
+      handleImportGDriveFile(selectedSingleGDrive);
     }
   };
 
-  // Folder Icon with Category Corner Badge (cPanel-style)
-  const renderFolderWithBadge = (iconType: string, folderSize = "w-5 h-5", badgeSize = "w-2.5 h-2.5") => {
-    return (
-      <div className="relative inline-flex items-center justify-center shrink-0">
-        <Folder className={`${folderSize} text-amber-500 fill-amber-400/20 shrink-0`} />
-        {iconType === 'pdf' && (
-          <span className="absolute -bottom-1 -right-1 bg-rose-500 text-white rounded-full p-[1.5px] ring-1 ring-white shadow-2xs" title="Documentos PDF">
-            <FileText className={badgeSize} />
-          </span>
-        )}
-        {iconType === 'excel' && (
-          <span className="absolute -bottom-1 -right-1 bg-emerald-600 text-white rounded-full p-[1.5px] ring-1 ring-white shadow-2xs" title="Folhas de Cálculo Excel">
-            <FileSpreadsheet className={badgeSize} />
-          </span>
-        )}
-        {iconType === 'word' && (
-          <span className="absolute -bottom-1 -right-1 bg-blue-600 text-white rounded-full p-[1.5px] ring-1 ring-white shadow-2xs" title="Documentos Word">
-            <FileText className={badgeSize} />
-          </span>
-        )}
-        {iconType === 'image' && (
-          <span className="absolute -bottom-1 -right-1 bg-indigo-500 text-white rounded-full p-[1.5px] ring-1 ring-white shadow-2xs" title="Imagens & Fotografias">
-            <FileImage className={badgeSize} />
-          </span>
-        )}
-        {iconType === 'cad' && (
-          <span className="absolute -bottom-1 -right-1 bg-purple-600 text-white rounded-full p-[1.5px] ring-1 ring-white shadow-2xs" title="Projetos CAD & DWG">
-            <Compass className={badgeSize} />
-          </span>
-        )}
-        {iconType === 'contract' && (
-          <span className="absolute -bottom-1 -right-1 bg-cyan-600 text-white rounded-full p-[1.5px] ring-1 ring-white shadow-2xs" title="Contratos & Jurídico">
-            <FileCheck2 className={badgeSize} />
-          </span>
-        )}
-        {iconType === 'rh' && (
-          <span className="absolute -bottom-1 -right-1 bg-teal-600 text-white rounded-full p-[1.5px] ring-1 ring-white shadow-2xs" title="RH & Pessoal">
-            <Users className={badgeSize} />
-          </span>
-        )}
-        {iconType === 'brand' && (
-          <span className="absolute -bottom-1 -right-1 bg-amber-500 text-white rounded-full p-[1.5px] ring-1 ring-white shadow-2xs" title="Logotipos & Marcas">
-            <Sparkles className={badgeSize} />
-          </span>
-        )}
-        {iconType === 'google_drive' && (
-          <span className="absolute -bottom-1 -right-1 bg-white rounded-full p-[1.5px] ring-1 ring-neutral-300 shadow-2xs" title="Google Drive">
-            <svg className={badgeSize} viewBox="0 0 87.3 78" fill="none">
-              <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.9 2.5 3.2 3.3l16.3-28.2H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066DA"/>
-              <path d="M43.65 25 29.8 1c-1.3.8-2.4 1.9-3.2 3.3L1.2 48.2c-.8 1.4-1.2 2.95-1.2 4.5h29.95z" fill="#00AC47"/>
-              <path d="m73.55 76.8c1.3-.8 2.4-1.9 3.2-3.3l1.6-2.75 7.75-13.45c.8-1.4 1.2-2.95 1.2-4.5H57.35l6.55 11.35z" fill="#EA4335"/>
-              <path d="M43.65 25 57.5 1c-1.3-.8-2.4-1.9-3.2-3.3H33c-1.55 0-3.1.4-4.5 1.2z" fill="#00832D"/>
-              <path d="M87.3 48.2 72.8 23.05c-.8-1.4-1.9-2.5-3.2-3.3L57.5 44.9h29.8z" fill="#FFBA00"/>
-              <path d="M57.35 44.9H27.45L13.65 68.8c.8 1.4 1.9 2.5 3.2 3.3h53.7c1.55 0 3.1-.4 4.5-1.2z" fill="#2684FC"/>
-            </svg>
-          </span>
-        )}
-      </div>
-    );
+  const handleToolbarDelete = () => {
+    if (currentPath === '/trash') {
+      if (selectedSingleDoc) {
+        handlePermanentDelete({ type: 'file', id: selectedSingleDoc.id, name: selectedSingleDoc.title });
+      } else if (selectedSingleFolder) {
+        handlePermanentDelete({ type: 'folder', id: selectedSingleFolder.id, name: selectedSingleFolder.name });
+      }
+    } else {
+      if (selectedSingleDoc) {
+        handleMoveToTrash({ type: 'file', id: selectedSingleDoc.id, name: selectedSingleDoc.title });
+      } else if (selectedSingleFolder) {
+        handleMoveToTrash({ type: 'folder', id: selectedSingleFolder.id, name: selectedSingleFolder.name });
+      }
+    }
   };
 
-  // File type icons
-  const getFileIcon = (fileName: string, mimeType?: string | null, size = "w-5 h-5") => {
+  const handleToolbarRestore = () => {
+    if (selectedSingleDoc) {
+      handleRestoreItem({ type: 'file', id: selectedSingleDoc.id, name: selectedSingleDoc.title });
+    } else if (selectedSingleFolder) {
+      handleRestoreItem({ type: 'folder', id: selectedSingleFolder.id, name: selectedSingleFolder.name });
+    }
+  };
+
+  const handleToolbarRename = () => {
+    if (selectedSingleDoc) {
+      handleOpenRename({ type: 'file', id: selectedSingleDoc.id, name: selectedSingleDoc.title });
+    } else if (selectedSingleFolder) {
+      handleOpenRename({ type: 'folder', id: selectedSingleFolder.id, name: selectedSingleFolder.name });
+    }
+  };
+
+  const handleToolbarPermissions = () => {
+    if (selectedSingleFolder) {
+      setPermissionsTarget({ name: selectedSingleFolder.name, permissions: selectedSingleFolder.permissions || '0755' });
+      setIsPermissionsModalOpen(true);
+    } else if (selectedSingleDoc) {
+      setPermissionsTarget({ name: selectedSingleDoc.title, permissions: '0644' });
+      setIsPermissionsModalOpen(true);
+    }
+  };
+
+  const handleToolbarView = () => {
+    if (selectedSingleDoc) {
+      window.open(`/api/v1/ged/documents/${selectedSingleDoc.id}/download`, '_blank');
+    }
+  };
+
+  // Folder Icon rendering
+  const renderFolderIcon = (iconType: string, className = "w-4 h-4 text-amber-500") => {
+    if (iconType === 'mail') return <Mail className="w-4 h-4 text-blue-600" />;
+    if (iconType === 'web') return <Globe className="w-4 h-4 text-sky-500" />;
+    if (iconType === 'pdf') return <Folder className={`${className} fill-amber-400/20`} />;
+    if (iconType === 'excel') return <Folder className={`${className} fill-amber-400/20`} />;
+    if (iconType === 'word') return <Folder className={`${className} fill-amber-400/20`} />;
+    if (iconType === 'image') return <Folder className={`${className} fill-amber-400/20`} />;
+    if (iconType === 'cad') return <Folder className={`${className} fill-amber-400/20`} />;
+    if (iconType === 'contract') return <Folder className={`${className} fill-amber-400/20`} />;
+    if (iconType === 'rh') return <Folder className={`${className} fill-amber-400/20`} />;
+    return <Folder className={`${className} fill-amber-400/20`} />;
+  };
+
+  // File Icon
+  const getFileRowIcon = (fileName: string, mimeType?: string | null) => {
     const ext = fileName.split('.').pop()?.toLowerCase() || '';
-    if (ext === 'pdf' || mimeType?.includes('pdf')) {
-      return <FileText className={`${size} text-rose-500 flex-shrink-0`} />;
-    }
-    if (['png', 'jpg', 'jpeg', 'svg', 'webp', 'gif'].includes(ext) || mimeType?.includes('image')) {
-      return <FileImage className={`${size} text-blue-500 flex-shrink-0`} />;
-    }
-    if (['xlsx', 'xls', 'csv'].includes(ext) || mimeType?.includes('spreadsheet') || mimeType?.includes('excel')) {
-      return <FileSpreadsheet className={`${size} text-emerald-500 flex-shrink-0`} />;
-    }
-    if (['doc', 'docx'].includes(ext) || mimeType?.includes('word')) {
-      return <FileText className={`${size} text-blue-600 flex-shrink-0`} />;
-    }
-    if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext) || mimeType?.includes('zip')) {
-      return <FileArchive className={`${size} text-amber-500 flex-shrink-0`} />;
-    }
-    if (['js', 'ts', 'py', 'json', 'html', 'css', 'sql'].includes(ext)) {
-      return <FileCode className={`${size} text-purple-500 flex-shrink-0`} />;
-    }
-    if (['dwg', 'dxf'].includes(ext)) {
-      return <Compass className={`${size} text-purple-600 flex-shrink-0`} />;
-    }
-    return <FileIcon className={`${size} text-slate-500 flex-shrink-0`} />;
+    if (ext === 'pdf' || mimeType?.includes('pdf')) return <FileText className="w-4 h-4 text-rose-500 shrink-0" />;
+    if (['png', 'jpg', 'jpeg', 'svg', 'webp', 'gif'].includes(ext) || mimeType?.includes('image')) return <FileImage className="w-4 h-4 text-blue-500 shrink-0" />;
+    if (['xlsx', 'xls', 'csv'].includes(ext) || mimeType?.includes('spreadsheet')) return <FileSpreadsheet className="w-4 h-4 text-emerald-500 shrink-0" />;
+    if (['doc', 'docx'].includes(ext) || mimeType?.includes('word')) return <FileText className="w-4 h-4 text-blue-600 shrink-0" />;
+    if (['zip', 'rar', 'tar', 'gz', '7z'].includes(ext) || mimeType?.includes('zip')) return <FileArchive className="w-4 h-4 text-amber-600 shrink-0" />;
+    if (['js', 'ts', 'py', 'json', 'html', 'css', 'sql'].includes(ext)) return <FileCode className="w-4 h-4 text-purple-500 shrink-0" />;
+    if (['dwg', 'dxf'].includes(ext)) return <Compass className="w-4 h-4 text-purple-600 shrink-0" />;
+    return <FileIcon className="w-4 h-4 text-slate-500 shrink-0" />;
   };
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  // cPanel Size Formatting
+  const formatCPanelSize = (bytes?: number): string => {
+    if (!bytes || bytes === 0) return '0 de bytes';
+    if (bytes < 1024) return `${bytes} de bytes`;
+    if (bytes < 1024 * 1024) {
+      const kb = (bytes / 1024).toFixed(2).replace('.', ',');
+      return `${kb} KB`;
+    }
+    if (bytes < 1024 * 1024 * 1024) {
+      const mb = (bytes / (1024 * 1024)).toFixed(2).replace('.', ',');
+      return `${mb} MB`;
+    }
+    const gb = (bytes / (1024 * 1024 * 1024)).toFixed(2).replace('.', ',');
+    return `${gb} GB`;
   };
 
-  const getFormatName = (fileName: string, mimeType?: string | null): string => {
+  // cPanel MIME / Type Formatting
+  const getCPanelType = (fileName: string, mimeType?: string | null, isDir = false): string => {
+    if (isDir) return 'httpd/unix-directory';
     const ext = fileName.split('.').pop()?.toLowerCase() || '';
-    if (ext === 'pdf') return 'Documento PDF';
-    if (ext === 'png') return 'Imagem PNG';
-    if (['jpg', 'jpeg'].includes(ext)) return 'Fotografia JPEG';
-    if (['doc', 'docx'].includes(ext)) return 'Documento Word';
-    if (['xlsx', 'xls'].includes(ext)) return 'Folha de Cálculo Excel';
-    if (ext === 'csv') return 'Tabela CSV';
-    if (['dwg', 'dxf'].includes(ext)) return 'Projeto CAD (AutoCAD)';
-    if (['zip', 'rar', '7z'].includes(ext)) return 'Arquivo Comprimido';
-    return mimeType || 'Ficheiro Binário';
+    if (ext === 'pdf' || mimeType?.includes('pdf')) return 'application/pdf';
+    if (['png', 'jpg', 'jpeg', 'svg', 'webp', 'gif'].includes(ext) || mimeType?.includes('image')) return `image/${ext || 'jpeg'}`;
+    if (['xlsx', 'xls'].includes(ext) || mimeType?.includes('spreadsheet')) return 'application/vnd.ms-excel';
+    if (['doc', 'docx'].includes(ext) || mimeType?.includes('word')) return 'application/msword';
+    if (['zip', 'rar', 'tar', 'gz', '7z'].includes(ext)) return 'package/x-generic';
+    if (ext === 'mail' || ext === 'msg') return 'mail';
+    if (ext === 'html' || ext === 'htm') return 'publichtml';
+    if (['dwg', 'dxf'].includes(ext)) return 'application/acad';
+    return mimeType || 'application/octet-stream';
   };
 
-  const isGoogleConnected = !!getStoredGoogleToken();
+  // cPanel Date Formatting
+  const formatCPanelDate = (dateStr?: string | null): string => {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    
+    const now = new Date();
+    const isToday = d.toDateString() === now.toDateString();
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const isYesterday = d.toDateString() === yesterday.toDateString();
+
+    const timeStr = d.toLocaleTimeString('pt-MZ', { hour: '2-digit', minute: '2-digit' });
+
+    if (isToday) return `Hoje ${timeStr}`;
+    if (isYesterday) return `Ontem ${timeStr}`;
+
+    return d.toLocaleDateString('pt-MZ', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   const trashTotalCount = trashedDocuments.length + trashedFolders.length;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-112px)] min-h-[580px] font-sans select-none gap-3">
+    <div className="flex flex-col h-[calc(100vh-112px)] min-h-[580px] font-sans select-none gap-2">
       <Toast 
         toasts={toasts} 
         onDismiss={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} 
       />
 
       {/* =========================================================================
-          1. BARRA SUPERIOR DE FERRAMENTAS DO GESTOR DE FICHEIROS (cPanel-Style Toolbar)
+          1. TOP ACTION TOOLBAR (Image 3 Style: File Manager Top Actions Bar)
          ========================================================================= */}
-      <div className="bg-white border border-[#E2E2DE] rounded-xl px-3 py-2 shadow-2xs flex items-center justify-between gap-3 shrink-0 overflow-x-auto scrollbar-none">
+      <div className="bg-[#2B303A] text-white border-b border-[#1E222A] rounded-t-lg px-2 py-1.5 shadow-xs flex items-center gap-1 shrink-0 overflow-x-auto scrollbar-none text-[12px]">
         
-        {/* Bloco 1: Navegação Histórica */}
-        <div className="flex items-center gap-1 shrink-0 flex-nowrap">
+        {/* + Arquivo */}
+        <button
+          type="button"
+          onClick={() => setIsUploadModalOpen(true)}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded hover:bg-white/10 transition cursor-pointer text-slate-100 active:scale-95"
+          title="Criar / Carregar Novo Ficheiro"
+        >
+          <Plus size={14} className="text-white font-bold" />
+          <span className="font-semibold">Arquivo</span>
+        </button>
+
+        {/* + Pasta */}
+        <button
+          type="button"
+          onClick={() => setIsNewFolderModalOpen(true)}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded hover:bg-white/10 transition cursor-pointer text-slate-100 active:scale-95"
+          title="Criar Nova Pasta"
+        >
+          <Plus size={14} className="text-white font-bold" />
+          <span className="font-semibold">Pasta</span>
+        </button>
+
+        <div className="h-4 w-px bg-white/20 mx-1 shrink-0" />
+
+        {/* Copiar */}
+        <button
+          type="button"
+          disabled={!hasSelection}
+          onClick={() => showToast('info', 'Área de Transferência', 'Elemento copiado para a memória.')}
+          className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-white/10 transition cursor-pointer text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
+          title="Copiar"
+        >
+          <Copy size={13} />
+          <span>Copiar</span>
+        </button>
+
+        {/* Mover */}
+        <button
+          type="button"
+          disabled={!hasSelection}
+          onClick={() => showToast('info', 'Mover Ficheiro', 'Selecione a pasta de destino.')}
+          className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-white/10 transition cursor-pointer text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
+          title="Mover"
+        >
+          <Move size={13} />
+          <span>Mover</span>
+        </button>
+
+        {/* Carregar */}
+        <button
+          type="button"
+          onClick={() => setIsUploadModalOpen(true)}
+          className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-white/10 transition cursor-pointer text-slate-200"
+          title="Carregar ficheiro para esta pasta"
+        >
+          <UploadCloud size={13} />
+          <span>Carregar</span>
+        </button>
+
+        {/* Download */}
+        <button
+          type="button"
+          disabled={!selectedSingleDoc && !selectedSingleGDrive}
+          onClick={handleToolbarDownload}
+          className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-white/10 transition cursor-pointer text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
+          title="Descarregar ficheiro selecionado"
+        >
+          <Download size={13} />
+          <span>Download</span>
+        </button>
+
+        {/* Excluir */}
+        <button
+          type="button"
+          disabled={!hasSelection}
+          onClick={handleToolbarDelete}
+          className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-rose-500/30 text-rose-200 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          title="Excluir item selecionado"
+        >
+          <X size={14} className="text-rose-400 font-bold" />
+          <span>Excluir</span>
+        </button>
+
+        {/* Restaurar */}
+        {currentPath === '/trash' && (
           <button
             type="button"
-            onClick={handleGoBack}
-            disabled={historyIndex === 0}
-            className="btn-ghost btn-sm whitespace-nowrap shrink-0 flex items-center gap-1.5 text-neutral-700 disabled:opacity-35"
-            title="Voltar"
+            disabled={!hasSelection}
+            onClick={handleToolbarRestore}
+            className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-emerald-500/30 text-emerald-200 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Restaurar item selecionado"
           >
-            <ArrowLeft size={14} />
-            <span className="text-xs">Voltar</span>
+            <RotateCcw size={13} />
+            <span>Restaurar</span>
           </button>
+        )}
 
+        <div className="h-4 w-px bg-white/20 mx-1 shrink-0" />
+
+        {/* Renomear */}
+        <button
+          type="button"
+          disabled={!selectedSingleDoc && !selectedSingleFolder}
+          onClick={handleToolbarRename}
+          className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-white/10 transition cursor-pointer text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
+          title="Renomear item selecionado"
+        >
+          <Edit2 size={13} />
+          <span>Renomear</span>
+        </button>
+
+        {/* Editar */}
+        <button
+          type="button"
+          disabled={!selectedSingleDoc}
+          onClick={handleToolbarRename}
+          className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-white/10 transition cursor-pointer text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
+          title="Editar Ficheiro"
+        >
+          <Edit2 size={13} />
+          <span>Editar</span>
+        </button>
+
+        {/* Permissões */}
+        <button
+          type="button"
+          disabled={!selectedSingleDoc && !selectedSingleFolder}
+          onClick={handleToolbarPermissions}
+          className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-white/10 transition cursor-pointer text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
+          title="Alterar Permissões (chmod)"
+        >
+          <Key size={13} />
+          <span>Permissões</span>
+        </button>
+
+        {/* Visualizar */}
+        <button
+          type="button"
+          disabled={!selectedSingleDoc}
+          onClick={handleToolbarView}
+          className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-white/10 transition cursor-pointer text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
+          title="Visualizar Ficheiro"
+        >
+          <Eye size={13} />
+          <span>Visualizar</span>
+        </button>
+      </div>
+
+      {/* =========================================================================
+          2. SUB-TOOLBAR / NAVIGATION BAR (Image 1 Style)
+         ========================================================================= */}
+      <div className="bg-white border border-[#E2E2DE] px-3 py-1.5 rounded-b-lg shadow-2xs flex items-center justify-between gap-3 shrink-0 overflow-x-auto scrollbar-none text-[12px] text-sky-700">
+        
+        {/* Navigation Group */}
+        <div className="flex items-center gap-3 shrink-0 flex-nowrap">
+          
+          {/* Início */}
           <button
             type="button"
-            onClick={handleGoForward}
-            disabled={historyIndex >= history.length - 1}
-            className="btn-ghost btn-sm whitespace-nowrap shrink-0 flex items-center gap-1.5 text-neutral-700 disabled:opacity-35"
-            title="Avançar"
+            onClick={() => navigateTo('/')}
+            className="flex items-center gap-1 hover:text-sky-900 transition cursor-pointer"
+            title="Ir para o Início (/)"
           >
-            <ArrowRight size={14} />
-            <span className="text-xs">Avançar</span>
+            <Home size={14} className="text-sky-600" />
+            <span className="font-semibold">Início</span>
           </button>
 
+          {/* Subir Um Nível */}
           <button
             type="button"
             onClick={handleUpLevel}
             disabled={currentPath === '/'}
-            className="btn-ghost btn-sm whitespace-nowrap shrink-0 flex items-center gap-1.5 text-neutral-700 disabled:opacity-35"
+            className="flex items-center gap-1 hover:text-sky-900 transition cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed"
             title="Subir um nível de diretório"
           >
-            <ArrowUp size={14} />
-            <span className="text-xs">Subir Nível</span>
+            <ArrowUp size={14} className="text-sky-600" />
+            <span>Subir Um Nível</span>
           </button>
 
+          {/* Voltar */}
           <button
             type="button"
-            onClick={() => loadAllData(true)}
-            disabled={isLoading}
-            className="btn-ghost btn-sm whitespace-nowrap shrink-0 flex items-center gap-1.5 text-neutral-700"
-            title="Recarregar dados do S3"
+            onClick={handleGoBack}
+            disabled={historyIndex === 0}
+            className="flex items-center gap-1 hover:text-sky-900 transition cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed"
+            title="Voltar"
           >
-            <RefreshCw size={14} className={isLoading ? 'animate-spin text-[#FF8000]' : ''} />
-            <span className="text-xs">Recarregar</span>
+            <ArrowLeft size={14} className="text-sky-600" />
+            <span>Voltar</span>
           </button>
 
-          <div className="h-4 w-px bg-neutral-200 mx-0.5 shrink-0" />
-
-          {/* Bloco 2: Gestão de Pastas e Arquivos */}
+          {/* Encaminhar */}
           <button
             type="button"
-            onClick={() => setIsNewFolderModalOpen(true)}
-            className="btn-ghost btn-sm whitespace-nowrap shrink-0 flex items-center gap-1.5 text-neutral-700 hover:text-[#FF8000]"
-            title="Criar Nova Pasta no Repositório"
+            onClick={handleGoForward}
+            disabled={historyIndex >= history.length - 1}
+            className="flex items-center gap-1 hover:text-sky-900 transition cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed"
+            title="Encaminhar"
           >
-            <FolderPlus size={14} className="text-amber-500" />
-            <span className="text-xs font-semibold">Nova Pasta</span>
+            <ArrowRight size={14} className="text-sky-600" />
+            <span>Encaminhar</span>
           </button>
 
+          {/* Recarregar */}
           <button
             type="button"
-            onClick={() => setIsUploadModalOpen(true)}
-            className="btn-ghost btn-sm whitespace-nowrap shrink-0 flex items-center gap-1.5 text-neutral-700 hover:text-[#FF8000]"
-            title="Carregar Novo Arquivo"
+            onClick={() => {
+              loadAllData(true);
+              if (currentPath === '/google-drive' && googleToken) {
+                fetchGoogleDriveFiles(googleToken);
+              }
+            }}
+            disabled={isLoading || isGdriveLoading}
+            className="flex items-center gap-1 hover:text-sky-900 transition cursor-pointer"
+            title="Recarregar dados"
           >
-            <UploadCloud size={14} className="text-[#FF8000]" />
-            <span className="text-xs font-semibold">Novo Arquivo</span>
+            <RefreshCw size={13} className={`text-sky-600 ${isLoading || isGdriveLoading ? 'animate-spin' : ''}`} />
+            <span>Recarregar</span>
           </button>
 
-          <div className="h-4 w-px bg-neutral-200 mx-0.5 shrink-0" />
-
-          {/* Bloco 3: Seleção em Lote */}
+          {/* Selecionar Tudo */}
           <button
             type="button"
             onClick={handleSelectAll}
-            className="btn-ghost btn-sm whitespace-nowrap shrink-0 flex items-center gap-1.5 text-neutral-600"
-            title="Selecionar todos os ficheiros da pasta"
+            className="flex items-center gap-1 hover:text-sky-900 transition cursor-pointer ml-2"
+            title="Selecionar todos os itens da tabela"
           >
-            <CheckSquare size={13} />
-            <span className="text-xs">Selecionar Tudo</span>
+            <CheckSquare size={13} className="text-sky-600" />
+            <span>Selecionar Tudo</span>
           </button>
 
+          {/* Desmarcar Tudo */}
           <button
             type="button"
             onClick={handleDeselectAll}
-            disabled={selectedDocIds.length === 0}
-            className="btn-ghost btn-sm whitespace-nowrap shrink-0 flex items-center gap-1.5 text-neutral-600 disabled:opacity-35"
+            disabled={!hasSelection}
+            className="flex items-center gap-1 hover:text-sky-900 transition cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed"
             title="Desmarcar seleção"
           >
-            <Square size={13} />
-            <span className="text-xs">Desmarcar</span>
+            <Square size={13} className="text-sky-600" />
+            <span>Desmarcar Tudo</span>
           </button>
         </div>
 
-        {/* Bloco 4: Lixeira, Visualização e Cloud */}
-        <div className="flex items-center gap-2 shrink-0 flex-nowrap">
-          
-          {/* Alternador Lista / Grelha */}
-          <div className="flex items-center bg-[#F5F5F3] p-0.5 rounded-lg border border-[#E2E2DE]">
-            <button
-              type="button"
-              onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded-md transition ${viewMode === 'list' ? 'bg-white shadow-2xs text-[#FF8000] font-bold' : 'text-neutral-500 hover:text-neutral-800'}`}
-              title="Visualização em Lista (Tabela cPanel)"
-            >
-              <List size={14} />
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-md transition ${viewMode === 'grid' ? 'bg-white shadow-2xs text-[#FF8000] font-bold' : 'text-neutral-500 hover:text-neutral-800'}`}
-              title="Visualização em Grelha (Cartões / Ícones)"
-            >
-              <LayoutGrid size={14} />
-            </button>
-          </div>
+        {/* Trash Group & Search */}
+        <div className="flex items-center gap-3 shrink-0 flex-nowrap">
+          <div className="h-4 w-px bg-neutral-200 shrink-0" />
 
-          <div className="h-4 w-px bg-neutral-200 mx-0.5 shrink-0" />
-
-          {/* Botão Ver Lixeira */}
+          {/* Ver Lixeira */}
           <button
             type="button"
             onClick={() => navigateTo('/trash')}
-            className={`btn-ghost btn-sm whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
-              currentPath === '/trash' 
-                ? 'bg-rose-50 text-rose-600 font-bold border border-rose-200' 
-                : 'text-neutral-600 hover:text-rose-600'
+            className={`flex items-center gap-1 transition cursor-pointer ${
+              currentPath === '/trash' ? 'text-rose-700 font-bold' : 'hover:text-rose-600 text-sky-700'
             }`}
-            title="Ver Ficheiros e Pastas na Lixeira"
+            title="Ver lixeira"
           >
-            <Trash2 size={14} className={trashTotalCount > 0 ? 'text-rose-500' : 'text-neutral-400'} />
-            <span className="text-xs">Lixeira</span>
+            <Trash2 size={14} className={trashTotalCount > 0 ? 'text-rose-500' : 'text-sky-600'} />
+            <span>Ver lixeira</span>
             {trashTotalCount > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-rose-500 text-white font-mono">
+              <span className="bg-rose-500 text-white rounded-full px-1.5 py-0.2 text-[10px] font-bold">
                 {trashTotalCount}
               </span>
             )}
           </button>
 
-          {/* Esvaziar Lixeira (Quando na lixeira ou com itens) */}
-          {currentPath === '/trash' && trashTotalCount > 0 && (
-            <button
-              type="button"
-              onClick={() => setIsEmptyTrashModalOpen(true)}
-              className="btn-danger btn-sm whitespace-nowrap shrink-0 flex items-center gap-1.5"
-            >
-              <Trash2 size={13} />
-              <span className="text-xs font-bold">Esvaziar Lixeira</span>
-            </button>
-          )}
-
-          {/* Google Drive Direct Button */}
+          {/* Esvaziar Lixeira */}
           <button
             type="button"
-            onClick={() => setIsGoogleDriveModalOpen(true)}
-            className="btn-secondary btn-sm whitespace-nowrap shrink-0 flex items-center gap-1.5 border border-slate-200"
-            title="Abrir Google Drive Integrado"
+            onClick={() => setIsEmptyTrashModalOpen(true)}
+            disabled={trashTotalCount === 0}
+            className="flex items-center gap-1 hover:text-rose-700 transition cursor-pointer text-slate-600 disabled:opacity-35 disabled:cursor-not-allowed"
+            title="Esvaziar toda a lixeira"
           >
-            <svg className="w-3.5 h-3.5" viewBox="0 0 87.3 78" fill="none">
-              <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.9 2.5 3.2 3.3l16.3-28.2H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066DA"/>
-              <path d="M43.65 25 29.8 1c-1.3.8-2.4 1.9-3.2 3.3L1.2 48.2c-.8 1.4-1.2 2.95-1.2 4.5h29.95z" fill="#00AC47"/>
-              <path d="m73.55 76.8c1.3-.8 2.4-1.9 3.2-3.3l1.6-2.75 7.75-13.45c.8-1.4 1.2-2.95 1.2-4.5H57.35l6.55 11.35z" fill="#EA4335"/>
-              <path d="M43.65 25 57.5 1c-1.3-.8-2.4-1.9-3.2-3.3H33c-1.55 0-3.1.4-4.5 1.2z" fill="#00832D"/>
-              <path d="M87.3 48.2 72.8 23.05c-.8-1.4-1.9-2.5-3.2-3.3L57.5 44.9h29.8z" fill="#FFBA00"/>
-              <path d="M57.35 44.9H27.45L13.65 68.8c.8 1.4 1.9 2.5 3.2 3.3h53.7c1.55 0 3.1-.4 4.5-1.2z" fill="#2684FC"/>
-            </svg>
-            <span className="text-xs font-semibold">Google Drive</span>
-            {isGoogleConnected && (
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 ml-0.5" title="Conectado" />
-            )}
+            <Trash2 size={13} />
+            <span>Esvaziar Lixeira</span>
           </button>
         </div>
       </div>
 
       {/* =========================================================================
-          2. PAINEL PRINCIPAL: ÁRVORE DE DIRETÓRIOS (ESQUERDA) + EXPLORADOR (DIREITA)
+          3. CORPO PRINCIPAL: ÁRVORE À ESQUERDA + TABELA À DIREITA (Image 1 & 2)
          ========================================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 flex-1 min-h-0 overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 flex-1 min-h-0 overflow-hidden">
         
         {/* -----------------------------------------------------------------------
-            PAINEL ESQUERDO: ÁRVORE DE DIRETÓRIOS (Folder Tree Explorer)
+            PAINEL ESQUERDO: ÁRVORE DE DIRETÓRIOS (Image 2 Style)
            ----------------------------------------------------------------------- */}
-        <div className="lg:col-span-3 xl:col-span-3 bg-white border border-[#E2E2DE] rounded-xl shadow-2xs flex flex-col h-full min-h-0 overflow-hidden">
+        <div className="lg:col-span-3 xl:col-span-3 bg-white border border-[#E2E2DE] rounded-lg shadow-2xs flex flex-col h-full min-h-0 overflow-hidden text-xs">
           
-          {/* Cabeçalho do Caminho / Path Input */}
-          <div className="p-2.5 bg-[#FAFAF9] border-b border-[#EDEDEA] flex items-center justify-between gap-1.5 shrink-0">
-            <div className="flex items-center gap-1.5 min-w-0 flex-1">
-              <FolderArchive size={15} className="text-[#FF8000] shrink-0" />
-              <div className="px-2 py-1 bg-white border border-[#E2E2DE] rounded-md text-[11px] font-mono text-[#101010] truncate w-full shadow-2xs">
-                {currentPath === '/trash' ? '/assets/lixeira' : currentPath === '/' ? '/assets/ged' : `/assets/ged${currentPath}`}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsTreeExpanded(!isTreeExpanded)}
-              className="btn-ghost btn-sm text-[11px] text-[#737370] hover:text-[#101010] px-2 py-1 shrink-0"
-              title={isTreeExpanded ? 'Reduzir todas as pastas' : 'Expandir todas as pastas'}
-            >
-              {isTreeExpanded ? 'Reduzir' : 'Expandir'}
-            </button>
-          </div>
-
-          {/* Lista de Pastas e Subpastas com Scroll Vertical Independente */}
-          <div className="p-2 space-y-0.5 flex-1 min-h-0 overflow-y-auto">
-            
-            {/* Raiz: (/home/lecasu-storage/assets) */}
+          {/* Top Path Input Box + "Ir" Button (Image 2 Header) */}
+          <form onSubmit={handlePathInputSubmit} className="p-2 border-b border-[#E2E2DE] flex items-center gap-1.5 bg-[#FAFAF9] shrink-0">
             <button
               type="button"
               onClick={() => navigateTo('/')}
-              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs transition cursor-pointer ${
-                currentPath === '/' 
-                  ? 'bg-[#FFF2E5] text-[#FF8000] font-bold shadow-2xs' 
-                  : 'text-neutral-700 hover:bg-[#FAFAF9]'
-              }`}
+              className="p-1.5 text-neutral-600 hover:text-neutral-900 border border-[#E2E2DE] rounded bg-white shadow-2xs shrink-0"
+              title="Ir para a Raiz"
             >
-              <div className="flex items-center gap-2 min-w-0">
-                <FolderOpen size={15} className={currentPath === '/' ? 'text-[#FF8000]' : 'text-neutral-400'} />
-                <span className="font-heading truncate font-semibold">assets (Raiz)</span>
-              </div>
-              <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded bg-neutral-100 text-neutral-600">
-                {activeDocuments.length}
-              </span>
+              <Home size={14} />
             </button>
+            <input
+              type="text"
+              value={pathInputText}
+              onChange={(e) => setPathInputText(e.target.value)}
+              className="flex-1 px-2 py-1 bg-white border border-[#E2E2DE] rounded text-[11px] font-mono text-neutral-800 focus:outline-none focus:ring-1 focus:ring-sky-500 min-w-0"
+            />
+            <button
+              type="submit"
+              className="px-2.5 py-1 bg-white border border-[#E2E2DE] hover:bg-neutral-100 rounded text-[11px] font-semibold text-neutral-700 shrink-0 shadow-2xs"
+            >
+              Ir
+            </button>
+          </form>
 
-            {/* Subpastas com hierarquia e ícones por categoria */}
-            {isTreeExpanded && (
-              <div className="pl-3.5 space-y-0.5 border-l border-neutral-200 ml-3.5 my-1">
-                {activeFolders.map((folder) => {
-                  const isActive = currentPath === folder.path;
-                  const count = folderCounts[folder.id] || 0;
-
-                  return (
-                    <button
-                      key={folder.id}
-                      type="button"
-                      onClick={() => navigateTo(folder.path)}
-                      className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-left text-xs transition cursor-pointer group ${
-                        isActive 
-                          ? 'bg-[#FFF2E5] text-[#FF8000] font-bold ring-1 ring-[#FF8000]/30 shadow-2xs' 
-                          : 'text-neutral-700 hover:bg-[#FAFAF9]'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        {renderFolderWithBadge(folder.iconType, "w-4 h-4", "w-2 h-2")}
-                        <span className="font-mono text-xs truncate">
-                          {folder.name}
-                        </span>
-                      </div>
-                      <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
-                        isActive ? 'bg-[#FF8000] text-white font-bold' : 'bg-neutral-100 text-neutral-500 group-hover:bg-neutral-200'
-                      }`}>
-                        {count}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Secção Cloud Repositories na Árvore de Pastas */}
-            <div className="mt-3 pt-2.5 border-t border-neutral-100 px-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 font-heading">
-                Repositórios Cloud
-              </span>
-              <div className="mt-1 space-y-0.5">
-                
-                {/* Google Drive Folder Item */}
-                <button
-                  type="button"
-                  onClick={() => setIsGoogleDriveModalOpen(true)}
-                  className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-left text-xs text-neutral-700 hover:bg-[#FAFAF9] transition cursor-pointer group"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 87.3 78" fill="none">
-                      <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.9 2.5 3.2 3.3l16.3-28.2H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066DA"/>
-                      <path d="M43.65 25 29.8 1c-1.3.8-2.4 1.9-3.2 3.3L1.2 48.2c-.8 1.4-1.2 2.95-1.2 4.5h29.95z" fill="#00AC47"/>
-                      <path d="m73.55 76.8c1.3-.8 2.4-1.9 3.2-3.3l1.6-2.75 7.75-13.45c.8-1.4 1.2-2.95 1.2-4.5H57.35l6.55 11.35z" fill="#EA4335"/>
-                      <path d="M43.65 25 57.5 1c-1.3-.8-2.4-1.9-3.2-3.3H33c-1.55 0-3.1.4-4.5 1.2z" fill="#00832D"/>
-                      <path d="M87.3 48.2 72.8 23.05c-.8-1.4-1.9-2.5-3.2-3.3L57.5 44.9h29.8z" fill="#FFBA00"/>
-                      <path d="M57.35 44.9H27.45L13.65 68.8c.8 1.4 1.9 2.5 3.2 3.3h53.7c1.55 0 3.1-.4 4.5-1.2z" fill="#2684FC"/>
-                    </svg>
-                    <span className="font-heading text-xs font-semibold truncate text-slate-800">
-                      Google Drive
-                    </span>
-                  </div>
-                  <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${isGoogleConnected ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-500'}`}>
-                    {isGoogleConnected ? 'Ativo' : 'Conectar'}
-                  </span>
-                </button>
-
-                {/* OneDrive Folder Item */}
-                <button
-                  type="button"
-                  onClick={() => setIsOneDriveModalOpen(true)}
-                  className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-left text-xs text-neutral-700 hover:bg-[#FAFAF9] transition cursor-pointer group"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <svg className="w-4 h-4 shrink-0 text-[#0078D4]" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM19 18H6c-2.21 0-4-1.79-4-4 0-2.05 1.53-3.76 3.56-3.97l1.07-.11.5-.95C8.08 7.14 9.94 6 12 6c2.62 0 4.88 1.86 5.39 4.43l.3 1.5 1.53.11c1.56.1 2.78 1.41 2.78 2.96 0 1.65-1.35 3-3 3z"/>
-                    </svg>
-                    <span className="font-heading text-xs font-semibold truncate text-slate-800">
-                      OneDrive
-                    </span>
-                  </div>
-                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-neutral-100 text-neutral-500">
-                    Em Breve
-                  </span>
-                </button>
-
-                {/* Lixeira Folder Item */}
-                <button
-                  type="button"
-                  onClick={() => navigateTo('/trash')}
-                  className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-left text-xs transition cursor-pointer group ${
-                    currentPath === '/trash' ? 'bg-rose-50 text-rose-600 font-bold' : 'text-neutral-700 hover:bg-[#FAFAF9]'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Trash2 size={14} className={currentPath === '/trash' ? 'text-rose-600' : 'text-rose-400'} />
-                    <span className="font-heading text-xs font-semibold truncate">
-                      Lixeira
-                    </span>
-                  </div>
-                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-rose-100 text-rose-600 font-bold">
-                    {trashTotalCount}
-                  </span>
-                </button>
-
-              </div>
-            </div>
-
+          {/* Full-width "Reduzir Tudo" / "Expandir Tudo" Button (Image 2) */}
+          <div className="px-2 py-1.5 border-b border-[#E2E2DE] bg-white shrink-0">
+            <button
+              type="button"
+              onClick={() => setIsTreeExpanded(!isTreeExpanded)}
+              className="w-full py-1 border border-[#E2E2DE] rounded bg-white hover:bg-neutral-50 text-[11px] font-semibold text-neutral-700 text-center shadow-2xs transition"
+            >
+              {isTreeExpanded ? 'Reduzir Tudo' : 'Expandir Tudo'}
+            </button>
           </div>
 
-          {/* Informação de Capacidade / Storage */}
-          <div className="p-2.5 bg-[#FAFAF9] border-t border-[#EDEDEA] shrink-0 text-[11px] text-neutral-500">
-            <div className="flex items-center justify-between mb-0.5">
-              <span className="flex items-center gap-1 text-neutral-600 font-medium">
-                <HardDrive size={13} className="text-[#FF8000]" />
-                <span>Storage Neon S3</span>
+          {/* Directory Tree Explorer Hierarchy (Image 2) */}
+          <div className="p-2 space-y-1 flex-1 min-h-0 overflow-y-auto font-sans">
+            
+            {/* Root Node: − 📁 🏠 (/home/lecasu-storage) */}
+            <div
+              onClick={() => navigateTo('/')}
+              className={`flex items-center gap-1.5 px-2 py-1 rounded cursor-pointer transition ${
+                currentPath === '/' ? 'bg-sky-100/70 text-sky-900 font-bold' : 'hover:bg-neutral-100 text-neutral-800'
+              }`}
+            >
+              <span className="font-mono text-neutral-400 font-bold select-none">−</span>
+              <Folder className="w-4 h-4 text-amber-500 fill-amber-400/20" />
+              <Home size={13} className="text-neutral-600" />
+              <span className="font-mono text-[11px] font-semibold truncate">
+                (/home/lecasu-storage)
               </span>
-              <span className="font-mono font-bold text-neutral-800">{kpis.total_storage_formatted}</span>
             </div>
-            <p className="text-[10px] text-neutral-400">
-              Sincronização em tempo real ativa
-            </p>
+
+            {/* Folder Children List */}
+            {isTreeExpanded && (
+              <div className="pl-4 space-y-0.5 border-l border-neutral-200 ml-3.5 my-0.5">
+                {activeFolders.map((folder) => {
+                  const isActive = currentPath === folder.path;
+                  return (
+                    <div
+                      key={folder.id}
+                      onClick={() => navigateTo(folder.path)}
+                      className={`flex items-center gap-1.5 px-2 py-1 rounded cursor-pointer transition ${
+                        isActive ? 'bg-sky-100 text-sky-900 font-bold' : 'hover:bg-neutral-100 text-neutral-700'
+                      }`}
+                    >
+                      <span className="font-mono text-neutral-400 text-[11px] select-none">+</span>
+                      {renderFolderIcon(folder.iconType)}
+                      <span className="text-[12px] truncate capitalize font-medium">
+                        {folder.name}
+                      </span>
+                    </div>
+                  );
+                })}
+
+                {/* Cloud & Special items in tree */}
+                <div
+                  onClick={() => navigateTo('/google-drive')}
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded cursor-pointer transition ${
+                    currentPath === '/google-drive' ? 'bg-blue-100 text-blue-900 font-bold' : 'hover:bg-neutral-100 text-neutral-700'
+                  }`}
+                >
+                  <span className="font-mono text-neutral-400 text-[11px] select-none">+</span>
+                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 87.3 78" fill="none">
+                    <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.9 2.5 3.2 3.3l16.3-28.2H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066DA"/>
+                    <path d="M43.65 25 29.8 1c-1.3.8-2.4 1.9-3.2 3.3L1.2 48.2c-.8 1.4-1.2 2.95-1.2 4.5h29.95z" fill="#00AC47"/>
+                    <path d="m73.55 76.8c1.3-.8 2.4-1.9 3.2-3.3l1.6-2.75 7.75-13.45c.8-1.4 1.2-2.95 1.2-4.5H57.35l6.55 11.35z" fill="#EA4335"/>
+                    <path d="M43.65 25 57.5 1c-1.3-.8-2.4-1.9-3.2-3.3H33c-1.55 0-3.1.4-4.5 1.2z" fill="#00832D"/>
+                    <path d="M87.3 48.2 72.8 23.05c-.8-1.4-1.9-2.5-3.2-3.3L57.5 44.9h29.8z" fill="#FFBA00"/>
+                    <path d="M57.35 44.9H27.45L13.65 68.8c.8 1.4 1.9 2.5 3.2 3.3h53.7c1.55 0 3.1-.4 4.5-1.2z" fill="#2684FC"/>
+                  </svg>
+                  <span className="text-[12px] font-medium truncate">
+                    Google Drive
+                  </span>
+                  {googleToken && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 ml-auto" />}
+                </div>
+
+                <div
+                  onClick={() => navigateTo('/onedrive')}
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded cursor-pointer transition ${
+                    currentPath === '/onedrive' ? 'bg-blue-100 text-blue-900 font-bold' : 'hover:bg-neutral-100 text-neutral-700'
+                  }`}
+                >
+                  <span className="font-mono text-neutral-400 text-[11px] select-none">+</span>
+                  <svg className="w-4 h-4 shrink-0 text-[#0078D4]" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM19 18H6c-2.21 0-4-1.79-4-4 0-2.05 1.53-3.76 3.56-3.97l1.07-.11.5-.95C8.08 7.14 9.94 6 12 6c2.62 0 4.88 1.86 5.39 4.43l.3 1.5 1.53.11c1.56.1 2.78 1.41 2.78 2.96 0 1.65-1.35 3-3 3z"/>
+                  </svg>
+                  <span className="text-[12px] font-medium truncate">
+                    OneDrive
+                  </span>
+                </div>
+
+                <div
+                  onClick={() => navigateTo('/trash')}
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded cursor-pointer transition ${
+                    currentPath === '/trash' ? 'bg-rose-100 text-rose-900 font-bold' : 'hover:bg-neutral-100 text-neutral-700'
+                  }`}
+                >
+                  <span className="font-mono text-neutral-400 text-[11px] select-none">+</span>
+                  <Trash2 size={13} className={currentPath === '/trash' ? 'text-rose-600' : 'text-neutral-400'} />
+                  <span className="text-[12px] font-medium truncate">
+                    Lixeira
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer Info */}
+          <div className="p-2 bg-[#FAFAF9] border-t border-[#E2E2DE] text-[11px] text-neutral-500 shrink-0 flex items-center justify-between">
+            <span className="flex items-center gap-1">
+              <HardDrive size={12} className="text-neutral-500" />
+              <span>Storage</span>
+            </span>
+            <span className="font-mono font-semibold text-neutral-700">{kpis.total_storage_formatted}</span>
           </div>
         </div>
 
         {/* -----------------------------------------------------------------------
-            PAINEL DIREITO: EXPLORADOR DE FICHEIROS E TABELA DE CONTEÚDO
+            PAINEL DIREITO: TABELA PRINCIPAL DE FICHEIROS (Image 1 Style)
            ----------------------------------------------------------------------- */}
-        <div className="lg:col-span-9 xl:col-span-9 bg-white border border-[#E2E2DE] rounded-xl shadow-2xs flex flex-col h-full min-h-0 overflow-hidden">
+        <div className="lg:col-span-9 xl:col-span-9 bg-white border border-[#E2E2DE] rounded-lg shadow-2xs flex flex-col h-full min-h-0 overflow-hidden">
           
-          {/* Breadcrumb Path & Search Bar */}
-          <div className="px-3.5 py-2.5 bg-[#FAFAF9] border-b border-[#EDEDEA] flex items-center justify-between gap-3 shrink-0">
-            
-            {/* Breadcrumb clicável */}
-            <div className="flex items-center gap-1.5 text-xs text-[#101010] flex-nowrap min-w-0">
-              <button
-                type="button"
-                onClick={() => navigateTo('/')}
-                className="font-bold text-[#FF8000] hover:underline flex items-center gap-1 shrink-0"
-              >
-                <FolderArchive size={14} />
-                <span>assets</span>
-              </button>
-              
-              {currentPath !== '/' && (
-                <>
-                  <ChevronRight size={13} className="text-neutral-400 shrink-0" />
-                  <span className={`font-bold font-mono px-2 py-0.5 rounded border shrink-0 ${
-                    currentPath === '/trash' 
-                      ? 'bg-rose-50 text-rose-600 border-rose-200' 
-                      : 'bg-white text-[#101010] border-[#E2E2DE]'
-                  }`}>
-                    {currentPath === '/trash' ? 'Lixeira do Sistema' : currentPath.replace('/', '')}
-                  </span>
-                </>
-              )}
+          {/* Quick Filter Search Input */}
+          <div className="px-3 py-1.5 bg-[#FAFAF9] border-b border-[#E2E2DE] flex items-center justify-between gap-2 shrink-0">
+            <div className="text-[12px] text-neutral-700 font-semibold truncate flex items-center gap-1.5">
+              <span className="text-neutral-400 font-mono">Diretório:</span>
+              <span className="font-mono text-sky-800 font-bold">
+                {currentPath === '/' ? '/ (Raiz)' : currentPath}
+              </span>
             </div>
 
-            {/* Search Input */}
-            <div className="relative w-48 sm:w-64 shrink-0">
-              <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <div className="relative w-48 sm:w-60 shrink-0">
+              <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Pesquisar ficheiro..."
+                placeholder="Filtrar ficheiros..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 bg-white border border-[#E2E2DE] rounded-lg text-xs text-[#101010] placeholder-neutral-400 focus:outline-none focus:ring-1 focus:ring-[#FF8000] focus:border-[#FF8000]"
+                className="w-full pl-8 pr-2.5 py-1 bg-white border border-[#E2E2DE] rounded text-[11px] text-[#101010] placeholder-neutral-400 focus:outline-none focus:ring-1 focus:ring-sky-500"
               />
               {searchTerm && (
                 <button
                   type="button"
                   onClick={() => setSearchTerm('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700"
                 >
                   <X size={12} />
                 </button>
@@ -1109,633 +1411,282 @@ export const GEDView: React.FC = () => {
             </div>
           </div>
 
-          {/* Banner de Aviso na Lixeira */}
-          {currentPath === '/trash' && (
-            <div className="px-4 py-2 bg-rose-50 border-b border-rose-200 flex items-center justify-between text-xs text-rose-800 shrink-0">
-              <div className="flex items-center gap-2">
-                <Trash2 size={15} className="text-rose-600" />
-                <span>
-                  <strong>Lixeira do Sistema:</strong> Os ficheiros aqui podem ser restaurados ou eliminados permanentemente.
-                </span>
-              </div>
-              {trashTotalCount > 0 && (
-                <span className="font-semibold text-rose-700">
-                  {trashTotalCount} {trashTotalCount === 1 ? 'item' : 'itens'} na lixeira
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* ===================================================================
-              CONTEÚDO PRINCIPAL: MODO LISTA (Tabela) OU MODO GRELHA (Cards)
-             =================================================================== */}
+          {/* Table Container */}
           <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto relative">
-            
-            {/* 1. SE FOR MODO LISTA */}
-            {viewMode === 'list' ? (
-              <table className="table-erp w-full">
-                <thead className="sticky top-0 bg-[#FAFAF9] z-10 shadow-2xs">
-                  <tr className="table-header-erp text-[11px] border-b border-[#E2E2DE]">
-                    <th className="w-8 px-3 text-center bg-[#FAFAF9]">
-                      <input
-                        type="checkbox"
-                        checked={
-                          currentPath === '/' 
-                            ? (activeFolders.length > 0 && selectedFolderIds.length === activeFolders.length)
-                            : currentPath === '/trash'
-                            ? ((trashedFolders.length + trashedDocuments.length > 0) && (selectedFolderIds.length + selectedDocIds.length === trashedFolders.length + trashedDocuments.length))
-                            : (currentFolderDocuments.length > 0 && selectedDocIds.length === currentFolderDocuments.length)
-                        }
-                        onChange={(e) => e.target.checked ? handleSelectAll() : handleDeselectAll()}
-                        className="rounded border-[#E2E2DE] text-[#FF8000] focus:ring-[#FF8000] accent-[#FF8000] cursor-pointer"
-                      />
-                    </th>
-                    <th className="px-4 bg-[#FAFAF9]">Nome do Ficheiro / Pasta</th>
-                    <th className="px-4 w-28 bg-[#FAFAF9]">Tamanho</th>
-                    <th className="px-4 w-36 bg-[#FAFAF9]">Data de Envio</th>
-                    <th className="px-4 w-44 bg-[#FAFAF9]">Formato / Tipo</th>
-                    <th className="px-4 w-28 text-right bg-[#FAFAF9]">Ações</th>
+            <table className="w-full text-left border-collapse select-none">
+              
+              {/* Header: Nome | Tamanho | Last Modified | Digitar | Permissões (Image 1) */}
+              <thead className="sticky top-0 bg-[#F4F8FA] border-b border-[#CCE2F0] z-10 text-[12px] font-semibold text-sky-800">
+                <tr>
+                  <th className="py-2 px-3">Nome</th>
+                  <th className="py-2 px-3 w-32">Tamanho</th>
+                  <th className="py-2 px-3 w-48">Last Modified</th>
+                  <th className="py-2 px-3 w-44">Digitar</th>
+                  <th className="py-2 px-3 w-28 text-right">Permissões</th>
+                </tr>
+              </thead>
+
+              <tbody className="text-[12px] text-neutral-700 divide-y divide-[#F0F4F8]">
+                
+                {/* 1. UP ONE LEVEL ROW (.. diretório anterior) */}
+                {currentPath !== '/' && currentPath !== '/trash' && currentPath !== '/google-drive' && currentPath !== '/onedrive' && !searchTerm && (
+                  <tr
+                    onDoubleClick={handleUpLevel}
+                    onClick={handleUpLevel}
+                    className="hover:bg-[#EBF5FB] transition-colors cursor-pointer group"
+                    title="Duplo clique para subir"
+                  >
+                    <td className="py-1.5 px-3 flex items-center gap-2">
+                      <Folder className="w-4 h-4 text-amber-500 fill-amber-400/20 shrink-0" />
+                      <span className="font-semibold text-neutral-800 group-hover:text-sky-700">.. (Diretório Anterior)</span>
+                    </td>
+                    <td className="py-1.5 px-3 font-mono text-[11px] text-neutral-400">—</td>
+                    <td className="py-1.5 px-3 text-[11px] text-neutral-400">—</td>
+                    <td className="py-1.5 px-3 text-[11px] text-neutral-400">httpd/unix-directory</td>
+                    <td className="py-1.5 px-3 text-right font-mono text-[11px] text-neutral-400">0755</td>
                   </tr>
-                </thead>
+                )}
 
-                <tbody className="divide-y divide-[#F0F0ED] text-xs">
-                  
-                  {/* Linha de Subir Diretório (..) */}
-                  {currentPath !== '/' && currentPath !== '/trash' && !searchTerm && (
-                    <tr 
-                      onDoubleClick={handleUpLevel}
-                      onClick={handleUpLevel}
-                      className="hover:bg-[#FFF8F2] transition-colors cursor-pointer group select-none"
-                      title="Duplo clique para subir ao diretório anterior"
-                    >
-                      <td className="px-3 text-center"></td>
-                      <td className="px-4 py-2.5 flex items-center gap-2.5">
-                        <Folder size={16} className="text-amber-500 shrink-0" />
-                        <span className="font-mono font-bold text-[#101010] group-hover:text-[#FF8000]">.. (Diretório Anterior)</span>
-                      </td>
-                      <td className="px-4 text-neutral-400 font-mono text-[11px]">—</td>
-                      <td className="px-4 text-neutral-400 text-[11px]">—</td>
-                      <td className="px-4 text-neutral-400 text-[11px]">Pasta de Ficheiros</td>
-                      <td className="px-4 text-right"></td>
-                    </tr>
-                  )}
-
-                  {/* Listar Pastas Principais se estiver na Raiz */}
-                  {currentPath === '/' && !searchTerm && (
-                    <>
-                      {/* Pastas de Armazenamento Ativas com Checkbox */}
-                      {activeFolders.map((folder) => {
-                        const count = folderCounts[folder.id] || 0;
-                        const isFolderSelected = selectedFolderIds.includes(folder.id);
-
+                {/* 2. GOOGLE DRIVE IN-PLACE VIEW */}
+                {currentPath === '/google-drive' && (
+                  <>
+                    {!googleToken ? (
+                      <tr>
+                        <td colSpan={5} className="py-16 text-center">
+                          <div className="flex flex-col items-center justify-center gap-3 max-w-md mx-auto">
+                            <svg className="w-12 h-12" viewBox="0 0 87.3 78" fill="none">
+                              <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.9 2.5 3.2 3.3l16.3-28.2H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066DA"/>
+                              <path d="M43.65 25 29.8 1c-1.3.8-2.4 1.9-3.2 3.3L1.2 48.2c-.8 1.4-1.2 2.95-1.2 4.5h29.95z" fill="#00AC47"/>
+                              <path d="m73.55 76.8c1.3-.8 2.4-1.9 3.2-3.3l1.6-2.75 7.75-13.45c.8-1.4 1.2-2.95 1.2-4.5H57.35l6.55 11.35z" fill="#EA4335"/>
+                              <path d="M43.65 25 57.5 1c-1.3-.8-2.4-1.9-3.2-3.3H33c-1.55 0-3.1.4-4.5 1.2z" fill="#00832D"/>
+                              <path d="M87.3 48.2 72.8 23.05c-.8-1.4-1.9-2.5-3.2-3.3L57.5 44.9h29.8z" fill="#FFBA00"/>
+                              <path d="M57.35 44.9H27.45L13.65 68.8c.8 1.4 1.9 2.5 3.2 3.3h53.7c1.55 0 3.1-.4 4.5-1.2z" fill="#2684FC"/>
+                            </svg>
+                            <h4 className="text-sm font-bold text-neutral-800">Conectar Google Drive</h4>
+                            <p className="text-xs text-neutral-500">
+                              Inicie sessão com a sua conta Google para listar e importar ficheiros diretamente para a tabela.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={handleConnectGoogleInPlace}
+                              disabled={isGdriveAuthenticating}
+                              className="px-4 py-2 bg-[#1A73E8] hover:bg-[#1557B0] text-white font-semibold rounded-lg text-xs flex items-center gap-2 shadow-xs cursor-pointer"
+                            >
+                              {isGdriveAuthenticating ? <Loader2 className="w-4 h-4 animate-spin" /> : <UploadCloud size={14} />}
+                              <span>Iniciar Sessão Google</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : isGdriveLoading ? (
+                      <tr>
+                        <td colSpan={5} className="py-14 text-center text-neutral-400">
+                          <div className="flex flex-col items-center justify-center gap-2">
+                            <RefreshCw className="w-5 h-5 text-sky-600 animate-spin" />
+                            <span className="text-xs">A carregar ficheiros do Google Drive...</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : gdriveFiles.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-14 text-center text-neutral-400">
+                          <p className="text-xs">Nenhum ficheiro encontrado no Google Drive.</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      gdriveFiles.map((gf) => {
+                        const isSelected = selectedGDriveFileIds.includes(gf.id);
                         return (
                           <tr
-                            key={folder.id}
-                            onDoubleClick={() => navigateTo(folder.path)}
-                            className={`hover:bg-[#FFF8F2] transition-colors cursor-pointer group ${isFolderSelected ? 'bg-[#FFF2E5]/50' : ''}`}
-                            title="Duplo clique para abrir a pasta"
+                            key={gf.id}
+                            onClick={() => toggleSelectGDriveFile(gf.id)}
+                            onDoubleClick={() => handleImportGDriveFile(gf)}
+                            className={`transition-colors cursor-pointer ${
+                              isSelected ? 'bg-[#D9EDF7] font-semibold text-sky-900' : 'hover:bg-[#EBF5FB]'
+                            }`}
                           >
-                            <td className="px-3 text-center">
-                              <input
-                                type="checkbox"
-                                checked={isFolderSelected}
-                                onChange={(e) => {
-                                  e.stopPropagation();
-                                  toggleSelectFolder(folder.id);
-                                }}
-                                className="rounded border-[#E2E2DE] text-[#FF8000] focus:ring-[#FF8000] accent-[#FF8000] cursor-pointer"
-                              />
+                            <td className="py-1.5 px-3 flex items-center gap-2">
+                              {getFileRowIcon(gf.name, gf.mimeType)}
+                              <span className="truncate max-w-sm">{gf.name}</span>
+                              {gdriveImportingId === gf.id && (
+                                <Loader2 className="w-3.5 h-3.5 text-sky-600 animate-spin ml-2" />
+                              )}
                             </td>
-                            <td className="px-4 py-3">
-                              <button
-                                type="button"
-                                onClick={() => navigateTo(folder.path)}
-                                className="text-left group-hover:text-[#FF8000] transition flex items-center gap-3"
-                              >
-                                {renderFolderWithBadge(folder.iconType, "w-5 h-5", "w-2.5 h-2.5")}
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-bold text-sm text-[#101010] font-mono group-hover:text-[#FF8000]">
-                                      {folder.name}
-                                    </span>
-                                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600">
-                                      {folder.category}
-                                    </span>
-                                  </div>
-                                  <p className="text-[11px] text-[#737370] mt-0.5">
-                                    {folder.description}
-                                  </p>
-                                </div>
-                              </button>
+                            <td className="py-1.5 px-3 font-mono text-[11px] text-neutral-600">
+                              {gf.size ? formatCPanelSize(parseInt(gf.size, 10)) : '—'}
                             </td>
-                            <td className="px-4 font-mono text-[11px] text-neutral-500">
-                              {count} {count === 1 ? 'ficheiro' : 'ficheiros'}
+                            <td className="py-1.5 px-3 text-[11px] text-neutral-600">
+                              {formatCPanelDate(gf.modifiedTime)}
                             </td>
-                            <td className="px-4 text-neutral-400 text-[11px]">
-                              {folder.createdAt}
+                            <td className="py-1.5 px-3 text-[11px] text-neutral-600 font-mono truncate max-w-xs">
+                              {gf.mimeType}
                             </td>
-                            <td className="px-4 text-neutral-600 text-[11px]">
-                              Pasta do Sistema
-                            </td>
-                            <td className="px-4 text-right">
-                              <div className="flex items-center justify-end gap-1">
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); handleOpenRename({ type: 'folder', id: folder.id, name: folder.name, description: folder.description }); }}
-                                  className="btn-ghost btn-icon-sm text-neutral-500 hover:text-neutral-800"
-                                  title="Renomear Pasta"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); handleMoveToTrash({ type: 'folder', id: folder.id, name: folder.name }); }}
-                                  className="btn-ghost btn-icon-sm text-neutral-500 hover:text-rose-600"
-                                  title="Mover Pasta para a Lixeira"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => navigateTo(folder.path)}
-                                  className="btn-secondary btn-sm text-[11px] py-1 px-2 ml-1"
-                                >
-                                  Abrir
-                                </button>
-                              </div>
+                            <td className="py-1.5 px-3 text-right font-mono text-[11px] text-neutral-600">
+                              0644
                             </td>
                           </tr>
                         );
-                      })}
+                      })
+                    )}
+                  </>
+                )}
 
-                      {/* Google Drive Folder Row */}
-                      <tr 
-                        onDoubleClick={() => setIsGoogleDriveModalOpen(true)}
-                        className="hover:bg-blue-50/50 transition-colors cursor-pointer group"
-                      >
-                        <td className="px-3 text-center">
-                          <input
-                            type="checkbox"
-                            disabled
-                            className="rounded border-[#E2E2DE] opacity-25 cursor-not-allowed"
-                          />
-                        </td>
-                        <td className="px-4 py-3">
-                          <button
-                            type="button"
-                            onClick={() => setIsGoogleDriveModalOpen(true)}
-                            className="text-left group-hover:text-blue-600 transition flex items-center gap-3"
-                          >
-                            {renderFolderWithBadge('google_drive', "w-5 h-5", "w-2.5 h-2.5")}
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-bold text-sm text-[#101010] font-mono group-hover:text-blue-600">
-                                  Google Drive
-                                </span>
-                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${isGoogleConnected ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
-                                  {isGoogleConnected ? 'Sincronizado' : 'OAuth 2.0'}
-                                </span>
-                              </div>
-                              <p className="text-[11px] text-[#737370] mt-0.5">
-                                Navegue e importe ficheiros diretamente da sua conta Google Drive
-                              </p>
-                            </div>
-                          </button>
-                        </td>
-                        <td className="px-4 font-mono text-[11px] text-neutral-500">Cloud Storage</td>
-                        <td className="px-4 text-neutral-400 text-[11px]">Tempo Real</td>
-                        <td className="px-4 text-blue-600 text-[11px] font-medium">Repositório Cloud</td>
-                        <td className="px-4 text-right">
-                          <button
-                            type="button"
-                            onClick={() => setIsGoogleDriveModalOpen(true)}
-                            className="btn-secondary btn-sm text-[11px] py-1 px-2.5"
-                          >
-                            Explorar
-                          </button>
-                        </td>
-                      </tr>
-                    </>
-                  )}
+                {/* 3. ONEDRIVE IN-PLACE VIEW */}
+                {currentPath === '/onedrive' && (
+                  <tr>
+                    <td colSpan={5} className="py-16 text-center">
+                      <div className="flex flex-col items-center justify-center gap-2 max-w-md mx-auto">
+                        <svg className="w-12 h-12 text-[#0078D4]" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM19 18H6c-2.21 0-4-1.79-4-4 0-2.05 1.53-3.76 3.56-3.97l1.07-.11.5-.95C8.08 7.14 9.94 6 12 6c2.62 0 4.88 1.86 5.39 4.43l.3 1.5 1.53.11c1.56.1 2.78 1.41 2.78 2.96 0 1.65-1.35 3-3 3z"/>
+                        </svg>
+                        <h4 className="text-sm font-bold text-neutral-800">Microsoft OneDrive</h4>
+                        <p className="text-xs text-neutral-500">
+                          Integração via Microsoft Graph API configurada no servidor backend.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
 
-                  {/* Pastas na Lixeira se estiver na Lixeira */}
-                  {currentPath === '/trash' && trashedFolders.map((f) => {
-                    const isTrashedFolderSelected = selectedFolderIds.includes(f.id);
+                {/* 4. LIST FOLDERS IF IN ROOT (/) - Image 1 Style */}
+                {currentPath === '/' && !searchTerm && activeFolders.map((folder) => {
+                  const isFolderSelected = selectedFolderIds.includes(folder.id);
+                  return (
+                    <tr
+                      key={folder.id}
+                      onClick={() => toggleSelectFolder(folder.id)}
+                      onDoubleClick={() => navigateTo(folder.path)}
+                      className={`transition-colors cursor-pointer group ${
+                        isFolderSelected ? 'bg-[#D9EDF7] font-semibold text-sky-900' : 'hover:bg-[#EBF5FB]'
+                      }`}
+                    >
+                      <td className="py-1.5 px-3 flex items-center gap-2">
+                        {renderFolderIcon(folder.iconType)}
+                        <span className="text-neutral-900 font-medium group-hover:text-sky-800 capitalize">
+                          {folder.name}
+                        </span>
+                      </td>
+                      <td className="py-1.5 px-3 font-mono text-[11px] text-neutral-600">
+                        4 KB
+                      </td>
+                      <td className="py-1.5 px-3 text-[11px] text-neutral-600">
+                        {formatCPanelDate(folder.createdAt)}
+                      </td>
+                      <td className="py-1.5 px-3 text-[11px] text-neutral-600 font-mono">
+                        {folder.iconType === 'mail' ? 'mail' : folder.iconType === 'web' ? 'publichtml' : 'httpd/unix-directory'}
+                      </td>
+                      <td className="py-1.5 px-3 text-right font-mono text-[11px] text-neutral-600">
+                        {folder.permissions || '0755'}
+                      </td>
+                    </tr>
+                  );
+                })}
 
+                {/* 5. LIST TRASHED FOLDERS IF IN TRASH */}
+                {currentPath === '/trash' && trashedFolders.map((tf) => {
+                  const isFolderSelected = selectedFolderIds.includes(tf.id);
+                  return (
+                    <tr
+                      key={tf.id}
+                      onClick={() => toggleSelectFolder(tf.id)}
+                      className={`transition-colors cursor-pointer ${
+                        isFolderSelected ? 'bg-rose-100 font-semibold text-rose-900' : 'hover:bg-rose-50/50'
+                      }`}
+                    >
+                      <td className="py-1.5 px-3 flex items-center gap-2">
+                        <Folder className="w-4 h-4 text-rose-500 fill-rose-400/20 shrink-0" />
+                        <span className="text-rose-900 font-medium capitalize">{tf.name} (Pasta Eliminada)</span>
+                      </td>
+                      <td className="py-1.5 px-3 font-mono text-[11px] text-neutral-600">4 KB</td>
+                      <td className="py-1.5 px-3 text-[11px] text-neutral-600">{formatCPanelDate(tf.createdAt)}</td>
+                      <td className="py-1.5 px-3 text-[11px] text-rose-600 font-mono">httpd/unix-directory</td>
+                      <td className="py-1.5 px-3 text-right font-mono text-[11px] text-neutral-600">{tf.permissions || '0755'}</td>
+                    </tr>
+                  );
+                })}
+
+                {/* 6. LIST FILES */}
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={5} className="py-14 text-center text-neutral-400">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <RefreshCw className="w-5 h-5 text-sky-600 animate-spin" />
+                        <span className="text-xs">A sincronizar ficheiros...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : currentFolderDocuments.length === 0 && (currentPath !== '/' || searchTerm) && currentPath !== '/google-drive' && currentPath !== '/onedrive' ? (
+                  <tr>
+                    <td colSpan={5} className="py-14 text-center text-neutral-400">
+                      <p className="text-xs">
+                        {currentPath === '/trash' ? 'A lixeira está vazia.' : 'Esta pasta não contém ficheiros.'}
+                      </p>
+                    </td>
+                  </tr>
+                ) : (
+                  currentFolderDocuments.map((doc) => {
+                    const isSelected = selectedDocIds.includes(doc.id);
                     return (
-                      <tr key={f.id} className={`bg-rose-50/40 hover:bg-rose-50 transition-colors ${isTrashedFolderSelected ? 'bg-rose-100/50' : ''}`}>
-                        <td className="px-3 text-center">
-                          <input
-                            type="checkbox"
-                            checked={isTrashedFolderSelected}
-                            onChange={() => toggleSelectFolder(f.id)}
-                            className="rounded border-rose-300 text-rose-600 focus:ring-rose-500 accent-rose-600 cursor-pointer"
-                          />
+                      <tr
+                        key={doc.id}
+                        onClick={() => toggleSelectDoc(doc.id)}
+                        onDoubleClick={() => downloadDocument(doc.id, doc.file_name)}
+                        className={`transition-colors cursor-pointer group ${
+                          isSelected ? 'bg-[#D9EDF7] font-semibold text-sky-900' : 'hover:bg-[#EBF5FB]'
+                        }`}
+                      >
+                        {/* Nome (Only Clean Title / Name) */}
+                        <td className="py-1.5 px-3 flex items-center gap-2">
+                          {getFileRowIcon(doc.file_name, doc.mime_type)}
+                          <span className="text-neutral-900 group-hover:text-sky-800 truncate max-w-md">
+                            {doc.title}
+                          </span>
                         </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            {renderFolderWithBadge(f.iconType, "w-5 h-5", "w-2.5 h-2.5")}
-                            <div>
-                              <span className="font-bold text-sm text-rose-900 font-mono">
-                                {f.name} (Pasta Eliminada)
-                              </span>
-                              <p className="text-[11px] text-rose-600 mt-0.5">
-                                {f.description}
-                              </p>
-                            </div>
-                          </div>
+
+                        {/* Tamanho */}
+                        <td className="py-1.5 px-3 font-mono text-[11px] text-neutral-600">
+                          {formatCPanelSize(doc.file_size_bytes)}
                         </td>
-                        <td className="px-4 font-mono text-[11px] text-neutral-500">—</td>
-                        <td className="px-4 text-neutral-400 text-[11px]">{f.createdAt}</td>
-                        <td className="px-4 text-rose-600 text-[11px]">Pasta na Lixeira</td>
-                        <td className="px-4 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <button
-                              type="button"
-                              onClick={() => handleRestoreItem({ type: 'folder', id: f.id, name: f.name })}
-                              className="btn-secondary btn-sm text-[11px] py-1 px-2 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
-                              title="Restaurar Pasta"
-                            >
-                              <RotateCcw className="w-3 h-3 mr-1 text-emerald-600 inline" />
-                              Restaurar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handlePermanentDelete({ type: 'folder', id: f.id, name: f.name })}
-                              className="btn-danger btn-icon-sm"
-                              title="Eliminar Permanentemente"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
+
+                        {/* Last Modified */}
+                        <td className="py-1.5 px-3 text-[11px] text-neutral-600">
+                          {formatCPanelDate(doc.created_at)}
+                        </td>
+
+                        {/* Digitar (MIME / Type) */}
+                        <td className="py-1.5 px-3 text-[11px] text-neutral-600 font-mono truncate max-w-xs">
+                          {getCPanelType(doc.file_name, doc.mime_type)}
+                        </td>
+
+                        {/* Permissões */}
+                        <td className="py-1.5 px-3 text-right font-mono text-[11px] text-neutral-600">
+                          0644
                         </td>
                       </tr>
                     );
-                  })}
-
-                  {/* Lista de Ficheiros */}
-                  {isLoading ? (
-                    <tr>
-                      <td colSpan={6} className="py-14 text-center text-neutral-400">
-                        <div className="flex flex-col items-center justify-center gap-2">
-                          <RefreshCw className="w-5 h-5 text-[#FF8000] animate-spin" />
-                          <span className="text-xs">A sincronizar ficheiros com o Neon S3...</span>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : currentFolderDocuments.length === 0 && (currentPath !== '/' || searchTerm) ? (
-                    <tr>
-                      <td colSpan={6} className="py-14 text-center text-neutral-400">
-                        <div className="flex flex-col items-center justify-center gap-2">
-                          <FolderArchive className="w-9 h-9 text-neutral-300" />
-                          <p className="text-sm font-bold text-neutral-700 font-heading">
-                            {currentPath === '/trash' ? 'A lixeira está vazia' : 'Esta pasta está vazia'}
-                          </p>
-                          <p className="text-xs text-neutral-400 max-w-sm">
-                            {searchTerm 
-                              ? 'Nenhum ficheiro encontrado com os termos pesquisados.' 
-                              : currentPath === '/trash'
-                              ? 'Nenhum item foi enviado para a lixeira.'
-                              : 'Clique em "Novo Arquivo" acima para fazer upload para este diretório.'}
-                          </p>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    currentFolderDocuments.map((doc) => {
-                      const isSelected = selectedDocIds.includes(doc.id);
-                      const isTrashed = trashedDocIds.includes(doc.id);
-
-                      return (
-                        <tr 
-                          key={doc.id}
-                          className={`hover:bg-[#FAFAF9] transition-colors group ${isSelected ? 'bg-[#FFF2E5]/50' : ''}`}
-                        >
-                          {/* Checkbox */}
-                          <td className="px-3 text-center">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => toggleSelectDoc(doc.id)}
-                              className="rounded border-[#E2E2DE] text-[#FF8000] focus:ring-[#FF8000] accent-[#FF8000] cursor-pointer"
-                            />
-                          </td>
-
-                          {/* Nome do Ficheiro */}
-                          <td className="px-4 py-2.5 min-w-[260px]">
-                            <div className="flex items-center space-x-3">
-                              {getFileIcon(doc.file_name, doc.mime_type)}
-                              <div className="min-w-0 flex-1">
-                                <div className="font-bold text-[#101010] font-heading truncate max-w-md group-hover:text-[#FF8000] transition">
-                                  {doc.title}
-                                </div>
-                                <div className="text-[11px] text-neutral-400 font-mono truncate">
-                                  {doc.file_name}
-                                </div>
-                                {doc.description && (
-                                  <p className="text-[11px] text-neutral-400 italic truncate max-w-md">
-                                    {doc.description}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* Tamanho */}
-                          <td className="px-4 font-mono text-[11px] text-neutral-700 whitespace-nowrap">
-                            {formatFileSize(doc.file_size_bytes)}
-                          </td>
-
-                          {/* Data */}
-                          <td className="px-4 text-neutral-500 text-[11px] whitespace-nowrap">
-                            {doc.created_at ? new Date(doc.created_at).toLocaleDateString('pt-MZ', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            }) : '—'}
-                          </td>
-
-                          {/* Formato */}
-                          <td className="px-4 text-neutral-600 text-[11px] whitespace-nowrap">
-                            {getFormatName(doc.file_name, doc.mime_type)}
-                          </td>
-
-                          {/* Ações */}
-                          <td className="px-4 text-right whitespace-nowrap">
-                            <div className="flex items-center justify-end gap-1">
-                              {isTrashed ? (
-                                <>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRestoreItem({ type: 'file', id: doc.id, name: doc.title })}
-                                    className="btn-secondary btn-sm text-[11px] py-1 px-2 text-emerald-700 border-emerald-300 hover:bg-emerald-50"
-                                    title="Restaurar Ficheiro"
-                                  >
-                                    <RotateCcw className="w-3 h-3 mr-1 text-emerald-600 inline" />
-                                    Restaurar
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handlePermanentDelete({ type: 'file', id: doc.id, name: doc.title })}
-                                    className="btn-danger btn-icon-sm"
-                                    title="Eliminar Definitivamente"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </>
-                              ) : (
-                                <>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDownload(doc)}
-                                    className="btn-secondary btn-icon-sm"
-                                    title="Descarregar ficheiro"
-                                  >
-                                    <Download className="w-3.5 h-3.5 text-neutral-600" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenRename({ type: 'file', id: doc.id, name: doc.title, description: doc.description || '' })}
-                                    className="btn-ghost btn-icon-sm text-neutral-500 hover:text-neutral-800"
-                                    title="Renomear Ficheiro"
-                                  >
-                                    <Edit2 className="w-3.5 h-3.5" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleMoveToTrash({ type: 'file', id: doc.id, name: doc.title })}
-                                    className="btn-ghost btn-icon-sm text-rose-500 hover:text-rose-700 hover:bg-rose-50"
-                                    title="Mover para Lixeira"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-
-                </tbody>
-              </table>
-            ) : (
-              /* 2. MODO GRELHA (GRID VIEW) */
-              <div className="p-4 space-y-5">
-                
-                {/* Pastas em Grelha (Se estiver na raiz) */}
-                {currentPath === '/' && !searchTerm && (
-                  <div>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400 font-heading mb-3">
-                      Pastas do Sistema & Armazenamento
-                    </h4>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                      {activeFolders.map((folder) => {
-                        const count = folderCounts[folder.id] || 0;
-                        return (
-                          <div
-                            key={folder.id}
-                            onDoubleClick={() => navigateTo(folder.path)}
-                            onClick={() => navigateTo(folder.path)}
-                            className="bg-[#FAFAF9] hover:bg-white border border-[#E2E2DE] hover:border-[#FF8000] hover:shadow-md rounded-xl p-3.5 transition cursor-pointer flex flex-col justify-between group"
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="p-2.5 rounded-xl bg-white border border-[#E2E2DE] shadow-2xs group-hover:scale-105 transition">
-                                {renderFolderWithBadge(folder.iconType, "w-7 h-7", "w-3.5 h-3.5")}
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); handleOpenRename({ type: 'folder', id: folder.id, name: folder.name, description: folder.description }); }}
-                                  className="p-1 text-neutral-400 hover:text-neutral-700 rounded"
-                                  title="Renomear"
-                                >
-                                  <Edit2 size={13} />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); handleMoveToTrash({ type: 'folder', id: folder.id, name: folder.name }); }}
-                                  className="p-1 text-neutral-400 hover:text-rose-600 rounded"
-                                  title="Mover para Lixeira"
-                                >
-                                  <Trash2 size={13} />
-                                </button>
-                              </div>
-                            </div>
-                            <div className="mt-3">
-                              <p className="font-bold text-xs text-[#101010] font-mono group-hover:text-[#FF8000] truncate">
-                                {folder.name}
-                              </p>
-                              <p className="text-[10px] text-neutral-500 font-mono mt-0.5">
-                                {count} {count === 1 ? 'ficheiro' : 'ficheiros'}
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
-
-                      {/* Google Drive Card */}
-                      <div
-                        onClick={() => setIsGoogleDriveModalOpen(true)}
-                        className="bg-blue-50/50 hover:bg-white border border-blue-200 hover:border-blue-500 hover:shadow-md rounded-xl p-3.5 transition cursor-pointer flex flex-col justify-between group"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="p-2.5 rounded-xl bg-white border border-blue-200 shadow-2xs group-hover:scale-105 transition">
-                            {renderFolderWithBadge('google_drive', "w-7 h-7", "w-3.5 h-3.5")}
-                          </div>
-                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${isGoogleConnected ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
-                            {isGoogleConnected ? 'Ativo' : 'Conectar'}
-                          </span>
-                        </div>
-                        <div className="mt-3">
-                          <p className="font-bold text-xs text-blue-900 font-heading truncate">
-                            Google Drive
-                          </p>
-                          <p className="text-[10px] text-blue-600 font-sans mt-0.5">
-                            Cloud Explorer
-                          </p>
-                        </div>
-                      </div>
-
-                    </div>
-                  </div>
+                  })
                 )}
 
-                {/* Ficheiros em Grelha */}
-                <div>
-                  {currentPath !== '/' && (
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-400 font-heading">
-                        Ficheiros ({currentFolderDocuments.length})
-                      </h4>
-                      <button
-                        type="button"
-                        onClick={handleUpLevel}
-                        className="text-xs text-[#FF8000] hover:underline font-bold flex items-center gap-1"
-                      >
-                        <ArrowUp size={13} />
-                        <span>Subir Nível</span>
-                      </button>
-                    </div>
-                  )}
-
-                  {currentFolderDocuments.length === 0 ? (
-                    <div className="py-14 text-center text-neutral-400">
-                      <FolderArchive className="w-10 h-10 text-neutral-300 mx-auto mb-2" />
-                      <p className="text-sm font-bold text-neutral-700 font-heading">Nenhum ficheiro para exibir</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3.5">
-                      {currentFolderDocuments.map((doc) => {
-                        const isSelected = selectedDocIds.includes(doc.id);
-                        const isTrashed = trashedDocIds.includes(doc.id);
-
-                        return (
-                          <div
-                            key={doc.id}
-                            className={`bg-white border rounded-xl p-3.5 shadow-2xs hover:shadow-md transition flex flex-col justify-between group ${
-                              isSelected ? 'border-[#FF8000] ring-1 ring-[#FF8000]' : 'border-[#E2E2DE] hover:border-neutral-400'
-                            }`}
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="p-2 rounded-xl bg-[#FAFAF9] border border-[#EDEDEA] shrink-0">
-                                {getFileIcon(doc.file_name, doc.mime_type, "w-7 h-7")}
-                              </div>
-                              <div className="flex items-center gap-1">
-                                {isTrashed ? (
-                                  <>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleRestoreItem({ type: 'file', id: doc.id, name: doc.title })}
-                                      className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded"
-                                      title="Restaurar"
-                                    >
-                                      <RotateCcw size={14} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handlePermanentDelete({ type: 'file', id: doc.id, name: doc.title })}
-                                      className="p-1.5 text-rose-500 hover:bg-rose-50 rounded"
-                                      title="Eliminar Permanentemente"
-                                    >
-                                      <Trash2 size={14} />
-                                    </button>
-                                  </>
-                                ) : (
-                                  <>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDownload(doc)}
-                                      className="p-1.5 text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100 rounded"
-                                      title="Descarregar"
-                                    >
-                                      <Download size={14} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleOpenRename({ type: 'file', id: doc.id, name: doc.title, description: doc.description || '' })}
-                                      className="p-1.5 text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100 rounded"
-                                      title="Renomear"
-                                    >
-                                      <Edit2 size={14} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleMoveToTrash({ type: 'file', id: doc.id, name: doc.title })}
-                                      className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded"
-                                      title="Mover para Lixeira"
-                                    >
-                                      <Trash2 size={14} />
-                                    </button>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="mt-3">
-                              <h5 className="font-bold text-xs text-[#101010] font-heading truncate group-hover:text-[#FF8000]">
-                                {doc.title}
-                              </h5>
-                              <p className="text-[10px] text-neutral-400 font-mono truncate mt-0.5">
-                                {doc.file_name}
-                              </p>
-                            </div>
-
-                            <div className="mt-3 pt-2 border-t border-neutral-100 flex items-center justify-between text-[10px] text-neutral-500 font-mono">
-                              <span>{formatFileSize(doc.file_size_bytes)}</span>
-                              <span>{doc.created_at ? new Date(doc.created_at).toLocaleDateString('pt-MZ') : '—'}</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-              </div>
-            )}
-
+              </tbody>
+            </table>
           </div>
 
-          {/* Barra de Status no Rodapé */}
-          <div className="px-4 py-2 bg-[#FAFAF9] border-t border-[#EDEDEA] flex flex-wrap items-center justify-between text-xs text-[#737370] shrink-0">
+          {/* Footer Summary (Image 1 Bottom Status Bar) */}
+          <div className="px-3 py-1.5 bg-[#FAFAF9] border-t border-[#E2E2DE] flex items-center justify-between text-[11px] text-neutral-500 shrink-0 font-sans">
             <div className="flex items-center gap-3">
               <span>
-                <strong>{currentFolderDocuments.length}</strong> ficheiros na visualização
+                <strong>{currentFolderDocuments.length + (currentPath === '/' ? activeFolders.length : 0)}</strong> elementos no diretório
               </span>
-              {selectedDocIds.length > 0 && (
-                <span className="font-semibold text-[#FF8000]">
-                  ({selectedDocIds.length} selecionados)
+              {hasSelection && (
+                <span className="text-sky-700 font-bold">
+                  ({selectedDocIds.length + selectedFolderIds.length + selectedGDriveFileIds.length} selecionado(s))
                 </span>
               )}
             </div>
 
             <div className="flex items-center gap-2">
-              <ShieldCheck size={14} className="text-emerald-600" />
-              <span>Storage Neon S3: <strong>{kpis.total_storage_formatted}</strong></span>
+              <ShieldCheck size={13} className="text-emerald-600" />
+              <span>Storage Neon S3</span>
             </div>
           </div>
 
@@ -1743,7 +1694,7 @@ export const GEDView: React.FC = () => {
       </div>
 
       {/* =========================================================================
-          3. MODAL: NOVA PASTA
+          4. MODAL: NOVA PASTA
          ========================================================================= */}
       {isNewFolderModalOpen && (
         <div className="modal-overlay-erp animate-in fade-in duration-200">
@@ -1754,8 +1705,8 @@ export const GEDView: React.FC = () => {
                   <FolderPlus className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 leading-tight font-heading">Criar Nova Pasta</h3>
-                  <p className="text-[11px] text-slate-500">Organize ficheiros por categoria no repositório</p>
+                  <h3 className="text-sm font-bold text-slate-900 leading-tight">Criar Nova Pasta</h3>
+                  <p className="text-[11px] text-slate-500">Organize os ficheiros por categoria</p>
                 </div>
               </div>
               <button
@@ -1774,61 +1725,26 @@ export const GEDView: React.FC = () => {
                 <input
                   type="text"
                   required
-                  placeholder="ex: orcamentos_2026, plantas_estruturais"
+                  placeholder="ex: Orcamentos, Projetos_Estruturais"
                   value={newFolderName}
                   onChange={(e) => setNewFolderName(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#FAFAF9] border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#FF8000]"
+                  className="w-full px-3 py-2 bg-[#FAFAF9] border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Categoria / Finalidade
+                  Categoria
                 </label>
                 <select
                   value={newFolderCategory}
                   onChange={(e) => setNewFolderCategory(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#FAFAF9] border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#FF8000]"
+                  className="w-full px-3 py-2 bg-[#FAFAF9] border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 >
                   {CATEGORIES.map((cat) => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Tipo de Ícone & Formato
-                </label>
-                <div className="grid grid-cols-4 gap-2">
-                  {[
-                    { id: 'folder', label: 'Pasta', color: 'text-amber-500', icon: <Folder className="w-4 h-4 text-amber-500" /> },
-                    { id: 'pdf', label: 'PDF', color: 'text-rose-500', icon: <FileText className="w-4 h-4 text-rose-500" /> },
-                    { id: 'excel', label: 'Excel', color: 'text-emerald-600', icon: <FileSpreadsheet className="w-4 h-4 text-emerald-600" /> },
-                    { id: 'word', label: 'Word', color: 'text-blue-600', icon: <FileText className="w-4 h-4 text-blue-600" /> },
-                    { id: 'image', label: 'Imagem', color: 'text-indigo-500', icon: <FileImage className="w-4 h-4 text-indigo-500" /> },
-                    { id: 'cad', label: 'CAD', color: 'text-purple-600', icon: <Compass className="w-4 h-4 text-purple-600" /> },
-                    { id: 'contract', label: 'Contrato', color: 'text-cyan-600', icon: <FileCheck2 className="w-4 h-4 text-cyan-600" /> },
-                    { id: 'rh', label: 'RH', color: 'text-teal-600', icon: <Users className="w-4 h-4 text-teal-600" /> },
-                  ].map((ic) => (
-                    <button
-                      key={ic.id}
-                      type="button"
-                      onClick={() => {
-                        setNewFolderIcon(ic.id);
-                        setNewFolderColor(ic.color);
-                      }}
-                      className={`p-2 rounded-lg border text-center flex flex-col items-center gap-1 transition ${
-                        newFolderIcon === ic.id 
-                          ? 'border-[#FF8000] bg-[#FFF2E5] text-[#FF8000] font-bold' 
-                          : 'border-slate-200 hover:bg-slate-50 text-slate-600'
-                      }`}
-                    >
-                      {ic.icon}
-                      <span className="text-[10px]">{ic.label}</span>
-                    </button>
-                  ))}
-                </div>
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
@@ -1841,7 +1757,7 @@ export const GEDView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="btn-primary btn-sm"
+                  className="btn-primary btn-sm bg-sky-600 hover:bg-sky-700 text-white"
                 >
                   Criar Pasta
                 </button>
@@ -1852,21 +1768,21 @@ export const GEDView: React.FC = () => {
       )}
 
       {/* =========================================================================
-          4. MODAL: RENOMEAR (PASTA / FICHEIRO)
+          5. MODAL: RENOMEAR
          ========================================================================= */}
       {isRenameModalOpen && renameTarget && (
         <div className="modal-overlay-erp animate-in fade-in duration-200">
           <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
             <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
               <div className="flex items-center space-x-2.5">
-                <div className="w-8 h-8 rounded-xl bg-orange-100 text-[#FF8000] flex items-center justify-center">
+                <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center">
                   <Edit2 className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 leading-tight font-heading">
+                  <h3 className="text-sm font-bold text-slate-900 leading-tight">
                     Renomear {renameTarget.type === 'file' ? 'Ficheiro' : 'Pasta'}
                   </h3>
-                  <p className="text-[11px] text-slate-500">Altere o nome e a descrição do elemento</p>
+                  <p className="text-[11px] text-slate-500">Altere o título do elemento</p>
                 </div>
               </div>
               <button
@@ -1880,27 +1796,14 @@ export const GEDView: React.FC = () => {
             <form onSubmit={handleSaveRename} className="p-5 space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Novo Nome <span className="text-rose-500">*</span>
+                  Novo Título / Nome <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
                   required
                   value={renameValue}
                   onChange={(e) => setRenameValue(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#FAFAF9] border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#FF8000]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Descrição (Opcional)
-                </label>
-                <textarea
-                  rows={2}
-                  value={renameDescValue}
-                  onChange={(e) => setRenameDescValue(e.target.value)}
-                  placeholder="Adicione detalhes sobre o arquivo..."
-                  className="w-full px-3 py-2 bg-[#FAFAF9] border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#FF8000]"
+                  className="w-full px-3 py-2 bg-[#FAFAF9] border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
 
@@ -1914,9 +1817,9 @@ export const GEDView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="btn-primary btn-sm"
+                  className="btn-primary btn-sm bg-sky-600 hover:bg-sky-700 text-white"
                 >
-                  Guardar Alterações
+                  Guardar
                 </button>
               </div>
             </form>
@@ -1925,7 +1828,89 @@ export const GEDView: React.FC = () => {
       )}
 
       {/* =========================================================================
-          5. MODAL: NOVO ARQUIVO / UPLOAD (S3)
+          6. MODAL: PERMISSÕES (chmod 0755 / 0644)
+         ========================================================================= */}
+      {isPermissionsModalOpen && permissionsTarget && (
+        <div className="modal-overlay-erp animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl">
+            <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Key className="w-5 h-5 text-amber-500" />
+                <h3 className="text-sm font-bold text-slate-900 leading-tight">
+                  Permissões de {permissionsTarget.name}
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsPermissionsModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-md hover:bg-slate-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-xs">
+              <table className="w-full text-center border border-slate-200 rounded-lg overflow-hidden">
+                <thead className="bg-slate-50 text-[11px] font-semibold text-slate-700">
+                  <tr>
+                    <th className="py-1.5">Permissão</th>
+                    <th>User</th>
+                    <th>Group</th>
+                    <th>World</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-600">
+                  <tr>
+                    <td className="py-1.5 font-medium text-left px-2">Read (4)</td>
+                    <td><input type="checkbox" defaultChecked className="accent-sky-600" /></td>
+                    <td><input type="checkbox" defaultChecked className="accent-sky-600" /></td>
+                    <td><input type="checkbox" defaultChecked className="accent-sky-600" /></td>
+                  </tr>
+                  <tr>
+                    <td className="py-1.5 font-medium text-left px-2">Write (2)</td>
+                    <td><input type="checkbox" defaultChecked className="accent-sky-600" /></td>
+                    <td><input type="checkbox" className="accent-sky-600" /></td>
+                    <td><input type="checkbox" className="accent-sky-600" /></td>
+                  </tr>
+                  <tr>
+                    <td className="py-1.5 font-medium text-left px-2">Execute (1)</td>
+                    <td><input type="checkbox" defaultChecked className="accent-sky-600" /></td>
+                    <td><input type="checkbox" defaultChecked className="accent-sky-600" /></td>
+                    <td><input type="checkbox" defaultChecked className="accent-sky-600" /></td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div className="flex items-center justify-between font-mono bg-slate-50 p-2 rounded border border-slate-200">
+                <span className="text-slate-500 font-sans">Permissão Unix:</span>
+                <span className="font-bold text-sky-800 text-sm">{permissionsTarget.permissions}</span>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setIsPermissionsModalOpen(false)}
+                  className="btn-secondary btn-sm"
+                >
+                  Fechar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    showToast('success', 'Permissões Atualizadas', `Permissões de ${permissionsTarget.name} definidas.`);
+                    setIsPermissionsModalOpen(false);
+                  }}
+                  className="btn-primary btn-sm bg-sky-600 hover:bg-sky-700 text-white"
+                >
+                  Salvar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          7. MODAL: NOVO ARQUIVO / UPLOAD
          ========================================================================= */}
       {isUploadModalOpen && (
         <div className="modal-overlay-erp animate-in fade-in duration-200">
@@ -1936,7 +1921,7 @@ export const GEDView: React.FC = () => {
                   <UploadCloud className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 leading-tight font-heading">Carregar Novo Arquivo</h3>
+                  <h3 className="text-base font-bold text-slate-900 leading-tight">Carregar Arquivo</h3>
                   <p className="text-xs text-slate-500">Armazenamento direto no Storage Neon S3</p>
                 </div>
               </div>
@@ -1953,7 +1938,7 @@ export const GEDView: React.FC = () => {
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Arquivo Físico <span className="text-rose-500">*</span>
                 </label>
-                <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:border-[#FF8000] transition-colors cursor-pointer bg-slate-50/50">
+                <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:border-sky-500 transition-colors cursor-pointer bg-slate-50/50">
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -1969,7 +1954,7 @@ export const GEDView: React.FC = () => {
                           {selectedFile.name}
                         </p>
                         <p className="text-[11px] text-slate-400 mt-0.5">
-                          {formatFileSize(selectedFile.size)}
+                          {formatCPanelSize(selectedFile.size)}
                         </p>
                       </div>
                     ) : (
@@ -1996,7 +1981,7 @@ export const GEDView: React.FC = () => {
                   placeholder="ex: Projeto Estrutural da Obra X"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-3 py-2 bg-[#FAFAF9] border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#FF8000]"
+                  className="w-full px-3 py-2 bg-[#FAFAF9] border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
 
@@ -2008,7 +1993,7 @@ export const GEDView: React.FC = () => {
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#FAFAF9] border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#FF8000]"
+                    className="w-full px-3 py-2 bg-[#FAFAF9] border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500"
                   >
                     {CATEGORIES.map((cat) => (
                       <option key={cat} value={cat}>{cat}</option>
@@ -2025,7 +2010,7 @@ export const GEDView: React.FC = () => {
                     placeholder="v1.0, Rev B"
                     value={formData.version}
                     onChange={(e) => setFormData({ ...formData, version: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#FAFAF9] border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#FF8000]"
+                    className="w-full px-3 py-2 bg-[#FAFAF9] border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500"
                   />
                 </div>
               </div>
@@ -2038,7 +2023,7 @@ export const GEDView: React.FC = () => {
                   <select
                     value={formData.project_id}
                     onChange={(e) => setFormData({ ...formData, project_id: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#FAFAF9] border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#FF8000]"
+                    className="w-full px-3 py-2 bg-[#FAFAF9] border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500"
                   >
                     <option value="">Nenhum Projeto</option>
                     {projects.map((p) => (
@@ -2054,7 +2039,7 @@ export const GEDView: React.FC = () => {
                   <select
                     value={formData.client_id}
                     onChange={(e) => setFormData({ ...formData, client_id: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#FAFAF9] border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#FF8000]"
+                    className="w-full px-3 py-2 bg-[#FAFAF9] border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500"
                   >
                     <option value="">Nenhum Cliente</option>
                     {clients.map((c) => (
@@ -2062,19 +2047,6 @@ export const GEDView: React.FC = () => {
                     ))}
                   </select>
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Descrição / Notas
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="Adicione observações relevantes sobre o arquivo..."
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3 py-2 bg-[#FAFAF9] border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#FF8000]"
-                />
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex items-center justify-end space-x-2">
@@ -2088,13 +2060,13 @@ export const GEDView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="btn-primary btn-sm flex items-center space-x-1.5"
+                  className="btn-primary btn-sm bg-sky-600 hover:bg-sky-700 text-white flex items-center space-x-1.5"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>A Enviar para o S3...</span>
+                      <span>A Enviar...</span>
                     </>
                   ) : (
                     <>
@@ -2110,50 +2082,14 @@ export const GEDView: React.FC = () => {
       )}
 
       {/* =========================================================================
-          6. MODAIS DE INTEGRAÇÃO CLOUD (GOOGLE DRIVE & ONEDRIVE)
-         ========================================================================= */}
-      <GoogleDriveExplorerModal
-        isOpen={isGoogleDriveModalOpen}
-        onClose={() => setIsGoogleDriveModalOpen(false)}
-        onSuccess={(fileName) => {
-          showToast('success', 'Google Drive Sincronizado', `"${fileName}" foi transferido com sucesso para o Neon S3.`);
-          loadAllData();
-        }}
-      />
-
-      {isOneDriveModalOpen && (
-        <div className="modal-overlay-erp animate-in fade-in duration-200">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl p-6 text-center space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#0078D4] flex items-center justify-center mx-auto">
-              <svg className="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM19 18H6c-2.21 0-4-1.79-4-4 0-2.05 1.53-3.76 3.56-3.97l1.07-.11.5-.95C8.08 7.14 9.94 6 12 6c2.62 0 4.88 1.86 5.39 4.43l.3 1.5 1.53.11c1.56.1 2.78 1.41 2.78 2.96 0 1.65-1.35 3-3 3z"/>
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-900 font-heading">Microsoft OneDrive</h3>
-              <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-                A integração do Microsoft Graph / OneDrive está configurada no backend e será ativada com o Azure Client ID do LECASU ERP.
-              </p>
-            </div>
-            <button
-              onClick={() => setIsOneDriveModalOpen(false)}
-              className="btn-primary btn-sm w-full"
-            >
-              Compreendi
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* =========================================================================
-          7. MODAIS DE CONFIRMAÇÃO (MOVER PARA LIXEIRA, ESVAZIAR, PERMANENTE)
+          8. MODAIS DE CONFIRMAÇÃO
          ========================================================================= */}
       <ConfirmationModal
         isOpen={!!itemToDelete}
         onClose={() => setItemToDelete(null)}
         onConfirm={handleConfirmMoveToTrash}
         title="Mover para a Lixeira?"
-        description={`Tem a certeza de que deseja enviar "${itemToDelete?.name}" para a lixeira? Poderá restaurá-lo mais tarde se precisar.`}
+        description={`Tem a certeza de que deseja enviar "${itemToDelete?.name}" para a lixeira?`}
         confirmText="Mover para Lixeira"
         cancelText="Cancelar"
         variant="warning"
@@ -2164,7 +2100,7 @@ export const GEDView: React.FC = () => {
         onClose={() => setItemToPermanentDelete(null)}
         onConfirm={handleConfirmPermanentDelete}
         title="Eliminar Definitivamente?"
-        description={`Esta ação apagará permanentemente "${itemToPermanentDelete?.name}" do Neon S3 e da base de dados. Não poderá ser recuperado.`}
+        description={`Esta ação apagará permanentemente "${itemToPermanentDelete?.name}" do S3 e da base de dados.`}
         confirmText="Eliminar Definitivamente"
         cancelText="Cancelar"
         variant="danger"
