@@ -488,19 +488,19 @@ export const GEDView: React.FC = () => {
       )}
 
       {/* Technical Documents Table */}
-      <div className="bg-white rounded-lg border border-slate-200 shadow-2xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+      <div className="table-container-erp">
+        <div className="table-scroll-container">
+          <table className="table-erp">
             <thead>
-              <tr className="bg-slate-50/75 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold text-[11px]">
-                <th className="py-3 px-4">Tipo</th>
-                <th className="py-3 px-4">Título & Arquivo</th>
-                <th className="py-3 px-4">Versão</th>
-                <th className="py-3 px-4">Categoria</th>
-                <th className="py-3 px-4">Vínculo</th>
-                <th className="py-3 px-4">Tamanho</th>
-                <th className="py-3 px-4">Data Envio</th>
-                <th className="py-3 px-4 text-right">Ações</th>
+              <tr className="table-header-erp">
+                <th className="px-4 text-center w-12">Tipo</th>
+                <th className="px-4">Título & Arquivo</th>
+                <th className="px-4">Versão</th>
+                <th className="px-4">Categoria</th>
+                <th className="px-4">Vínculo</th>
+                <th className="px-4">Tamanho</th>
+                <th className="px-4">Data Envio</th>
+                <th className="px-4 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
@@ -518,7 +518,7 @@ export const GEDView: React.FC = () => {
                   <td colSpan={8} className="py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <FolderArchive className="w-8 h-8 text-slate-300" />
-                      <p className="text-sm font-semibold text-slate-700">Nenhum documento encontrado</p>
+                      <p className="text-sm font-semibold text-slate-700 font-heading">Nenhum documento encontrado</p>
                       <p className="text-xs text-slate-500 max-w-sm">
                         {searchTerm || categoryFilter 
                           ? 'Tente ajustar os critérios de pesquisa ou limpar os filtros.' 
@@ -531,57 +531,51 @@ export const GEDView: React.FC = () => {
                 filteredDocuments.map(doc => (
                   <tr 
                     key={doc.id}
-                    className="hover:bg-slate-50/80 transition-colors group"
+                    className="table-row-erp hover:bg-slate-50/80 transition-colors group"
                   >
                     {/* Icon Column */}
-                    <td className="py-3 px-4">
+                    <td className="px-4 text-center cell-nowrap">
                       {getFileIcon(doc.file_name, doc.mime_type)}
                     </td>
 
                     {/* Title & File Name */}
-                    <td className="py-3 px-4">
-                      <div className="font-semibold text-slate-900 flex items-center gap-2">
-                        <span>{doc.title}</span>
+                    <td className="px-4 min-w-[240px]">
+                      <div className="font-semibold text-slate-900 font-heading">
+                        {doc.title}
                       </div>
-                      <div className="text-[11px] text-slate-500 font-mono mt-0.5 flex items-center gap-2">
-                        <span className="truncate max-w-xs" title={doc.file_name}>
-                          {doc.file_name}
-                        </span>
+                      <div className="text-[11px] text-slate-500 font-mono mt-0.5">
+                        {doc.file_name}
                       </div>
                       {doc.description && (
-                        <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1 italic">
+                        <p className="text-[11px] text-slate-400 mt-0.5 italic">
                           {doc.description}
                         </p>
                       )}
                     </td>
 
                     {/* Version */}
-                    <td className="py-3 px-4">
+                    <td className="px-4 cell-nowrap">
                       <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-700 font-mono text-[11px] font-semibold">
                         {doc.version || 'v1.0'}
                       </span>
                     </td>
 
                     {/* Category */}
-                    <td className="py-3 px-4">
+                    <td className="px-4 cell-nowrap">
                       {getCategoryBadge(doc.category)}
                     </td>
 
                     {/* Link (Project or Client) */}
-                    <td className="py-3 px-4">
+                    <td className="px-4 min-w-[160px] cell-nowrap">
                       {doc.project_name ? (
                         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
                           <Briefcase className="w-3 h-3" />
-                          <span className="truncate max-w-[140px]" title={doc.project_name}>
-                            {doc.project_name}
-                          </span>
+                          <span>{doc.project_name}</span>
                         </span>
                       ) : doc.client_name ? (
                         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
                           <Building2 className="w-3 h-3" />
-                          <span className="truncate max-w-[140px]" title={doc.client_name}>
-                            {doc.client_name}
-                          </span>
+                          <span>{doc.client_name}</span>
                         </span>
                       ) : (
                         <span className="text-slate-400 text-[11px] italic">
@@ -591,12 +585,12 @@ export const GEDView: React.FC = () => {
                     </td>
 
                     {/* File Size */}
-                    <td className="py-3 px-4 text-slate-600 text-xs font-mono">
+                    <td className="px-4 text-slate-600 text-xs font-mono cell-nowrap">
                       {formatFileSize(doc.file_size_bytes)}
                     </td>
 
                     {/* Created Date */}
-                    <td className="py-3 px-4 text-slate-500 text-xs">
+                    <td className="px-4 text-slate-500 text-xs cell-nowrap">
                       {doc.created_at ? (
                         <span className="flex items-center">
                           <Calendar size={12} className="mr-1 text-slate-400" />
@@ -606,7 +600,7 @@ export const GEDView: React.FC = () => {
                     </td>
 
                     {/* Actions */}
-                    <td className="py-3 px-4 text-right">
+                    <td className="px-4 td-actions cell-nowrap">
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => handleDownload(doc)}

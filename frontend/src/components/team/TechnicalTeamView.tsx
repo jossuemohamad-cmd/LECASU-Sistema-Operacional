@@ -439,47 +439,48 @@ export const TechnicalTeamView: React.FC = () => {
               )}
             </div>
           ) : (
-            <table className="w-full text-left border-collapse">
+          <div className="table-scroll-container">
+            <table className="table-erp">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/40 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                  <th className="py-2.5 px-4">Intervenção / Tarefa</th>
-                  <th className="py-2.5 px-3">Projeto</th>
-                  <th className="py-2.5 px-3">Técnico Responsável</th>
-                  <th className="py-2.5 px-3">Prazo</th>
-                  <th className="py-2.5 px-3">Status</th>
-                  <th className="py-2.5 px-4 text-right">Alocação</th>
+                <tr className="table-header-erp">
+                  <th className="px-4">Intervenção / Tarefa</th>
+                  <th className="px-4">Projeto</th>
+                  <th className="px-4">Técnico Responsável</th>
+                  <th className="px-4">Prazo</th>
+                  <th className="px-4">Status</th>
+                  <th className="px-4 text-right">Alocação</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
                 {filteredTasks.map((task) => (
-                  <tr key={task.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3 px-4">
-                      <div className="font-semibold text-slate-900 truncate max-w-[240px]" title={task.title}>
+                  <tr key={task.id} className="table-row-erp hover:bg-slate-50/80 transition-colors">
+                    <td className="px-4 min-w-[240px]">
+                      <div className="font-semibold text-slate-900 font-heading">
                         {task.title}
                       </div>
                       {task.description && (
-                        <div className="text-[11px] text-slate-500 truncate max-w-[240px] mt-0.5">
+                        <div className="text-[11px] text-slate-500 mt-0.5">
                           {task.description}
                         </div>
                       )}
                     </td>
 
-                    <td className="py-3 px-3">
-                      <div className="font-medium text-slate-700 truncate max-w-[160px]" title={task.project_name || ''}>
+                    <td className="px-4 min-w-[180px]">
+                      <div className="font-medium text-slate-700">
                         {task.project_name || 'Geral'}
                       </div>
-                      <span className="font-mono text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded mt-0.5 inline-block">
+                      <span className="font-mono text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded mt-0.5 inline-block cell-nowrap">
                         {task.project_code || 'PRJ'}
                       </span>
                     </td>
 
-                    <td className="py-3 px-3">
+                    <td className="px-4 min-w-[160px] cell-nowrap">
                       {task.assigned_technician_name ? (
                         <div className="flex items-center gap-1.5">
                           <div className="w-6 h-6 rounded-full bg-slate-800 text-white font-bold text-[10px] flex items-center justify-center flex-shrink-0">
                             {task.assigned_technician_name.charAt(0)}
                           </div>
-                          <span className="font-semibold text-slate-800 truncate max-w-[140px]" title={task.assigned_technician_name}>
+                          <span className="font-semibold text-slate-800">
                             {task.assigned_technician_name}
                           </span>
                         </div>
@@ -490,24 +491,24 @@ export const TechnicalTeamView: React.FC = () => {
                       )}
                     </td>
 
-                    <td className="py-3 px-3 text-slate-600 text-[11px]">
+                    <td className="px-4 cell-nowrap text-slate-600 text-[11px]">
                       <span className="flex items-center gap-1">
                         <Calendar size={12} className="text-slate-400" />
                         {formatDate(task.due_date)}
                       </span>
                     </td>
 
-                    <td className="py-3 px-3">
+                    <td className="px-4 cell-nowrap">
                       {getStatusBadge(task.status)}
                     </td>
 
-                    <td className="py-3 px-4 text-right">
+                    <td className="px-4 td-actions cell-nowrap">
                       <button
                         onClick={() => {
                           setSelectedTaskForAssign(task);
                           setSelectedAssigneeId(task.assigned_to || (technicians[0]?.id ?? ''));
                         }}
-                        className="inline-flex items-center space-x-1 px-2.5 py-1 bg-slate-50 hover:bg-orange-50 border border-slate-200 hover:border-orange-300 text-slate-700 hover:text-orange-700 rounded text-[11px] font-semibold transition shadow-2xs"
+                        className="btn-secondary btn-sm"
                       >
                         <ArrowRightLeft size={11} className="text-orange-600" />
                         <span>{task.assigned_to ? 'Reatribuir' : 'Atribuir'}</span>
@@ -517,6 +518,7 @@ export const TechnicalTeamView: React.FC = () => {
                 ))}
               </tbody>
             </table>
+          </div>
           )}
         </div>
       </div>

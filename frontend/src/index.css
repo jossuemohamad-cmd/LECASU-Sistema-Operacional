@@ -320,14 +320,31 @@ button, input, select, textarea, label, table, .font-sans, .font-body {
     box-shadow: 0 1px 2px rgba(16, 16, 16, 0.03);
   }
 
-  /* --- TABELAS ERP DE ALTA DENSIDADE --- */
+  /* --- TABELAS ERP DE ALTA DENSIDADE & INTEGRIDADE DE TEXTO --- */
   .table-container-erp {
     background-color: #FFFFFF;
     border: 1px solid #E2E2DE;
     border-radius: 0.75rem; /* 12px */
     overflow: hidden;
     box-shadow: 0 1px 2px rgba(16, 16, 16, 0.03);
+    width: 100%;
   }
+
+  .table-scroll-container {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    display: block;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table-erp {
+    width: 100%;
+    min-width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+  }
+
   .table-header-erp {
     background-color: #FAFAF9;
     border-bottom: 1px solid #E2E2DE;
@@ -343,7 +360,9 @@ button, input, select, textarea, label, table, .font-sans, .font-body {
     padding-top: 0.625rem;
     padding-bottom: 0.625rem;
     height: 2.5rem; /* 40px */
+    white-space: nowrap;
   }
+
   .table-row-erp {
     border-bottom: 1px solid #EDEDEA;
     transition: background-color 0.1s ease;
@@ -356,9 +375,20 @@ button, input, select, textarea, label, table, .font-sans, .font-body {
   .table-row-erp td {
     padding-left: 1rem; /* 16px */
     padding-right: 1rem; /* 16px */
-    padding-top: 0.75rem;
-    padding-bottom: 0.75rem;
+    padding-top: 0.75rem; /* 12px */
+    padding-bottom: 0.75rem; /* 12px */
     vertical-align: middle;
+  }
+
+  /* Células de dados atômicos sem quebra */
+  .cell-nowrap, .td-atomic {
+    white-space: nowrap !important;
+  }
+
+  /* Coluna de ações com alinhamento */
+  .td-actions {
+    white-space: nowrap;
+    text-align: right;
   }
 
   /* Badges */

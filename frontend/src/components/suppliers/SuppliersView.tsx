@@ -523,19 +523,19 @@ export const SuppliersView: React.FC = () => {
 
       {/* CONTEÚDO DA SUB-ABA 1: FORNECEDORES */}
       {activeTab === 'suppliers' && (
-        <div className="bg-white rounded-lg border border-slate-200 shadow-2xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+        <div className="table-container-erp">
+          <div className="table-scroll-container">
+            <table className="table-erp">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/60 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                  <th className="py-2.5 px-4">Fornecedor</th>
-                  <th className="py-2.5 px-3">NUIT</th>
-                  <th className="py-2.5 px-3">Categoria</th>
-                  <th className="py-2.5 px-3">Contacto Principal</th>
-                  <th className="py-2.5 px-3">Telefone / E-mail</th>
-                  <th className="py-2.5 px-3 text-right">Total Compras</th>
-                  <th className="py-2.5 px-3">Status</th>
-                  <th className="py-2.5 px-4 text-right">Ações</th>
+                <tr className="table-header-erp">
+                  <th className="px-4">Fornecedor</th>
+                  <th className="px-4">NUIT</th>
+                  <th className="px-4">Categoria</th>
+                  <th className="px-4">Contacto Principal</th>
+                  <th className="px-4">Telefone / E-mail</th>
+                  <th className="px-4 text-right">Total Compras</th>
+                  <th className="px-4">Status</th>
+                  <th className="px-4 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
@@ -547,32 +547,32 @@ export const SuppliersView: React.FC = () => {
                   </tr>
                 ) : (
                   filteredSuppliers.map((supplier) => (
-                    <tr key={supplier.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3 px-4">
+                    <tr key={supplier.id} className="table-row-erp hover:bg-slate-50/80 transition-colors">
+                      <td className="px-4 min-w-[220px]">
                         <div className="flex items-center space-x-2.5">
                           <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center border border-slate-200 flex-shrink-0">
                             <Building2 size={14} className="text-orange-600" />
                           </div>
                           <div>
-                            <div className="font-semibold text-slate-900">{supplier.name}</div>
+                            <div className="font-semibold text-slate-900 font-heading">{supplier.name}</div>
                             <div className="text-[10px] text-slate-400 font-mono">ID: #{supplier.id}</div>
                           </div>
                         </div>
                       </td>
 
-                      <td className="py-3 px-3 text-slate-600 font-mono text-[11px]">
+                      <td className="px-4 cell-nowrap text-slate-600 font-mono text-[11px]">
                         {supplier.nuit || '—'}
                       </td>
 
-                      <td className="py-3 px-3">
+                      <td className="px-4 cell-nowrap">
                         {getCategoryBadge(supplier.category)}
                       </td>
 
-                      <td className="py-3 px-3 text-slate-700 font-medium">
+                      <td className="px-4 min-w-[140px] text-slate-700 font-medium">
                         {supplier.contact_person || '—'}
                       </td>
 
-                      <td className="py-3 px-3 text-slate-600 text-[11px]">
+                      <td className="px-4 cell-nowrap text-slate-600 text-[11px]">
                         <div className="space-y-0.5">
                           {supplier.phone && (
                             <div className="flex items-center gap-1">
@@ -592,14 +592,14 @@ export const SuppliersView: React.FC = () => {
                         </div>
                       </td>
 
-                      <td className="py-3 px-3 text-right font-mono font-semibold text-slate-800">
+                      <td className="px-4 text-right font-mono font-semibold text-slate-800 cell-nowrap font-heading">
                         {formatCurrency(supplier.total_spent)}
                         <span className="block text-[10px] text-slate-400 font-normal font-sans">
                           {supplier.purchases_count} pedido(s)
                         </span>
                       </td>
 
-                      <td className="py-3 px-3">
+                      <td className="px-4 cell-nowrap">
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold ${
                           supplier.is_active
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
@@ -609,7 +609,7 @@ export const SuppliersView: React.FC = () => {
                         </span>
                       </td>
 
-                      <td className="py-3 px-4 text-right">
+                      <td className="px-4 td-actions cell-nowrap">
                         <button
                           onClick={() => handleToggleSupplierStatus(supplier)}
                           className={`text-[11px] font-semibold px-2.5 py-1 rounded transition border cursor-pointer ${
@@ -632,19 +632,19 @@ export const SuppliersView: React.FC = () => {
 
       {/* CONTEÚDO DA SUB-ABA 2: ORDENS DE COMPRA */}
       {activeTab === 'purchases' && (
-        <div className="bg-white rounded-lg border border-slate-200 shadow-2xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+        <div className="table-container-erp">
+          <div className="table-scroll-container">
+            <table className="table-erp">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/60 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                  <th className="py-2.5 px-4">Nº Ordem</th>
-                  <th className="py-2.5 px-3">Fornecedor</th>
-                  <th className="py-2.5 px-3">Descrição dos Insumos</th>
-                  <th className="py-2.5 px-3">Projeto Vinculado</th>
-                  <th className="py-2.5 px-3 text-right">Valor (MZN)</th>
-                  <th className="py-2.5 px-3">Vencimento</th>
-                  <th className="py-2.5 px-3">Status</th>
-                  <th className="py-2.5 px-4 text-right">Ações</th>
+                <tr className="table-header-erp">
+                  <th className="px-4">Nº Ordem</th>
+                  <th className="px-4">Fornecedor</th>
+                  <th className="px-4">Descrição dos Insumos</th>
+                  <th className="px-4">Projeto Vinculado</th>
+                  <th className="px-4 text-right">Valor (MZN)</th>
+                  <th className="px-4">Vencimento</th>
+                  <th className="px-4">Status</th>
+                  <th className="px-4 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
@@ -656,21 +656,21 @@ export const SuppliersView: React.FC = () => {
                   </tr>
                 ) : (
                   filteredPurchases.map((order) => (
-                    <tr key={order.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3 px-4 font-mono font-bold text-slate-900">
+                    <tr key={order.id} className="table-row-erp hover:bg-slate-50/80 transition-colors">
+                      <td className="px-4 font-mono font-bold text-slate-900 cell-nowrap">
                         {order.order_number}
                       </td>
 
-                      <td className="py-3 px-3">
-                        <div className="font-semibold text-slate-900">{order.supplier_name}</div>
+                      <td className="px-4 min-w-[180px]">
+                        <div className="font-semibold text-slate-900 font-heading">{order.supplier_name}</div>
                         <div className="text-[10px] text-slate-400">{order.supplier_category}</div>
                       </td>
 
-                      <td className="py-3 px-3 text-slate-700 max-w-xs truncate" title={order.description}>
+                      <td className="px-4 text-slate-700 min-w-[220px]">
                         {order.description}
                       </td>
 
-                      <td className="py-3 px-3">
+                      <td className="px-4 cell-nowrap min-w-[140px]">
                         {order.project_code ? (
                           <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-medium">
                             <Briefcase size={11} />
@@ -681,15 +681,15 @@ export const SuppliersView: React.FC = () => {
                         )}
                       </td>
 
-                      <td className="py-3 px-3 text-right font-mono font-bold text-slate-900">
+                      <td className="px-4 text-right font-mono font-bold text-slate-900 cell-nowrap font-heading">
                         {formatCurrency(order.total_amount)}
                       </td>
 
-                      <td className="py-3 px-3 text-slate-600 font-mono text-[11px]">
+                      <td className="px-4 text-slate-600 font-mono text-[11px] cell-nowrap">
                         {order.due_date ? new Date(order.due_date).toLocaleDateString('pt-MZ') : '—'}
                       </td>
 
-                      <td className="py-3 px-3">
+                      <td className="px-4 cell-nowrap">
                         {order.status === 'PAID' ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                             <CheckCircle2 size={11} className="text-emerald-600" />
@@ -703,15 +703,15 @@ export const SuppliersView: React.FC = () => {
                         )}
                       </td>
 
-                      <td className="py-3 px-4 text-right">
+                      <td className="px-4 td-actions cell-nowrap">
                         {order.status === 'PENDING' ? (
                           <button
                             onClick={() => handlePayPurchase(order)}
-                            className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs transition cursor-pointer"
+                            className="btn-success btn-sm"
                             title="Registar liquidação de pagamento"
                           >
                             <CreditCard size={12} />
-                            <span>Liquidar Pagamento</span>
+                            <span>Liquidar</span>
                           </button>
                         ) : (
                           <span className="text-[11px] text-slate-400 font-medium">

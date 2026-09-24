@@ -544,19 +544,19 @@ export const HRView: React.FC = () => {
 
       {/* CONTEÚDO SUB-ABA 1: COLABORADORES */}
       {activeTab === 'employees' && (
-        <div className="bg-white rounded-lg border border-slate-200 shadow-2xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+        <div className="table-container-erp">
+          <div className="table-scroll-container">
+            <table className="table-erp">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/60 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                  <th className="py-2.5 px-4">Colaborador</th>
-                  <th className="py-2.5 px-3">Cargo / Posição</th>
-                  <th className="py-2.5 px-3">Departamento</th>
-                  <th className="py-2.5 px-3">Contrato</th>
-                  <th className="py-2.5 px-3 text-right">Salário Base (MZN)</th>
-                  <th className="py-2.5 px-3">Admissão</th>
-                  <th className="py-2.5 px-3">Status</th>
-                  <th className="py-2.5 px-4 text-right">Ações</th>
+                <tr className="table-header-erp">
+                  <th className="px-4">Colaborador</th>
+                  <th className="px-4">Cargo / Posição</th>
+                  <th className="px-4">Departamento</th>
+                  <th className="px-4">Contrato</th>
+                  <th className="px-4 text-right">Salário Base (MZN)</th>
+                  <th className="px-4">Admissão</th>
+                  <th className="px-4">Status</th>
+                  <th className="px-4 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
@@ -568,14 +568,14 @@ export const HRView: React.FC = () => {
                   </tr>
                 ) : (
                   filteredEmployees.map((emp) => (
-                    <tr key={emp.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3 px-4">
+                    <tr key={emp.id} className="table-row-erp hover:bg-slate-50/80 transition-colors">
+                      <td className="px-4 min-w-[220px]">
                         <div className="flex items-center space-x-2.5">
                           <div className="w-8 h-8 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center flex-shrink-0">
                             {emp.name.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <div className="font-semibold text-slate-900">{emp.name}</div>
+                            <div className="font-semibold text-slate-900 font-heading">{emp.name}</div>
                             <div className="text-[10px] text-slate-400 flex items-center gap-2">
                               {emp.email && <span>{emp.email}</span>}
                               {emp.bi_number && <span className="font-mono">BI: {emp.bi_number}</span>}
@@ -584,29 +584,29 @@ export const HRView: React.FC = () => {
                         </div>
                       </td>
 
-                      <td className="py-3 px-3 text-slate-800 font-medium">
+                      <td className="px-4 min-w-[140px] text-slate-800 font-medium">
                         {emp.position}
                       </td>
 
-                      <td className="py-3 px-3">
+                      <td className="px-4 cell-nowrap">
                         {getDepartmentBadge(emp.department)}
                       </td>
 
-                      <td className="py-3 px-3 text-slate-600 text-[11px]">
+                      <td className="px-4 cell-nowrap text-slate-600 text-[11px]">
                         <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-medium border border-slate-200">
                           {emp.contract_type}
                         </span>
                       </td>
 
-                      <td className="py-3 px-3 text-right font-mono font-bold text-slate-900">
+                      <td className="px-4 text-right font-mono font-bold text-slate-900 cell-nowrap font-heading">
                         {formatCurrency(emp.base_salary)}
                       </td>
 
-                      <td className="py-3 px-3 text-slate-600 font-mono text-[11px]">
+                      <td className="px-4 text-slate-600 font-mono text-[11px] cell-nowrap">
                         {emp.hire_date ? new Date(emp.hire_date).toLocaleDateString('pt-MZ') : '—'}
                       </td>
 
-                      <td className="py-3 px-3">
+                      <td className="px-4 cell-nowrap">
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold ${
                           emp.is_active
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
@@ -616,7 +616,7 @@ export const HRView: React.FC = () => {
                         </span>
                       </td>
 
-                      <td className="py-3 px-4 text-right">
+                      <td className="px-4 td-actions cell-nowrap">
                         <button
                           onClick={() => handleToggleEmployeeStatus(emp)}
                           className={`text-[11px] font-semibold px-2.5 py-1 rounded transition border cursor-pointer ${
@@ -639,18 +639,18 @@ export const HRView: React.FC = () => {
 
       {/* CONTEÚDO SUB-ABA 2: PRESENÇAS & AUSÊNCIAS */}
       {activeTab === 'leaves' && (
-        <div className="bg-white rounded-lg border border-slate-200 shadow-2xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+        <div className="table-container-erp">
+          <div className="table-scroll-container">
+            <table className="table-erp">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/60 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                  <th className="py-2.5 px-4">Colaborador</th>
-                  <th className="py-2.5 px-3">Tipo de Ausência</th>
-                  <th className="py-2.5 px-3">Período / Duração</th>
-                  <th className="py-2.5 px-3">Motivo / Justificação</th>
-                  <th className="py-2.5 px-3">Data de Pedido</th>
-                  <th className="py-2.5 px-3">Status</th>
-                  <th className="py-2.5 px-4 text-right">Ações de Gestão</th>
+                <tr className="table-header-erp">
+                  <th className="px-4">Colaborador</th>
+                  <th className="px-4">Tipo de Ausência</th>
+                  <th className="px-4">Período / Duração</th>
+                  <th className="px-4">Motivo / Justificação</th>
+                  <th className="px-4">Data de Pedido</th>
+                  <th className="px-4">Status</th>
+                  <th className="px-4 text-right">Ações de Gestão</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
@@ -664,17 +664,17 @@ export const HRView: React.FC = () => {
                   filteredLeaves.map((leave) => {
                     const days = calculateDays(leave.start_date, leave.end_date);
                     return (
-                      <tr key={leave.id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="py-3 px-4">
-                          <div className="font-semibold text-slate-900">{leave.employee_name}</div>
+                      <tr key={leave.id} className="table-row-erp hover:bg-slate-50/80 transition-colors">
+                        <td className="px-4 min-w-[200px]">
+                          <div className="font-semibold text-slate-900 font-heading">{leave.employee_name}</div>
                           <div className="text-[10px] text-slate-400">{leave.employee_position} • {leave.employee_department}</div>
                         </td>
 
-                        <td className="py-3 px-3 font-medium text-slate-800">
+                        <td className="px-4 cell-nowrap font-medium text-slate-800 min-w-[140px]">
                           {leave.leave_type}
                         </td>
 
-                        <td className="py-3 px-3">
+                        <td className="px-4 cell-nowrap min-w-[180px]">
                           <div className="font-mono text-[11px] text-slate-700">
                             {new Date(leave.start_date).toLocaleDateString('pt-MZ')} ➔ {new Date(leave.end_date).toLocaleDateString('pt-MZ')}
                           </div>
@@ -683,15 +683,15 @@ export const HRView: React.FC = () => {
                           </span>
                         </td>
 
-                        <td className="py-3 px-3 text-slate-600 max-w-xs truncate" title={leave.reason || ''}>
+                        <td className="px-4 text-slate-600 min-w-[220px]">
                           {leave.reason || '—'}
                         </td>
 
-                        <td className="py-3 px-3 text-slate-500 font-mono text-[11px]">
+                        <td className="px-4 text-slate-500 font-mono text-[11px] cell-nowrap">
                           {leave.created_at ? new Date(leave.created_at).toLocaleDateString('pt-MZ') : '—'}
                         </td>
 
-                        <td className="py-3 px-3">
+                        <td className="px-4 cell-nowrap">
                           {leave.status === 'APPROVED' ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                               <CheckCircle2 size={11} className="text-emerald-600" />
@@ -710,12 +710,12 @@ export const HRView: React.FC = () => {
                           )}
                         </td>
 
-                        <td className="py-3 px-4 text-right">
+                        <td className="px-4 td-actions cell-nowrap">
                           {leave.status === 'PENDING' ? (
                             <div className="flex items-center justify-end gap-1.5">
                               <button
                                 onClick={() => handleApproveLeave(leave.id, 'APPROVED')}
-                                className="inline-flex items-center gap-1 px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold shadow-2xs transition cursor-pointer"
+                                className="btn-success btn-sm"
                                 title="Aprovar ausência"
                               >
                                 <Check size={12} />
@@ -723,7 +723,7 @@ export const HRView: React.FC = () => {
                               </button>
                               <button
                                 onClick={() => handleApproveLeave(leave.id, 'REJECTED')}
-                                className="inline-flex items-center gap-1 px-2 py-1 rounded bg-white hover:bg-rose-50 text-rose-700 border border-slate-200 hover:border-rose-300 text-[11px] font-semibold transition cursor-pointer"
+                                className="btn-secondary btn-sm text-rose-700 hover:bg-rose-50"
                                 title="Rejeitar ausência"
                               >
                                 <X size={12} />
@@ -732,7 +732,7 @@ export const HRView: React.FC = () => {
                             </div>
                           ) : (
                             <span className="text-[11px] text-slate-400 font-medium">
-                              Decidido
+                              {leave.status === 'APPROVED' ? 'Processado' : 'Finalizado'}
                             </span>
                           )}
                         </td>

@@ -287,41 +287,41 @@ export const SettingsView: React.FC = () => {
             </span>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <div className="table-scroll-container">
+            <table className="table-erp">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/40 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                  <th className="py-2.5 px-4">Utilizador</th>
-                  <th className="py-2.5 px-3">E-mail Corporativo</th>
-                  <th className="py-2.5 px-3">Contacto</th>
-                  <th className="py-2.5 px-3">Perfil de Acesso</th>
-                  <th className="py-2.5 px-3">Status</th>
-                  <th className="py-2.5 px-4 text-right">Ações Rápidas</th>
+                <tr className="table-header-erp">
+                  <th className="px-4">Utilizador</th>
+                  <th className="px-4">E-mail Corporativo</th>
+                  <th className="px-4">Contacto</th>
+                  <th className="px-4">Perfil de Acesso</th>
+                  <th className="px-4">Status</th>
+                  <th className="px-4 text-right">Ações Rápidas</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
                 {users.map((user) => (
-                  <tr key={user.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3 px-4">
+                  <tr key={user.id} className="table-row-erp hover:bg-slate-50/80 transition-colors">
+                    <td className="px-4 min-w-[200px]">
                       <div className="flex items-center space-x-2.5">
                         <div className="w-8 h-8 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center flex-shrink-0">
                           {user.name.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <div className="font-semibold text-slate-900">{user.name}</div>
+                          <div className="font-semibold text-slate-900 font-heading">{user.name}</div>
                           <div className="text-[10px] text-slate-400 font-mono">ID: #{user.id}</div>
                         </div>
                       </div>
                     </td>
 
-                    <td className="py-3 px-3 text-slate-700">
+                    <td className="px-4 cell-nowrap min-w-[180px] text-slate-700">
                       <div className="flex items-center gap-1.5">
                         <Mail size={12} className="text-slate-400" />
                         <span>{user.email}</span>
                       </div>
                     </td>
 
-                    <td className="py-3 px-3 text-slate-600 font-mono text-[11px]">
+                    <td className="px-4 cell-nowrap text-slate-600 font-mono text-[11px]">
                       {user.phone ? (
                         <div className="flex items-center gap-1.5">
                           <Phone size={12} className="text-slate-400" />
@@ -332,11 +332,11 @@ export const SettingsView: React.FC = () => {
                       )}
                     </td>
 
-                    <td className="py-3 px-3">
+                    <td className="px-4 cell-nowrap">
                       {getRoleBadge(user.role)}
                     </td>
 
-                    <td className="py-3 px-3">
+                    <td className="px-4 cell-nowrap">
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold ${
                         user.is_active
                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
@@ -356,12 +356,12 @@ export const SettingsView: React.FC = () => {
                       </span>
                     </td>
 
-                    <td className="py-3 px-4 text-right">
+                    <td className="px-4 td-actions cell-nowrap">
                       <div className="flex items-center justify-end gap-1.5">
                         {/* BOTÃO REDEFINIR SENHA (ADMIN) */}
                         <button
                           onClick={() => handleOpenResetModal(user)}
-                          className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded bg-white hover:bg-orange-50 text-orange-700 border border-slate-200 hover:border-orange-300 transition cursor-pointer"
+                          className="btn-secondary btn-sm text-orange-700 hover:bg-orange-50"
                           title="Redefinir Palavra-passe do Utilizador"
                         >
                           <KeyRound size={12} className="text-orange-600" />
@@ -371,7 +371,7 @@ export const SettingsView: React.FC = () => {
                         {/* ATIVAR/DESATIVAR */}
                         <button
                           onClick={() => handleToggleUserStatus(user)}
-                          className={`text-[11px] font-semibold px-2.5 py-1 rounded transition border cursor-pointer ${
+                          className={`btn-sm border ${
                             user.is_active
                               ? 'bg-white hover:bg-rose-50 text-rose-700 border-slate-200 hover:border-rose-300'
                               : 'bg-white hover:bg-emerald-50 text-emerald-700 border-slate-200 hover:border-emerald-300'

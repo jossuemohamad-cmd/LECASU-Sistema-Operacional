@@ -384,7 +384,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             </button>
           </div>
 
-          <div className="flex-1 overflow-x-auto">
+          <div className="table-scroll-container">
             {!data?.recent_projects || data.recent_projects.length === 0 ? (
               <div className="p-8 text-center">
                 <Briefcase size={32} className="mx-auto text-neutral-300 mb-2" />
@@ -400,7 +400,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                 </button>
               </div>
             ) : (
-              <table className="w-full text-left border-collapse">
+              <table className="table-erp">
                 <thead>
                   <tr className="table-header-erp">
                     <th className="px-4">Projeto & Código</th>
@@ -413,21 +413,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                 <tbody className="divide-y divide-[#EDEDEA]">
                   {data.recent_projects.map((proj) => (
                     <tr key={proj.id} className="table-row-erp">
-                      <td className="px-4">
-                        <div className="font-semibold text-[#101010] truncate max-w-[180px] font-heading" title={proj.name}>
+                      <td className="px-4 min-w-[200px]">
+                        <div className="font-semibold text-[#101010] font-heading">
                           {proj.name}
                         </div>
-                        <span className="font-mono text-[10px] text-neutral-500 bg-[#EDEDEA] px-1.5 py-0.5 rounded mt-0.5 inline-block">
+                        <span className="font-mono text-[10px] text-neutral-500 bg-[#EDEDEA] px-1.5 py-0.5 rounded mt-0.5 inline-block cell-nowrap">
                           {proj.code || 'PRJ-S/N'}
                         </span>
                       </td>
-                      <td className="px-4 text-neutral-600 truncate max-w-[140px]" title={proj.client_name || 'Geral'}>
+                      <td className="px-4 min-w-[140px] text-neutral-700">
                         {proj.client_name || 'Geral'}
                       </td>
-                      <td className="px-4">
-                        <div className="flex items-center justify-between text-[11px] mb-1">
+                      <td className="px-4 w-36 min-w-[130px]">
+                        <div className="flex items-center justify-between text-[11px] mb-1 cell-nowrap">
                           <span className="text-neutral-500">{proj.completed_tasks}/{proj.total_tasks}</span>
-                          <span className="font-bold text-neutral-700 font-heading">{proj.progress_percent}%</span>
+                          <span className="font-bold text-neutral-700 font-heading ml-2">{proj.progress_percent}%</span>
                         </div>
                         <div className="w-full bg-[#EDEDEA] rounded-full h-1.5 overflow-hidden">
                           <div
@@ -438,10 +438,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                           />
                         </div>
                       </td>
-                      <td className="px-4">
+                      <td className="px-4 cell-nowrap">
                         {getStatusBadge(proj.status)}
                       </td>
-                      <td className="px-4 text-right">
+                      <td className="px-4 td-actions cell-nowrap">
                         <button
                           onClick={() => onNavigate('projetos')}
                           className="btn-ghost btn-sm text-[#FF8000] hover:text-[#E67300]"
@@ -475,7 +475,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             </button>
           </div>
 
-          <div className="flex-1 overflow-x-auto">
+          <div className="table-scroll-container">
             {!data?.recent_invoices || data.recent_invoices.length === 0 ? (
               <div className="p-8 text-center">
                 <Wallet size={32} className="mx-auto text-neutral-300 mb-2" />
@@ -491,7 +491,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                 </button>
               </div>
             ) : (
-              <table className="w-full text-left border-collapse">
+              <table className="table-erp">
                 <thead>
                   <tr className="table-header-erp">
                     <th className="px-4">Nº Fatura</th>
@@ -504,19 +504,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                 <tbody className="divide-y divide-[#EDEDEA]">
                   {data.recent_invoices.map((inv) => (
                     <tr key={inv.id} className="table-row-erp">
-                      <td className="px-4 font-mono font-semibold text-[#101010]">
+                      <td className="px-4 font-mono font-semibold text-[#101010] cell-nowrap">
                         {inv.invoice_number || `FAT-${inv.id}`}
                       </td>
-                      <td className="px-4 text-neutral-600 truncate max-w-[130px]" title={inv.client_name || 'Cliente'}>
+                      <td className="px-4 min-w-[150px] text-neutral-700">
                         {inv.client_name || 'Cliente'}
                       </td>
-                      <td className="px-4 font-semibold text-[#101010] font-heading">
+                      <td className="px-4 font-semibold text-[#101010] font-heading cell-nowrap">
                         {formatMZN(inv.amount)}
                       </td>
-                      <td className="px-4 text-neutral-500 text-xs">
+                      <td className="px-4 text-neutral-500 text-xs cell-nowrap">
                         {formatDate(inv.due_date)}
                       </td>
-                      <td className="px-4">
+                      <td className="px-4 cell-nowrap">
                         {getStatusBadge(inv.status)}
                       </td>
                     </tr>

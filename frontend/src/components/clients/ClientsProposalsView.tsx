@@ -337,16 +337,16 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
 
         {/* Data Table */}
         {!isLoading && !error && filteredClients.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+          <div className="table-scroll-container">
+            <table className="table-erp">
               <thead>
-                <tr className="bg-slate-50/75 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold text-[11px]">
-                  <th className="py-3 px-4">Nome</th>
-                  <th className="py-3 px-4">NUIT</th>
-                  <th className="py-3 px-4">Contacto</th>
-                  <th className="py-3 px-4">Telefone</th>
-                  <th className="py-3 px-4">Propostas</th>
-                  <th className="py-3 px-4 text-right">Ações</th>
+                <tr className="table-header-erp">
+                  <th className="px-4">Nome & Responsável</th>
+                  <th className="px-4">NUIT</th>
+                  <th className="px-4">E-mail</th>
+                  <th className="px-4">Telefone</th>
+                  <th className="px-4">Propostas</th>
+                  <th className="px-4 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -360,21 +360,21 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
                   return (
                     <tr 
                       key={client.id}
-                      className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
+                      className="table-row-erp hover:bg-slate-50/80 transition-colors group cursor-pointer"
                       onClick={() => handleOpenDetails(client)}
                     >
                       {/* Nome / Empresa */}
-                      <td className="py-3 px-4">
+                      <td className="px-4 min-w-[220px]">
                         <div className="flex items-center space-x-3">
                           <div className="w-8 h-8 rounded bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center font-bold text-xs flex-shrink-0 group-hover:bg-orange-50 group-hover:text-orange-600 group-hover:border-orange-200 transition-colors">
                             {client.name.substring(0, 2).toUpperCase()}
                           </div>
-                          <div className="min-w-0">
-                            <p className="font-semibold text-slate-900 truncate group-hover:text-orange-600 transition-colors">
+                          <div>
+                            <p className="font-semibold text-slate-900 font-heading group-hover:text-orange-600 transition-colors">
                               {client.name}
                             </p>
                             {client.contact_person && (
-                              <p className="text-[11px] text-slate-500 truncate">
+                              <p className="text-[11px] text-slate-500">
                                 {client.contact_person}
                               </p>
                             )}
@@ -383,7 +383,7 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
                       </td>
 
                       {/* NUIT */}
-                      <td className="py-3 px-4">
+                      <td className="px-4 cell-nowrap">
                         {client.nuit ? (
                           <span className="font-mono text-[11px] font-medium px-2 py-0.5 bg-slate-100 text-slate-700 rounded border border-slate-200">
                             {client.nuit}
@@ -394,15 +394,15 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
                       </td>
 
                       {/* Contacto / Email */}
-                      <td className="py-3 px-4" onClick={e => e.stopPropagation()}>
+                      <td className="px-4 cell-nowrap" onClick={e => e.stopPropagation()}>
                         {client.email ? (
                           <a 
                             href={`mailto:${client.email}`}
-                            className="inline-flex items-center text-slate-600 hover:text-orange-600 font-medium truncate max-w-[200px]"
+                            className="inline-flex items-center text-slate-600 hover:text-orange-600 font-medium"
                             title={client.email}
                           >
                             <Mail size={13} className="mr-1.5 text-slate-400 flex-shrink-0" />
-                            <span className="truncate">{client.email}</span>
+                            <span>{client.email}</span>
                           </a>
                         ) : (
                           <span className="text-slate-400 italic">—</span>
@@ -410,7 +410,7 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
                       </td>
 
                       {/* Telefone */}
-                      <td className="py-3 px-4" onClick={e => e.stopPropagation()}>
+                      <td className="px-4 cell-nowrap" onClick={e => e.stopPropagation()}>
                         {client.phone ? (
                           <a 
                             href={`tel:${client.phone}`}
@@ -425,7 +425,7 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
                       </td>
 
                       {/* Propostas */}
-                      <td className="py-3 px-4">
+                      <td className="px-4 cell-nowrap">
                         {proposalsCount > 0 ? (
                           <div className="flex items-center space-x-1.5">
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-orange-50 text-orange-700 border border-orange-200">
@@ -441,7 +441,7 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
                       </td>
 
                       {/* Ações */}
-                      <td className="py-3 px-4 text-right" onClick={e => e.stopPropagation()}>
+                      <td className="px-4 td-actions cell-nowrap" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-end space-x-1.5">
                           <button
                             onClick={() => handleOpenProposalForClient(client.id)}

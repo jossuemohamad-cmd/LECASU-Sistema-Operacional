@@ -333,20 +333,20 @@ export function FinanceView() {
         </div>
 
         {/* INVOICES TABLE */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-600">
-            <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200 uppercase tracking-wider text-[11px]">
-              <tr>
-                <th className="py-3 px-4">Nº Fatura</th>
-                <th className="py-3 px-4">Cliente</th>
-                <th className="py-3 px-4">Projeto</th>
-                <th className="py-3 px-4 text-right">Valor Total</th>
-                <th className="py-3 px-4">Data Vencimento</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4 text-center">Ações</th>
+        <div className="table-scroll-container">
+          <table className="table-erp">
+            <thead>
+              <tr className="table-header-erp">
+                <th className="px-4">Nº Fatura</th>
+                <th className="px-4">Cliente</th>
+                <th className="px-4">Projeto</th>
+                <th className="px-4 text-right">Valor Total</th>
+                <th className="px-4">Data Vencimento</th>
+                <th className="px-4">Status</th>
+                <th className="px-4 text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200">
+            <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-slate-400">
@@ -360,8 +360,8 @@ export function FinanceView() {
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-slate-500">
                     <Receipt className="mx-auto text-slate-300 mb-2" size={32} />
-                    <p className="font-semibold text-slate-700">Nenhuma fatura encontrada</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
+                    <p className="font-semibold text-slate-700 font-heading">Nenhuma fatura encontrada</p>
+                    <p className="text-xs text-slate-400 mt-1">
                       Clique em "Emitir Fatura" para gerar o primeiro documento financeiro.
                     </p>
                   </td>
@@ -373,29 +373,29 @@ export function FinanceView() {
                   const isPending = inv.status === 'ISSUED';
 
                   return (
-                    <tr key={inv.id} className="hover:bg-slate-50/80 transition">
-                      <td className="py-3 px-4 font-semibold text-slate-900 whitespace-nowrap">
+                    <tr key={inv.id} className="table-row-erp hover:bg-slate-50/80 transition">
+                      <td className="px-4 font-mono font-semibold text-slate-900 cell-nowrap">
                         {inv.invoice_number || `FT-${inv.id}`}
                       </td>
-                      <td className="py-3 px-4 font-medium text-slate-800">
+                      <td className="px-4 min-w-[180px] font-medium text-slate-800">
                         {inv.client_name || `Cliente #${inv.client_id}`}
                       </td>
-                      <td className="py-3 px-4 text-slate-500 whitespace-nowrap">
+                      <td className="px-4 cell-nowrap min-w-[150px] text-slate-500">
                         {inv.project_code ? (
                           <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[11px] font-mono">
                             {inv.project_code}
                           </span>
                         ) : (
-                          <span className="text-slate-400 italic">Geral / Sem Projeto</span>
+                          <span className="text-slate-400 italic text-[11px]">Geral / Sem Projeto</span>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-right font-bold text-slate-900 whitespace-nowrap">
+                      <td className="px-4 text-right font-bold text-slate-900 cell-nowrap font-heading">
                         {formatMZN(inv.amount)}
                       </td>
-                      <td className="py-3 px-4 whitespace-nowrap text-slate-500">
+                      <td className="px-4 cell-nowrap text-slate-500">
                         {inv.due_date ? new Date(inv.due_date).toLocaleDateString('pt-PT') : '-'}
                       </td>
-                      <td className="py-3 px-4 whitespace-nowrap">
+                      <td className="px-4 cell-nowrap">
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${
                             isPaid
@@ -408,8 +408,8 @@ export function FinanceView() {
                           {isPaid ? 'Paga' : isCancelled ? 'Cancelada' : 'Emitida (Pendente)'}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-center whitespace-nowrap">
-                        <div className="flex items-center justify-center space-x-2">
+                      <td className="px-4 td-actions cell-nowrap">
+                        <div className="flex items-center justify-end space-x-2">
                           {isPending && (
                             <>
                               <button

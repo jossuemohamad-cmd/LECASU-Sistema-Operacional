@@ -350,17 +350,17 @@ export const ProjectsView: React.FC = () => {
 
         {/* Data Table */}
         {!isLoading && !error && filteredProjects.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+          <div className="table-scroll-container">
+            <table className="table-erp">
               <thead>
-                <tr className="bg-slate-50/75 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold text-[11px]">
-                  <th className="py-3 px-4">Código</th>
-                  <th className="py-3 px-4">Nome do Projeto</th>
-                  <th className="py-3 px-4">Cliente</th>
-                  <th className="py-3 px-4">Progresso de Tarefas</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Início</th>
-                  <th className="py-3 px-4 text-right">Ações</th>
+                <tr className="table-header-erp">
+                  <th className="px-4">Código</th>
+                  <th className="px-4">Nome do Projeto</th>
+                  <th className="px-4">Cliente</th>
+                  <th className="px-4">Progresso de Tarefas</th>
+                  <th className="px-4">Status</th>
+                  <th className="px-4">Início</th>
+                  <th className="px-4 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -369,35 +369,35 @@ export const ProjectsView: React.FC = () => {
                   return (
                     <tr 
                       key={project.id}
-                      className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
+                      className="table-row-erp hover:bg-slate-50/80 transition-colors group cursor-pointer"
                       onClick={() => handleOpenDetails(project)}
                     >
                       {/* Código */}
-                      <td className="py-3 px-4">
+                      <td className="px-4 cell-nowrap">
                         <span className="font-mono text-[11px] font-bold px-2 py-0.5 bg-slate-100 text-slate-800 rounded border border-slate-200 group-hover:border-orange-200 group-hover:bg-orange-50 group-hover:text-orange-700 transition-colors">
                           {project.code || 'PRJ-2026-XXX'}
                         </span>
                       </td>
 
                       {/* Nome do Projeto */}
-                      <td className="py-3 px-4 font-semibold text-slate-900 group-hover:text-orange-600 transition-colors">
+                      <td className="px-4 min-w-[240px] font-semibold text-slate-900 group-hover:text-orange-600 transition-colors font-heading">
                         <div className="flex items-center space-x-2">
                           <Briefcase size={14} className="text-slate-400 group-hover:text-orange-500 flex-shrink-0" />
-                          <span className="truncate max-w-xs">{project.name}</span>
+                          <span>{project.name}</span>
                         </div>
                       </td>
 
                       {/* Cliente */}
-                      <td className="py-3 px-4">
+                      <td className="px-4 min-w-[180px]">
                         <span className="text-slate-700 font-medium flex items-center">
                           <Building2 size={13} className="mr-1.5 text-slate-400 flex-shrink-0" />
-                          <span className="truncate max-w-[180px]">{project.client_name || '—'}</span>
+                          <span>{project.client_name || '—'}</span>
                         </span>
                       </td>
 
                       {/* Progresso (% de tarefas concluídas) */}
-                      <td className="py-3 px-4">
-                        <div className="w-40 space-y-1">
+                      <td className="px-4 w-44 min-w-[160px] cell-nowrap">
+                        <div className="space-y-1">
                           <div className="flex items-center justify-between text-[10px] text-slate-600">
                             <span className="font-semibold">{percent}%</span>
                             <span>{project.completed_tasks || 0}/{project.total_tasks || 0} tarefas</span>
@@ -414,12 +414,12 @@ export const ProjectsView: React.FC = () => {
                       </td>
 
                       {/* Status */}
-                      <td className="py-3 px-4">
+                      <td className="px-4 cell-nowrap">
                         {getStatusBadge(project.status)}
                       </td>
 
                       {/* Prazo / Início */}
-                      <td className="py-3 px-4 text-slate-500">
+                      <td className="px-4 cell-nowrap text-slate-500">
                         {project.created_at ? (
                           <span className="flex items-center text-[11px]">
                             <Calendar size={12} className="mr-1 text-slate-400" />
@@ -429,7 +429,7 @@ export const ProjectsView: React.FC = () => {
                       </td>
 
                       {/* Ações */}
-                      <td className="py-3 px-4 text-right" onClick={e => e.stopPropagation()}>
+                      <td className="px-4 td-actions cell-nowrap" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-end space-x-1.5">
                           <button
                             onClick={() => handleOpenDetails(project)}

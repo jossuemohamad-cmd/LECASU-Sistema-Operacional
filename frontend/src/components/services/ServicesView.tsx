@@ -432,54 +432,55 @@ export const ServicesView: React.FC = () => {
               </button>
             </div>
           ) : (
-            <table className="w-full text-left border-collapse">
+          <div className="table-scroll-container">
+            <table className="table-erp">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/40 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                  <th className="py-2.5 px-4">Código</th>
-                  <th className="py-2.5 px-3">Nome do Serviço</th>
-                  <th className="py-2.5 px-3">Categoria</th>
-                  <th className="py-2.5 px-3">Unidade</th>
-                  <th className="py-2.5 px-3">Preço Base (MZN)</th>
-                  <th className="py-2.5 px-3">Status</th>
-                  <th className="py-2.5 px-4 text-right">Ações</th>
+                <tr className="table-header-erp">
+                  <th className="px-4">Código</th>
+                  <th className="px-4">Nome do Serviço</th>
+                  <th className="px-4">Categoria</th>
+                  <th className="px-4">Unidade</th>
+                  <th className="px-4">Preço Base (MZN)</th>
+                  <th className="px-4">Status</th>
+                  <th className="px-4 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
                 {filteredServices.map((service) => (
-                  <tr key={service.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3 px-4">
+                  <tr key={service.id} className="table-row-erp hover:bg-slate-50/80 transition-colors">
+                    <td className="px-4 cell-nowrap">
                       <span className="font-mono font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
                         {service.code || `SRV-${service.id}`}
                       </span>
                     </td>
 
-                    <td className="py-3 px-3">
-                      <div className="font-semibold text-slate-900 truncate max-w-[240px]" title={service.name}>
+                    <td className="px-4 min-w-[260px]">
+                      <div className="font-semibold text-slate-900 font-heading">
                         {service.name}
                       </div>
                       {service.description && (
-                        <div className="text-[11px] text-slate-500 truncate max-w-[240px] mt-0.5" title={service.description}>
+                        <div className="text-[11px] text-slate-500 mt-0.5">
                           {service.description}
                         </div>
                       )}
                     </td>
 
-                    <td className="py-3 px-3">
+                    <td className="px-4 cell-nowrap">
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
                         <Tag size={10} className="text-orange-600" />
                         {service.category}
                       </span>
                     </td>
 
-                    <td className="py-3 px-3 text-slate-600 font-medium">
+                    <td className="px-4 cell-nowrap text-slate-600 font-medium">
                       {service.unit}
                     </td>
 
-                    <td className="py-3 px-3 font-bold text-slate-900">
+                    <td className="px-4 cell-nowrap font-bold text-slate-900 font-heading">
                       {formatMZN(service.base_price)}
                     </td>
 
-                    <td className="py-3 px-3">
+                    <td className="px-4 cell-nowrap">
                       <button
                         onClick={() => handleToggleStatus(service)}
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold transition ${
@@ -503,7 +504,7 @@ export const ServicesView: React.FC = () => {
                       </button>
                     </td>
 
-                    <td className="py-3 px-4 text-right">
+                    <td className="px-4 td-actions cell-nowrap">
                       <button
                         onClick={() => handleOpenEditModal(service)}
                         className="btn-secondary btn-sm"
@@ -517,6 +518,7 @@ export const ServicesView: React.FC = () => {
                 ))}
               </tbody>
             </table>
+          </div>
           )}
         </div>
       </div>
