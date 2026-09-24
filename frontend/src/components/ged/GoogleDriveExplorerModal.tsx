@@ -134,9 +134,40 @@ export const GoogleDriveExplorerModal: React.FC<GoogleDriveExplorerModalProps> =
   const handleImportFile = async (driveFile: GoogleDriveFile) => {
     if (!accessToken) return;
     setImportingId(driveFile.id);
+    setErrorMessage(null);
     try {
+      let downloadUrl = `https://www.googleapis.com/drive/v3/files/${driveFile.id}?alt=media`;
+      let finalName = driveFile.name;
+      let finalMime = driveFile.mimeType;
+
+      // Handle Google Workspace Native Documents (Docs, Sheets, Slides, Drawings)
+      if (driveFile.mimeType === 'application/vnd.google-apps.document') {
+        downloadUrl = `https://www.googleapis.com/drive/v3/files/${driveFile.id}/export?mimeType=application/pdf`;
+        finalMime = 'application/pdf';
+        if (!finalName.toLowerCase().endsWith('.pdf')) {
+          finalName = `${finalName}.pdf`;
+        }
+      } else if (driveFile.mimeType === 'application/vnd.google-apps.spreadsheet') {
+        downloadUrl = `https://www.googleapis.com/drive/v3/files/${driveFile.id}/export?mimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`;
+        finalMime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        if (!finalName.toLowerCase().endsWith('.xlsx')) {
+          finalName = `${finalName}.xlsx`;
+        }
+      } else if (driveFile.mimeType === 'application/vnd.google-apps.presentation') {
+        downloadUrl = `https://www.googleapis.com/drive/v3/files/${driveFile.id}/export?mimeType=application/pdf`;
+        finalMime = 'application/pdf';
+        if (!finalName.toLowerCase().endsWith('.pdf')) {
+          finalName = `${finalName}.pdf`;
+        }
+      } else if (driveFile.mimeType === 'application/vnd.google-apps.drawing') {
+        downloadUrl = `https://www.googleapis.com/drive/v3/files/${driveFile.id}/export?mimeType=image/png`;
+        finalMime = 'image/png';
+        if (!finalName.toLowerCase().endsWith('.png')) {
+          finalName = `${finalName}.png`;
+        }
+      }
+
       // 1. Download file content from Google Drive
-      const downloadUrl = `https://www.googleapis.com/drive/v3/files/${driveFile.id}?alt=media`;
       const fileRes = await fetch(downloadUrl, {
         headers: {
           Authorization: `Bearer ${accessToken}`
@@ -144,11 +175,13 @@ export const GoogleDriveExplorerModal: React.FC<GoogleDriveExplorerModalProps> =
       });
 
       if (!fileRes.ok) {
-        throw new Error('Não foi possível descarregar o ficheiro do Google Drive.');
+        const errText = await fileRes.text().catch(() => '');
+        console.error('Google Download HTTP Error:', fileRes.status, errText);
+        throw new Error(`Erro ao descarregar da Google (${fileRes.status}): ${fileRes.statusText}`);
       }
 
       const blob = await fileRes.blob();
-      const fileObj = new File([blob], driveFile.name, { type: driveFile.mimeType });
+      const fileObj = new File([blob], finalName, { type: finalMime });
 
       // 2. Upload to LECASU ERP (Neon S3 + Database)
       const data = new FormData();
@@ -159,7 +192,7 @@ export const GoogleDriveExplorerModal: React.FC<GoogleDriveExplorerModalProps> =
       data.append('description', 'Ficheiro importado diretamente do Google Drive corporativo.');
 
       await uploadDocument(data);
-      onSuccess(driveFile.name);
+      onSuccess(finalName);
     } catch (err: any) {
       console.error('Erro ao importar do Google Drive:', err);
       setErrorMessage(err.message || 'Falha ao importar o documento para o repositório.');
