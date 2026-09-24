@@ -153,10 +153,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           <button
             onClick={() => loadDashboardData(true)}
             disabled={isLoading}
-            className="flex items-center space-x-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold px-3 py-2 rounded-md shadow-2xs transition disabled:opacity-50"
+            className="btn-secondary btn-md"
             title="Recarregar indicadores"
           >
-            <RefreshCw size={14} className={isLoading ? 'animate-spin text-orange-600' : 'text-slate-500'} />
+            <RefreshCw size={14} className={isLoading ? 'animate-spin text-[#FF8000]' : 'text-neutral-600'} />
             <span>{isLoading ? 'Sincronizando...' : 'Atualizar'}</span>
           </button>
         </div>
@@ -164,30 +164,30 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
       {/* BARRA DE AÇÕES RÁPIDAS */}
       <div className="bg-white border border-slate-200 rounded-lg p-3.5 shadow-2xs flex flex-wrap items-center justify-between gap-2.5">
-        <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
-          <ArrowUpRight size={14} className="text-orange-600" />
+        <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider flex items-center gap-1.5 font-heading">
+          <ArrowUpRight size={14} className="text-[#FF8000]" />
           Ações Rápidas:
         </span>
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => onNavigate('clientes')}
-            className="inline-flex items-center space-x-1 px-3 py-1.5 bg-slate-50 hover:bg-orange-50 hover:border-orange-200 border border-slate-200 rounded text-xs font-medium text-slate-700 hover:text-orange-700 transition"
+            className="btn-secondary btn-sm hover:border-[#FF8000] hover:text-[#FF8000] hover:bg-[#FFF2E5]"
           >
-            <Plus size={13} className="text-orange-600" />
+            <Plus size={13} className="text-[#FF8000]" />
             <span>Novo Cliente / Proposta</span>
           </button>
           <button
             onClick={() => onNavigate('projetos')}
-            className="inline-flex items-center space-x-1 px-3 py-1.5 bg-slate-50 hover:bg-orange-50 hover:border-orange-200 border border-slate-200 rounded text-xs font-medium text-slate-700 hover:text-orange-700 transition"
+            className="btn-secondary btn-sm hover:border-[#FF8000] hover:text-[#FF8000] hover:bg-[#FFF2E5]"
           >
-            <Briefcase size={13} className="text-orange-600" />
+            <Briefcase size={13} className="text-[#FF8000]" />
             <span>Gerir Projetos & Tarefas</span>
           </button>
           <button
             onClick={() => onNavigate('financeiro')}
-            className="inline-flex items-center space-x-1 px-3 py-1.5 bg-slate-50 hover:bg-orange-50 hover:border-orange-200 border border-slate-200 rounded text-xs font-medium text-slate-700 hover:text-orange-700 transition"
+            className="btn-secondary btn-sm hover:border-[#FF8000] hover:text-[#FF8000] hover:bg-[#FFF2E5]"
           >
-            <Wallet size={13} className="text-orange-600" />
+            <Wallet size={13} className="text-[#FF8000]" />
             <span>Módulo Financeiro</span>
           </button>
         </div>
@@ -432,7 +432,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                 </p>
                 <button
                   onClick={() => onNavigate('financeiro')}
-                  className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded text-xs font-semibold transition"
+                  className="btn-dark btn-sm"
                 >
                   Abrir Módulo Financeiro
                 </button>
