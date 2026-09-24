@@ -1,9 +1,140 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================================================
+   LECASU ERP - DESIGN SYSTEM OFICIAL UNIFICADO
+   Paleta: #FF8000 (Laranja Oficial), #101010 (Preto Oficial), #F5F5F3 (Off-White Canvas)
+   Tipografia: Montserrat (Títulos/Headings) & Poppins (Corpo/Interface/Dados)
+   ========================================================================== */
+
+:root {
+  /* Cores Oficiais LECASU */
+  --lecasu-orange: #FF8000;
+  --lecasu-orange-hover: #E67300;
+  --lecasu-orange-active: #CC6600;
+  --lecasu-orange-light: #FFF2E5;
+  --lecasu-orange-glow: rgba(255, 128, 0, 0.25);
+  
+  --lecasu-black: #101010;
+  --lecasu-dark-surface: #181818;
+  --lecasu-dark-card: #202020;
+  --lecasu-dark-border: #2C2C2C;
+  --lecasu-dark-muted: #8E8E8E;
+  
+  --lecasu-canvas: #F5F5F3;
+  --lecasu-canvas-surface: #FFFFFF;
+  --lecasu-canvas-subtle: #EDEDEA;
+  --lecasu-canvas-border: #E2E2DE;
+  --lecasu-canvas-muted: #737370;
+  
+  /* Fontes Oficiais */
+  --font-heading: 'Montserrat', system-ui, -apple-system, sans-serif;
+  --font-body: 'Poppins', system-ui, -apple-system, sans-serif;
+}
+
+/* Regras Globais de Tipografia e Layout */
+html {
+  font-family: var(--font-body);
+  background-color: var(--lecasu-canvas);
+  color: var(--lecasu-black);
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 body {
   margin: 0;
-  background-color: #f8fafc;
-  color: #0f172a;
+  padding: 0;
+  font-family: var(--font-body);
+  background-color: var(--lecasu-canvas);
+  color: var(--lecasu-black);
+  min-height: 100vh;
+}
+
+/* Headings e Títulos Oficiais em Montserrat */
+h1, h2, h3, h4, h5, h6, 
+.font-heading,
+.brand-title,
+.table-header-title,
+.kpi-title {
+  font-family: var(--font-heading);
+  letter-spacing: -0.02em;
+}
+
+/* Elementos de Interface e Formulários em Poppins */
+button, input, select, textarea, label, table, .font-sans, .font-body {
+  font-family: var(--font-body);
+}
+
+/* Estilização Oficial de Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F5F5F3;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D4D4D0;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #FF8000;
+}
+
+/* Utilitários de Design Oficial LECASU */
+@layer components {
+  /* Botão Primário Laranja Oficial */
+  .btn-lecasu-primary {
+    background-color: #FF8000;
+    color: #FFFFFF;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(255, 128, 0, 0.25);
+  }
+  .btn-lecasu-primary:hover {
+    background-color: #E67300;
+    box-shadow: 0 4px 14px rgba(255, 128, 0, 0.35);
+    transform: translateY(-1px);
+  }
+  .btn-lecasu-primary:active {
+    background-color: #CC6600;
+    transform: translateY(0);
+  }
+
+  /* Botão Secundário Dark Oficial */
+  .btn-lecasu-dark {
+    background-color: #101010;
+    color: #FFFFFF;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+  .btn-lecasu-dark:hover {
+    background-color: #242424;
+  }
+
+  /* Cards e Superfícies Padronizadas */
+  .card-lecasu {
+    background-color: #FFFFFF;
+    border: 1px solid #E2E2DE;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px rgba(16, 16, 16, 0.04), 0 1px 2px rgba(16, 16, 16, 0.02);
+  }
+
+  /* Badge de Destaque Laranja */
+  .badge-lecasu-orange {
+    background-color: #FFF2E5;
+    color: #FF8000;
+    border: 1px solid rgba(255, 128, 0, 0.3);
+    font-family: var(--font-heading);
+    font-weight: 600;
+  }
 }

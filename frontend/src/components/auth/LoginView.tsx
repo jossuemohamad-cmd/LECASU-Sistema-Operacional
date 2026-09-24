@@ -161,52 +161,51 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
   return (
     <div 
-      className="min-h-screen w-full flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8 font-sans relative overflow-hidden bg-slate-950 bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: "url('/assets/images/login-bg.jpg')" }}
+      className="min-h-screen w-full flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8 font-sans relative overflow-hidden bg-[#101010] bg-cover bg-center bg-no-repeat selection:bg-[#FF8000] selection:text-white"
     >
       {/* LUXURY DARK GRADIENT & GLASS OVERLAY */}
-      <div className="absolute inset-0 bg-gradient-to-tr from-slate-950/95 via-slate-950/85 to-slate-900/80 backdrop-blur-[2px] pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-tr from-[#101010] via-[#141414] to-[#1a1a1a] pointer-events-none" />
       
       {/* AMBIENT GLOW EFFECTS */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-orange-600/15 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-24 -right-24 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#FF8000]/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-24 -right-24 w-80 h-80 bg-[#FF8000]/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* LOGIN CARD CONTAINER */}
       <div className="w-full max-w-md z-10 relative">
-        <div className="bg-slate-900/85 backdrop-blur-xl py-8 px-6 sm:px-10 shadow-2xl rounded-2xl border border-slate-700/60 transition-all duration-300 relative overflow-hidden">
+        <div className="bg-[#181818]/90 backdrop-blur-xl py-8 px-6 sm:px-10 shadow-2xl rounded-2xl border border-[#2E2E2E] transition-all duration-300 relative overflow-hidden">
           
           {/* TOP ACCENT LINE WITH LOADING PULSE */}
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-600 via-amber-500 to-orange-600 overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#FF8000] via-[#FFA347] to-[#FF8000] overflow-hidden">
             {isLoading && (
               <div className="w-full h-full bg-white/40 animate-pulse" />
             )}
           </div>
 
           {/* INTEGRATED BRANDING & HEADER */}
-          <div className="mb-6 pb-5 border-b border-slate-800/80 text-center">
+          <div className="mb-6 pb-5 border-b border-[#282828] text-center">
             <div className="inline-flex items-center justify-center space-x-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-orange-600 flex items-center justify-center font-black text-white text-xl tracking-wider shadow-lg shadow-orange-600/40 ring-1 ring-orange-400/30">
+              <div className="w-11 h-11 rounded-xl bg-[#FF8000] flex items-center justify-center font-heading font-black text-white text-2xl tracking-wider shadow-lg shadow-[#FF8000]/30 ring-1 ring-[#FF8000]/50">
                 L
               </div>
               <div className="text-left">
-                <span className="font-extrabold text-xl tracking-tight text-white block leading-none">
-                  LECASU <span className="text-orange-500 text-xs font-bold tracking-normal uppercase ml-0.5">ERP</span>
+                <span className="font-heading font-extrabold text-2xl tracking-tight text-white block leading-none">
+                  LECASU <span className="text-[#FF8000] text-xs font-bold tracking-wider uppercase ml-0.5">ERP</span>
                 </span>
-                <span className="text-[11px] text-slate-400 font-medium tracking-wide">
-                  Portal Corporativo
+                <span className="text-[11px] text-neutral-400 font-sans font-medium tracking-wide">
+                  Sistema Operacional
                 </span>
               </div>
             </div>
             
-            <p className="text-xs text-slate-400 max-w-xs mx-auto">
+            <p className="text-xs text-neutral-400 max-w-xs mx-auto font-sans">
               Introduza as suas credenciais corporativas para entrar no sistema.
             </p>
           </div>
 
           {/* ERROR ALERT */}
           {errorMessage && (
-            <div className="mb-5 bg-red-500/15 border border-red-500/30 text-red-300 p-3 rounded-lg flex items-start space-x-2.5 text-xs animate-in fade-in zoom-in-95">
-              <AlertCircle size={16} className="flex-shrink-0 mt-0.5 text-red-400" />
+            <div className="mb-5 bg-rose-500/15 border border-rose-500/30 text-rose-300 p-3 rounded-lg flex items-start space-x-2.5 text-xs animate-in fade-in zoom-in-95 font-sans">
+              <AlertCircle size={16} className="flex-shrink-0 mt-0.5 text-rose-400" />
               <span className="leading-relaxed">{errorMessage}</span>
             </div>
           )}
