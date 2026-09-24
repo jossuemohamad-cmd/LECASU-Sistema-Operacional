@@ -413,7 +413,7 @@ export const GEDView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 font-sans select-none">
+    <div className="flex flex-col h-[calc(100vh-112px)] min-h-[580px] font-sans select-none gap-3">
       <Toast 
         toasts={toasts} 
         onDismiss={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} 
@@ -422,27 +422,27 @@ export const GEDView: React.FC = () => {
       {/* =========================================================================
           1. BARRA SUPERIOR DE FERRAMENTAS DO GESTOR DE FICHEIROS (File Manager Toolbar)
          ========================================================================= */}
-      <div className="bg-white border border-[#E2E2DE] rounded-xl p-2.5 shadow-2xs flex flex-wrap items-center justify-between gap-2.5">
+      <div className="bg-white border border-[#E2E2DE] rounded-xl px-3 py-2 shadow-2xs flex items-center justify-between gap-3 shrink-0 overflow-x-auto scrollbar-none">
         
         {/* Botões de Navegação & Ações Rápidas (Estilo File Manager / cPanel) */}
-        <div className="flex items-center gap-1 flex-wrap">
+        <div className="flex items-center gap-1.5 shrink-0 flex-nowrap">
           <button
             type="button"
             onClick={() => navigateTo('/')}
-            className={`btn-ghost btn-sm flex items-center gap-1.5 ${currentPath === '/' ? 'bg-[#FFF2E5] text-[#FF8000] font-bold' : 'text-neutral-700'}`}
+            className={`btn-ghost btn-sm whitespace-nowrap shrink-0 flex items-center gap-1.5 ${currentPath === '/' ? 'bg-[#FFF2E5] text-[#FF8000] font-bold' : 'text-neutral-700'}`}
             title="Ir para o Início / Raiz"
           >
-            <Home size={15} className={currentPath === '/' ? 'text-[#FF8000]' : 'text-neutral-500'} />
+            <Home size={14} className={currentPath === '/' ? 'text-[#FF8000]' : 'text-neutral-500'} />
             <span className="text-xs">Início</span>
           </button>
 
-          <div className="h-4 w-px bg-neutral-200 mx-1" />
+          <div className="h-4 w-px bg-neutral-200 mx-0.5 shrink-0" />
 
           <button
             type="button"
             onClick={handleUpLevel}
             disabled={currentPath === '/'}
-            className="btn-ghost btn-sm flex items-center gap-1 text-neutral-700 disabled:opacity-35"
+            className="btn-ghost btn-sm whitespace-nowrap shrink-0 flex items-center gap-1.5 text-neutral-700 disabled:opacity-35"
             title="Subir um nível de diretório"
           >
             <ArrowUp size={14} />
@@ -453,7 +453,7 @@ export const GEDView: React.FC = () => {
             type="button"
             onClick={handleGoBack}
             disabled={historyIndex === 0}
-            className="btn-ghost btn-sm flex items-center gap-1 text-neutral-700 disabled:opacity-35"
+            className="btn-ghost btn-sm whitespace-nowrap shrink-0 flex items-center gap-1.5 text-neutral-700 disabled:opacity-35"
             title="Voltar"
           >
             <ArrowLeft size={14} />
@@ -464,7 +464,7 @@ export const GEDView: React.FC = () => {
             type="button"
             onClick={handleGoForward}
             disabled={historyIndex >= history.length - 1}
-            className="btn-ghost btn-sm flex items-center gap-1 text-neutral-700 disabled:opacity-35"
+            className="btn-ghost btn-sm whitespace-nowrap shrink-0 flex items-center gap-1.5 text-neutral-700 disabled:opacity-35"
             title="Avançar"
           >
             <ArrowRight size={14} />
@@ -475,19 +475,19 @@ export const GEDView: React.FC = () => {
             type="button"
             onClick={() => loadAllData(true)}
             disabled={isLoading}
-            className="btn-ghost btn-sm flex items-center gap-1 text-neutral-700"
+            className="btn-ghost btn-sm whitespace-nowrap shrink-0 flex items-center gap-1.5 text-neutral-700"
             title="Recarregar e sincronizar"
           >
             <RefreshCw size={14} className={isLoading ? 'animate-spin text-[#FF8000]' : ''} />
             <span className="text-xs">Recarregar</span>
           </button>
 
-          <div className="h-4 w-px bg-neutral-200 mx-1" />
+          <div className="h-4 w-px bg-neutral-200 mx-0.5 shrink-0" />
 
           <button
             type="button"
             onClick={handleSelectAll}
-            className="btn-ghost btn-sm flex items-center gap-1 text-neutral-600"
+            className="btn-ghost btn-sm whitespace-nowrap shrink-0 flex items-center gap-1.5 text-neutral-600"
             title="Selecionar todos os ficheiros da pasta"
           >
             <CheckSquare size={13} />
@@ -498,7 +498,7 @@ export const GEDView: React.FC = () => {
             type="button"
             onClick={handleDeselectAll}
             disabled={selectedDocIds.length === 0}
-            className="btn-ghost btn-sm flex items-center gap-1 text-neutral-600 disabled:opacity-35"
+            className="btn-ghost btn-sm whitespace-nowrap shrink-0 flex items-center gap-1.5 text-neutral-600 disabled:opacity-35"
             title="Desmarcar seleção"
           >
             <Square size={13} />
@@ -507,11 +507,11 @@ export const GEDView: React.FC = () => {
         </div>
 
         {/* Ações Primárias (Upload, Conectar Cloud) */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0 flex-nowrap">
           <button
             type="button"
             onClick={() => setIsCloudIntegrationsOpen(true)}
-            className="btn-secondary btn-sm flex items-center gap-1.5"
+            className="btn-secondary btn-sm whitespace-nowrap shrink-0 flex items-center gap-1.5"
             title="Repositórios em Nuvem (Google Drive / OneDrive)"
           >
             <Cloud size={14} className="text-[#FF8000]" />
@@ -524,7 +524,7 @@ export const GEDView: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsUploadModalOpen(true)}
-            className="btn-primary btn-sm flex items-center gap-1.5 shadow-sm"
+            className="btn-primary btn-sm whitespace-nowrap shrink-0 flex items-center gap-1.5 shadow-sm"
           >
             <UploadCloud size={14} />
             <span className="text-xs font-bold">Novo Arquivo</span>
@@ -535,15 +535,15 @@ export const GEDView: React.FC = () => {
       {/* =========================================================================
           2. PAINEL PRINCIPAL: ÁRVORE DE DIRETÓRIOS (ESQUERDA) + EXPLORADOR (DIREITA)
          ========================================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 flex-1 min-h-0 overflow-hidden">
         
         {/* -----------------------------------------------------------------------
             PAINEL ESQUERDO: ÁRVORE DE DIRETÓRIOS (Folder Tree Explorer)
            ----------------------------------------------------------------------- */}
-        <div className="lg:col-span-3 bg-white border border-[#E2E2DE] rounded-xl overflow-hidden shadow-2xs">
+        <div className="lg:col-span-3 xl:col-span-3 bg-white border border-[#E2E2DE] rounded-xl shadow-2xs flex flex-col h-full min-h-0 overflow-hidden">
           
           {/* Cabeçalho do Caminho / Path Input */}
-          <div className="p-3 bg-[#FAFAF9] border-b border-[#EDEDEA] flex items-center justify-between gap-1.5">
+          <div className="p-2.5 bg-[#FAFAF9] border-b border-[#EDEDEA] flex items-center justify-between gap-1.5 shrink-0">
             <div className="flex items-center gap-1.5 min-w-0 flex-1">
               <Home size={15} className="text-[#FF8000] shrink-0" />
               <div className="px-2 py-1 bg-white border border-[#E2E2DE] rounded-md text-[11px] font-mono text-[#101010] truncate w-full shadow-2xs">
@@ -560,8 +560,8 @@ export const GEDView: React.FC = () => {
             </button>
           </div>
 
-          {/* Lista de Pastas e Subpastas */}
-          <div className="p-2 space-y-0.5 max-h-[620px] overflow-y-auto">
+          {/* Lista de Pastas e Subpastas com Scroll Vertical Independente */}
+          <div className="p-2 space-y-0.5 flex-1 min-h-0 overflow-y-auto">
             
             {/* Raiz: (/home/lecasu-storage/assets) */}
             <button
@@ -616,38 +616,37 @@ export const GEDView: React.FC = () => {
                 })}
               </div>
             )}
+          </div>
 
-            {/* Informação de Capacidade / Storage */}
-            <div className="mt-4 pt-3 border-t border-neutral-100 px-2 text-[11px] text-neutral-500">
-              <div className="flex items-center justify-between mb-1">
-                <span className="flex items-center gap-1 text-neutral-600 font-medium">
-                  <HardDrive size={13} className="text-[#FF8000]" />
-                  <span>Storage Neon S3</span>
-                </span>
-                <span className="font-mono font-bold text-neutral-800">{kpis.total_storage_formatted}</span>
-              </div>
-              <p className="text-[10px] text-neutral-400">
-                Sincronização em tempo real ativa
-              </p>
+          {/* Informação de Capacidade / Storage */}
+          <div className="p-2.5 bg-[#FAFAF9] border-t border-[#EDEDEA] shrink-0 text-[11px] text-neutral-500">
+            <div className="flex items-center justify-between mb-0.5">
+              <span className="flex items-center gap-1 text-neutral-600 font-medium">
+                <HardDrive size={13} className="text-[#FF8000]" />
+                <span>Storage Neon S3</span>
+              </span>
+              <span className="font-mono font-bold text-neutral-800">{kpis.total_storage_formatted}</span>
             </div>
-
+            <p className="text-[10px] text-neutral-400">
+              Sincronização em tempo real ativa
+            </p>
           </div>
         </div>
 
         {/* -----------------------------------------------------------------------
             PAINEL DIREITO: EXPLORADOR DE FICHEIROS E TABELA DE CONTEÚDO
            ----------------------------------------------------------------------- */}
-        <div className="lg:col-span-9 bg-white border border-[#E2E2DE] rounded-xl shadow-2xs overflow-hidden flex flex-col">
+        <div className="lg:col-span-9 xl:col-span-9 bg-white border border-[#E2E2DE] rounded-xl shadow-2xs flex flex-col h-full min-h-0 overflow-hidden">
           
           {/* Breadcrumb Path & Search Bar */}
-          <div className="p-3 bg-[#FAFAF9] border-b border-[#EDEDEA] flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="px-3.5 py-2.5 bg-[#FAFAF9] border-b border-[#EDEDEA] flex items-center justify-between gap-3 shrink-0">
             
             {/* Breadcrumb clicável */}
-            <div className="flex items-center gap-1.5 text-xs text-[#101010] flex-wrap w-full sm:w-auto">
+            <div className="flex items-center gap-1.5 text-xs text-[#101010] flex-nowrap min-w-0">
               <button
                 type="button"
                 onClick={() => navigateTo('/')}
-                className="font-bold text-[#FF8000] hover:underline flex items-center gap-1"
+                className="font-bold text-[#FF8000] hover:underline flex items-center gap-1 shrink-0"
               >
                 <Home size={14} />
                 <span>assets</span>
@@ -655,8 +654,8 @@ export const GEDView: React.FC = () => {
               
               {currentPath !== '/' && (
                 <>
-                  <ChevronRight size={13} className="text-neutral-400" />
-                  <span className="font-bold text-[#101010] font-mono bg-white px-2 py-0.5 rounded border border-[#E2E2DE]">
+                  <ChevronRight size={13} className="text-neutral-400 shrink-0" />
+                  <span className="font-bold text-[#101010] font-mono bg-white px-2 py-0.5 rounded border border-[#E2E2DE] shrink-0">
                     {currentPath.replace('/', '')}
                   </span>
                 </>
@@ -664,7 +663,7 @@ export const GEDView: React.FC = () => {
             </div>
 
             {/* Search Input */}
-            <div className="relative w-full sm:w-72">
+            <div className="relative w-48 sm:w-64 shrink-0">
               <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
@@ -685,12 +684,12 @@ export const GEDView: React.FC = () => {
             </div>
           </div>
 
-          {/* Tabela de Ficheiros e Pastas */}
-          <div className="table-scroll-container min-h-[460px]">
-            <table className="table-erp">
-              <thead>
-                <tr className="table-header-erp text-[11px]">
-                  <th className="w-8 px-3 text-center">
+          {/* Tabela de Ficheiros e Pastas com Scroll Vertical e Header Sticky */}
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto relative">
+            <table className="table-erp w-full">
+              <thead className="sticky top-0 bg-[#FAFAF9] z-10 shadow-2xs">
+                <tr className="table-header-erp text-[11px] border-b border-[#E2E2DE]">
+                  <th className="w-8 px-3 text-center bg-[#FAFAF9]">
                     <input
                       type="checkbox"
                       checked={currentFolderDocuments.length > 0 && selectedDocIds.length === currentFolderDocuments.length}
@@ -698,11 +697,11 @@ export const GEDView: React.FC = () => {
                       className="rounded border-[#E2E2DE] text-[#FF8000] focus:ring-[#FF8000] accent-[#FF8000] cursor-pointer"
                     />
                   </th>
-                  <th className="px-4">Nome do Ficheiro / Pasta</th>
-                  <th className="px-4 w-28">Tamanho</th>
-                  <th className="px-4 w-36">Data de Envio</th>
-                  <th className="px-4 w-44">Formato / Tipo</th>
-                  <th className="px-4 w-24 text-right">Ações</th>
+                  <th className="px-4 bg-[#FAFAF9]">Nome do Ficheiro / Pasta</th>
+                  <th className="px-4 w-28 bg-[#FAFAF9]">Tamanho</th>
+                  <th className="px-4 w-36 bg-[#FAFAF9]">Data de Envio</th>
+                  <th className="px-4 w-44 bg-[#FAFAF9]">Formato / Tipo</th>
+                  <th className="px-4 w-24 text-right bg-[#FAFAF9]">Ações</th>
                 </tr>
               </thead>
 
@@ -895,7 +894,7 @@ export const GEDView: React.FC = () => {
           </div>
 
           {/* Barra de Status no Rodapé */}
-          <div className="px-4 py-2.5 bg-[#FAFAF9] border-t border-[#EDEDEA] flex flex-wrap items-center justify-between text-xs text-[#737370]">
+          <div className="px-4 py-2 bg-[#FAFAF9] border-t border-[#EDEDEA] flex flex-wrap items-center justify-between text-xs text-[#737370] shrink-0">
             <div className="flex items-center gap-3">
               <span>
                 <strong>{currentFolderDocuments.length}</strong> ficheiros na pasta atual
