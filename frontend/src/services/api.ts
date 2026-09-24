@@ -28,7 +28,12 @@ import type {
   SupplierCreateInput,
   PurchaseOrder,
   PurchaseOrderCreateInput,
-  SupplierOverviewKPIs
+  SupplierOverviewKPIs,
+  Employee,
+  EmployeeCreateInput,
+  EmployeeLeave,
+  LeaveCreateInput,
+  HROverviewKPIs
 } from '../types';
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
@@ -490,4 +495,83 @@ export async function payPurchaseOrder(purchaseId: number): Promise<PurchaseOrde
     headers: getAuthHeaders()
   });
   return handleResponse<PurchaseOrder>(res);
+}
+
+// ================= RECURSOS HUMANOS (HR) =================
+export async function fetchEmployees(params?: { department?: string; activeOnly?: boolean }): Promise<Employee[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.department) {
+    searchParams.append('department', params.department);
+  }
+  if (params?.activeOnly) {
+    searchParams.append('active_only', 'true');
+  }
+  const query = searchParams.toString();
+  const res = await fetch(`${API_BASE_URL}/hr/employees${query ? `?${query}` : ''}`, {
+    headers: getAuthHeaders()
+  });
+  return handleResponse<Employee[]>(res);
+}
+
+export async function createEmployee(payload: EmployeeCreateInput): Promise<Employee> {
+  const res = await fetch(`${API_BASE_URL}/hr/employees`, {
+    method: 'POST',
+    headers: getAuthHeaders({
+      'Content-Type': 'application/json'
+    }),
+    body: JSON.stringify(payload)
+  });
+  return handleResponse<Employee>(res);
+}
+
+export async function toggleEmployeeStatus(employeeId: number, isActive: boolean): Promise<Employee> {
+  const res = await fetch(`${API_BASE_URL}/hr/employees/${employeeId}/status?is_active=${isActive}`, {
+    method: 'PATCH',
+    headers: getAuthHeaders()
+  });
+  return handleResponse<Employee>(res);
+}
+
+export async function fetchLeaves(params?: { employeeId?: number; statusFilter?: string }): Promise<EmployeeLeave[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.employeeId) {
+    searchParams.append('employee_id', params.employeeId.toString());
+  }
+  if (params?.statusFilter) {
+    searchParams.append('status_filter', params.statusFilter);
+  }
+  const query = searchParams.toString();
+  const res = await fetch(`${API_BASE_URL}/hr/leaves${query ? `?${query}` : ''}`, {
+    headers: getAuthHeaders()
+  });
+  return handleResponse<EmployeeLeave[]>(res);
+}
+
+export async function createLeave(payload: LeaveCreateInput): Promise<EmployeeLeave> {
+  const res = await fetch(`${API_BASE_URL}/hr/leaves`, {
+    method: 'POST',
+    headers: getAuthHeaders({
+      'Content-Type': 'application/json'
+    }),
+    body: JSON.stringify(payload)
+  });
+  return handleResponse<EmployeeLeave>(res);
+}
+
+export async function approveLeave(leaveId: number, status: 'APPROVED' | 'REJECTED'): Promise<EmployeeLeave> {
+  const res = await fetch(`${API_BASE_URL}/hr/leaves/${leaveId}/approve`, {
+    method: 'PATCH',
+    headers: getAuthHeaders({
+      'Content-Type': 'application/json'
+    }),
+    body: JSON.stringify({ status })
+  });
+  return handleResponse<EmployeeLeave>(res);
+}
+
+export async function fetchHROverviewKPIs(): Promise<HROverviewKPIs> {
+  const res = await fetch(`${API_BASE_URL}/hr/overview`, {
+    headers: getAuthHeaders()
+  });
+  return handleResponse<HROverviewKPIs>(res);
 }

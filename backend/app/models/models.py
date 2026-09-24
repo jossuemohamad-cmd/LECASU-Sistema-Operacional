@@ -124,4 +124,33 @@ class PurchaseOrder(Base):
     supplier = relationship('Supplier', back_populates='purchases')
     project = relationship('Project')
 
+class Employee(Base):
+    __tablename__ = 'employees'
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(150), nullable=False)
+    email = Column(String(150), unique=True, index=True, nullable=True)
+    phone = Column(String(50), nullable=True)
+    bi_number = Column(String(50), nullable=True)
+    nuit = Column(String(50), nullable=True)
+    department = Column(String(100), default='Engenharia & Operações')
+    position = Column(String(100), default='Técnico')
+    contract_type = Column(String(50), default='Indeterminado')
+    base_salary = Column(Numeric(14, 2), default=0.00)
+    hire_date = Column(DateTime, nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    leaves = relationship('EmployeeLeave', back_populates='employee')
+
+class EmployeeLeave(Base):
+    __tablename__ = 'employee_leaves'
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey('employees.id'), nullable=False)
+    leave_type = Column(String(50), default='Férias')  # Férias, Licença Médica, Falta Justificada, Licença de Casamento/Paternidade
+    start_date = Column(DateTime, nullable=False)
+    end_date = Column(DateTime, nullable=False)
+    reason = Column(Text, nullable=True)
+    status = Column(String(50), default='PENDING')  # PENDING, APPROVED, REJECTED
+    created_at = Column(DateTime, default=datetime.utcnow)
+    employee = relationship('Employee', back_populates='leaves')
+
 

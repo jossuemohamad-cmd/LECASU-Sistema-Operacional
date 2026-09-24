@@ -338,8 +338,71 @@ export interface PurchaseOrderCreateInput {
 export interface SupplierOverviewKPIs {
   total_suppliers: number;
   active_suppliers_count: number;
-  pending_amount_mzn: float | number;
-  paid_amount_mzn: float | number;
+  pending_amount_mzn: number;
+  paid_amount_mzn: number;
   total_purchases_count: number;
   pending_orders_count: number;
 }
+
+// ================= RECURSOS HUMANOS (HR) =================
+export interface Employee {
+  id: number;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  bi_number?: string | null;
+  nuit?: string | null;
+  department: string;
+  position: string;
+  contract_type: string;
+  base_salary: number;
+  hire_date?: string | null;
+  is_active: boolean;
+  created_at?: string;
+  active_leaves_count: number;
+}
+
+export interface EmployeeCreateInput {
+  name: string;
+  email?: string;
+  phone?: string;
+  bi_number?: string;
+  nuit?: string;
+  department?: string;
+  position?: string;
+  contract_type?: string;
+  base_salary: number;
+  hire_date?: string;
+  is_active?: boolean;
+}
+
+export interface EmployeeLeave {
+  id: number;
+  employee_id: number;
+  leave_type: string;
+  start_date: string;
+  end_date: string;
+  reason?: string | null;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | string;
+  created_at?: string;
+  employee_name?: string | null;
+  employee_department?: string | null;
+  employee_position?: string | null;
+}
+
+export interface LeaveCreateInput {
+  employee_id: number;
+  leave_type: string;
+  start_date: string;
+  end_date: string;
+  reason?: string;
+}
+
+export interface HROverviewKPIs {
+  total_employees: number;
+  active_employees_count: number;
+  active_departments_count: number;
+  on_leave_count: number;
+  monthly_payroll_mzn: number;
+}
+

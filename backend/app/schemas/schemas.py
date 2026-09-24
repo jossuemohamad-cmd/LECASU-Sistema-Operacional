@@ -592,3 +592,104 @@ class SupplierOverviewKPIs(BaseModel):
     paid_amount_mzn: float
     total_purchases_count: int
     pending_orders_count: int
+
+
+# ================= RECURSOS HUMANOS (HR) =================
+class EmployeeCreate(BaseModel):
+    name: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    bi_number: Optional[str] = None
+    nuit: Optional[str] = None
+    department: Optional[str] = 'Engenharia & Operações'
+    position: Optional[str] = 'Técnico'
+    contract_type: Optional[str] = 'Indeterminado'
+    base_salary: float = 0.0
+    hire_date: Optional[datetime] = None
+    is_active: bool = True
+
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        v = v.strip()
+        if len(v) < 2:
+            raise ValueError('O nome do colaborador deve ter no mínimo 2 caracteres.')
+        return v
+
+    @field_validator('base_salary')
+    @classmethod
+    def validate_salary(cls, v: float) -> float:
+        if v < 0:
+            raise ValueError('O salário base não pode ser negativo.')
+        return v
+
+class EmployeeUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    bi_number: Optional[str] = None
+    nuit: Optional[str] = None
+    department: Optional[str] = None
+    position: Optional[str] = None
+    contract_type: Optional[str] = None
+    base_salary: Optional[float] = None
+    hire_date: Optional[datetime] = None
+    is_active: Optional[bool] = None
+
+class EmployeeResponse(BaseModel):
+    id: int
+    name: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    bi_number: Optional[str] = None
+    nuit: Optional[str] = None
+    department: str
+    position: str
+    contract_type: str
+    base_salary: float
+    hire_date: Optional[datetime] = None
+    is_active: bool
+    created_at: Optional[datetime] = None
+    active_leaves_count: int = 0
+
+    model_config = ConfigDict(from_attributes=True)
+
+class LeaveCreate(BaseModel):
+    employee_id: int
+    leave_type: Optional[str] = 'Férias'
+    start_date: datetime
+    end_date: datetime
+    reason: Optional[str] = None
+
+class LeaveApproveRequest(BaseModel):
+    status: str  # APPROVED, REJECTED
+
+    @field_validator('status')
+    @classmethod
+    def validate_status(cls, v: str) -> str:
+        v = v.strip().upper()
+        if v not in ['APPROVED', 'REJECTED', 'PENDING']:
+            raise ValueError("O status deve ser 'APPROVED', 'REJECTED' ou 'PENDING'.")
+        return v
+
+class LeaveResponse(BaseModel):
+    id: int
+    employee_id: int
+    leave_type: str
+    start_date: datetime
+    end_date: datetime
+    reason: Optional[str] = None
+    status: str
+    created_at: Optional[datetime] = None
+    employee_name: Optional[str] = None
+    employee_department: Optional[str] = None
+    employee_position: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class HROverviewKPIs(BaseModel):
+    total_employees: int
+    active_employees_count: int
+    active_departments_count: int
+    on_leave_count: int
+    monthly_payroll_mzn: float

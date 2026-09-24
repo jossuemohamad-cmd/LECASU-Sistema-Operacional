@@ -22,6 +22,7 @@ import { TechnicalTeamView } from './components/team/TechnicalTeamView';
 import { ServicesView } from './components/services/ServicesView';
 import { SettingsView } from './components/settings/SettingsView';
 import { SuppliersView } from './components/suppliers/SuppliersView';
+import { HRView } from './components/hr/HRView';
 import { LoginView } from './components/auth/LoginView';
 import { getAuthToken, removeAuthToken, fetchCurrentUser } from './services/api';
 import type { User } from './types';
@@ -215,6 +216,8 @@ export default function App() {
               <TechnicalTeamView />
             ) : activeTab === 'fornecedores' ? (
               <SuppliersView />
+            ) : activeTab === 'rh' ? (
+              <HRView />
             ) : activeTab === 'definicoes' ? (
               <SettingsView />
             ) : (
