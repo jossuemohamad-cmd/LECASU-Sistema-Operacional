@@ -8,11 +8,8 @@ import {
   KeyRound, 
   CheckCircle2, 
   X, 
-  Eye,
-  EyeOff,
-  Layers,
-  Sparkles,
-  Database
+  Eye, 
+  EyeOff 
 } from 'lucide-react';
 import type { User } from '../../types';
 import { loginUser, forgotPassword, resetPassword } from '../../services/api';
@@ -305,94 +302,22 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     <div className="min-h-screen w-full flex bg-[#F5F5F3] font-sans selection:bg-[#FF8000] selection:text-white">
       
       {/* 
-        PAINEL ESQUERDO: BRANDING CORPORATIVO & HIGHLIGHTS DO SISTEMA 
-        (Visível em telas grandes para demonstrar autoridade e elegância)
+        PAINEL ESQUERDO: IMAGEM CORPORATIVA DOS SERVIÇOS DA EMPRESA
       */}
-      <div className="hidden lg:flex lg:w-5/12 bg-[#101010] text-white flex-col justify-between p-12 relative overflow-hidden border-r border-[#222222]">
-        {/* Glow ambiente sutil */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#FF8000]/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#FF8000]/10 rounded-full blur-3xl pointer-events-none" />
-
-        {/* Top Header do Painel Esquerdo */}
-        <div className="relative z-10">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-[#FF8000] flex items-center justify-center font-heading font-black text-white text-xl shadow-lg shadow-[#FF8000]/30">
-              L
-            </div>
-            <div>
-              <span className="font-heading font-extrabold text-xl tracking-tight text-white block">
-                LECASU <span className="text-[#FF8000] text-xs font-bold tracking-wider uppercase">ERP</span>
-              </span>
-              <span className="text-[11px] text-neutral-400 font-medium">
-                Sistema Operacional Corporativo
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Centro: Mensagem & Destaques de Alto Nível */}
-        <div className="relative z-10 my-auto py-12 space-y-8">
-          <div>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#1F1F1F] text-[#FF8000] border border-[#2E2E2E] mb-4">
-              <Sparkles size={13} />
-              LECASU OS v2.0 Enterprise
-            </span>
-            <h2 className="text-3xl xl:text-4xl font-black font-heading tracking-tight text-white leading-tight">
-              Gestão Integrada para Engenharia & Climatização.
-            </h2>
-            <p className="text-sm text-neutral-400 mt-3 leading-relaxed">
-              Plataforma centralizada para orçamentos, faturação em Meticais (MZN), controle de obras, equipa técnica e conformidade fiscal.
-            </p>
-          </div>
-
-          {/* Grid de Recursos do Sistema */}
-          <div className="space-y-3.5">
-            <div className="flex items-start space-x-3 p-3.5 rounded-xl bg-[#181818] border border-[#262626]">
-              <div className="p-2 rounded-lg bg-[#222222] text-[#FF8000] flex-shrink-0 mt-0.5">
-                <Database size={16} />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-white font-heading">PostgreSQL Neon Cloud</h4>
-                <p className="text-[11px] text-neutral-400 mt-0.5">Sincronização em tempo real com alta disponibilidade.</p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3 p-3.5 rounded-xl bg-[#181818] border border-[#262626]">
-              <div className="p-2 rounded-lg bg-[#222222] text-[#FF8000] flex-shrink-0 mt-0.5">
-                <Layers size={16} />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-white font-heading">10 Módulos Integrados</h4>
-                <p className="text-[11px] text-neutral-400 mt-0.5">Financeiro, Obras, Propostas, RH, GED, Suprimentos e Equipa.</p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3 p-3.5 rounded-xl bg-[#181818] border border-[#262626]">
-              <div className="p-2 rounded-lg bg-[#222222] text-[#FF8000] flex-shrink-0 mt-0.5">
-                <ShieldCheck size={16} />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-white font-heading">Segurança e Auditoria</h4>
-                <p className="text-[11px] text-neutral-400 mt-0.5">Controle de acessos baseado em perfis (RBAC) e logs.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Rodapé do Painel Esquerdo */}
-        <div className="relative z-10 pt-6 border-t border-[#222222] text-xs text-neutral-500 flex items-center justify-between">
-          <span>LECASU, Lda • Moçambique</span>
-          <span className="flex items-center gap-1.5 text-emerald-500 font-medium">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            Serviços Operacionais
-          </span>
-        </div>
+      <div className="hidden lg:block lg:w-1/2 relative overflow-hidden bg-[#101010] border-r border-[#222222]">
+        <img
+          src="/login-cover.jpg"
+          alt="LECASU Serviços de Engenharia, Climatização e Energia Solar"
+          className="w-full h-full object-cover"
+        />
+        {/* Sutil gradiente para acabamento sofisticado */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 pointer-events-none" />
       </div>
 
       {/* 
         PAINEL DIREITO: FORMULÁRIO DE LOGIN LIMPO, CLARO E PROFISSIONAL
       */}
-      <div className="w-full lg:w-7/12 flex items-center justify-center p-6 sm:p-12 md:p-16 bg-[#F5F5F3]">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 md:p-16 bg-[#F5F5F3]">
         <div className="w-full max-w-md bg-white rounded-2xl border border-[#E2E2DE] shadow-xl p-8 sm:p-10 animate-in fade-in zoom-in-95 duration-200">
           
           {/* Logo visível em Mobile */}
