@@ -4,11 +4,9 @@ import {
   Briefcase, 
   Wallet, 
   Clock, 
-  RefreshCw, 
   CheckCircle2, 
   AlertCircle, 
   ChevronRight, 
-  Calendar,
   ListTodo,
   TrendingUp,
   Truck,
@@ -69,16 +67,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   useEffect(() => {
     loadDashboardData();
   }, []);
-
-  const getTodayFormatted = () => {
-    const today = new Date();
-    return today.toLocaleDateString('pt-MZ', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
-  };
 
   const getStatusBadge = (status: string) => {
     switch (status?.toUpperCase()) {
@@ -181,41 +169,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     ? Math.round((kpis.completed_tasks_count / kpis.total_tasks_count) * 100)
     : 0;
 
+  if (isLoading && !data) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-3 border-[#FF8000] border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-xs text-neutral-500 font-medium">Carregando estatísticas do sistema...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Toast Notification Container */}
       <Toast toasts={toasts} onDismiss={removeToast} />
-
-      {/* HEADER PRINCIPAL */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between pb-5 border-b border-[#E2E2DE] gap-4">
-        <div>
-          <div className="flex items-center space-x-3">
-            <h1 className="text-2xl font-bold text-[#101010] tracking-tight font-heading">
-              Painel Central & Estatísticas do Sistema
-            </h1>
-            <span className="badge-lecasu-orange flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#FF8000] animate-pulse"></span>
-              PostgreSQL Neon Online
-            </span>
-          </div>
-          <p className="text-xs text-[#737370] mt-1 capitalize flex items-center gap-2">
-            <Calendar size={14} className="text-[#FF8000]" />
-            {getTodayFormatted()} • Indicadores consolidados de todos os 10 módulos corporativos
-          </p>
-        </div>
-
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={() => loadDashboardData(true)}
-            disabled={isLoading}
-            className="btn-secondary btn-md"
-            title="Sincronizar estatísticas em tempo real"
-          >
-            <RefreshCw size={15} className={isLoading ? 'animate-spin text-[#FF8000]' : 'text-neutral-600'} />
-            <span>{isLoading ? 'Sincronizando...' : 'Atualizar Dados'}</span>
-          </button>
-        </div>
-      </div>
 
       {/* ERROR ALERT */}
       {error && (
