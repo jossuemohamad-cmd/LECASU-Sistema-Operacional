@@ -296,29 +296,29 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   }
 
   // =========================================================================
-  // 2. TELA DE LOGIN PROFISSIONAL (Dual-Panel Split-Screen Enterprise)
+  // 2. TELA DE LOGIN PROFISSIONAL (100vh Sem Scroll Vertical)
   // =========================================================================
   return (
-    <div className="min-h-screen w-full flex bg-[#F5F5F3] font-sans selection:bg-[#FF8000] selection:text-white">
+    <div className="h-screen max-h-screen w-screen overflow-hidden flex bg-[#F5F5F3] font-sans selection:bg-[#FF8000] selection:text-white">
       
       {/* 
-        PAINEL ESQUERDO: IMAGEM CORPORATIVA DOS SERVIÇOS DA EMPRESA
+        PAINEL ESQUERDO: IMAGEM CORPORATIVA (100vh Sem Scroll)
       */}
-      <div className="hidden lg:block lg:w-1/2 relative overflow-hidden bg-[#101010] border-r border-[#222222]">
+      <div className="hidden lg:block lg:w-1/2 h-full max-h-screen relative overflow-hidden bg-[#101010] border-r border-[#222222]">
         <img
           src="/login-cover.jpg"
           alt="LECASU Serviços de Engenharia, Climatização e Energia Solar"
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover object-center"
         />
         {/* Sutil gradiente para acabamento sofisticado */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 pointer-events-none" />
       </div>
 
       {/* 
-        PAINEL DIREITO: FORMULÁRIO DE LOGIN LIMPO, CLARO E PROFISSIONAL
+        PAINEL DIREITO: FORMULÁRIO DE LOGIN CENTRALIZADO
       */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 md:p-16 bg-[#F5F5F3]">
-        <div className="w-full max-w-md bg-white rounded-2xl border border-[#E2E2DE] shadow-xl p-8 sm:p-10 animate-in fade-in zoom-in-95 duration-200">
+      <div className="w-full lg:w-1/2 h-full max-h-screen flex items-center justify-center p-6 sm:p-8 md:p-10 overflow-y-auto bg-[#F5F5F3]">
+        <div className="w-full max-w-md bg-white rounded-2xl border border-[#E2E2DE] shadow-xl p-8 sm:p-9 animate-in fade-in zoom-in-95 duration-200 my-auto">
           
           {/* Logo visível em Mobile */}
           <div className="lg:hidden mb-6 text-center">
