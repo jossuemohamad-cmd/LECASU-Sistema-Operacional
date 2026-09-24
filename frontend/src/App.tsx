@@ -23,6 +23,7 @@ import { ServicesView } from './components/services/ServicesView';
 import { SettingsView } from './components/settings/SettingsView';
 import { SuppliersView } from './components/suppliers/SuppliersView';
 import { HRView } from './components/hr/HRView';
+import { GEDView } from './components/ged/GEDView';
 import { LoginView } from './components/auth/LoginView';
 import { getAuthToken, removeAuthToken, fetchCurrentUser } from './services/api';
 import type { User } from './types';
@@ -218,6 +219,8 @@ export default function App() {
               <SuppliersView />
             ) : activeTab === 'rh' ? (
               <HRView />
+            ) : activeTab === 'ged' ? (
+              <GEDView />
             ) : activeTab === 'definicoes' ? (
               <SettingsView />
             ) : (

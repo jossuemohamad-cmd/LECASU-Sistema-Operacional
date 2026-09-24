@@ -406,3 +406,33 @@ export interface HROverviewKPIs {
   monthly_payroll_mzn: number;
 }
 
+export interface GEDDocument {
+  id: number;
+  title: string;
+  category: string;
+  file_name: string;
+  file_path: string;
+  file_size_bytes: number;
+  mime_type?: string | null;
+  version: string;
+  description?: string | null;
+  project_id?: number | null;
+  client_id?: number | null;
+  uploaded_by_id?: number | null;
+  created_at?: string;
+  updated_at?: string;
+  project_name?: string | null;
+  project_code?: string | null;
+  client_name?: string | null;
+  uploaded_by_name?: string | null;
+}
+
+export interface GEDOverviewKPIs {
+  total_documents: number;
+  active_categories_count: number;
+  total_storage_bytes: number;
+  total_storage_formatted: string;
+  monthly_uploads_count: number;
+}
+
+

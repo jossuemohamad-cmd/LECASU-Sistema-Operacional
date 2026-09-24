@@ -11,6 +11,7 @@ from app.api.auth import router as auth_router, init_default_admin
 from app.api.users import router as users_router
 from app.api.suppliers import router as suppliers_router
 from app.api.hr import router as hr_router
+from app.api.ged import router as ged_router
 from app.core.database import SessionLocal
 
 # Criar tabelas no banco de dados se não existirem
@@ -47,6 +48,7 @@ app.include_router(projects_router, prefix='/api/v1')
 app.include_router(team_router, prefix='/api/v1')
 app.include_router(suppliers_router, prefix='/api/v1')
 app.include_router(hr_router, prefix='/api/v1')
+app.include_router(ged_router, prefix='/api/v1')
 
 @app.get('/api/health')
 def health_check():

@@ -33,7 +33,9 @@ import type {
   EmployeeCreateInput,
   EmployeeLeave,
   LeaveCreateInput,
-  HROverviewKPIs
+  HROverviewKPIs,
+  GEDDocument,
+  GEDOverviewKPIs
 } from '../types';
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
@@ -575,3 +577,83 @@ export async function fetchHROverviewKPIs(): Promise<HROverviewKPIs> {
   });
   return handleResponse<HROverviewKPIs>(res);
 }
+
+// ================= GESTÃO ELETRÓNICA DE DOCUMENTOS (GED) =================
+export async function fetchDocuments(params?: {
+  category?: string;
+  projectId?: number;
+  clientId?: number;
+  search?: string;
+}): Promise<GEDDocument[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.category) {
+    searchParams.append('category', params.category);
+  }
+  if (params?.projectId) {
+    searchParams.append('project_id', params.projectId.toString());
+  }
+  if (params?.clientId) {
+    searchParams.append('client_id', params.clientId.toString());
+  }
+  if (params?.search) {
+    searchParams.append('search', params.search);
+  }
+  const query = searchParams.toString();
+  const res = await fetch(`${API_BASE_URL}/ged/documents${query ? `?${query}` : ''}`, {
+    headers: getAuthHeaders()
+  });
+  return handleResponse<GEDDocument[]>(res);
+}
+
+export async function uploadDocument(formData: FormData): Promise<GEDDocument> {
+  const token = getAuthToken();
+  const headers: HeadersInit = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  // Note: FormData sets its own multipart/form-data boundary, so we do not set Content-Type header manually
+  const res = await fetch(`${API_BASE_URL}/ged/upload`, {
+    method: 'POST',
+    headers,
+    body: formData
+  });
+  return handleResponse<GEDDocument>(res);
+}
+
+export function getDocumentDownloadUrl(documentId: number): string {
+  return `${API_BASE_URL}/ged/documents/${documentId}/download`;
+}
+
+export async function downloadDocument(documentId: number, fileName: string): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/ged/documents/${documentId}/download`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) {
+    throw new Error('Falha ao descarregar documento');
+  }
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(url);
+  document.body.removeChild(a);
+}
+
+export async function deleteDocument(documentId: number): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE_URL}/ged/documents/${documentId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  return handleResponse<{ message: string }>(res);
+}
+
+export async function fetchGEDOverviewKPIs(): Promise<GEDOverviewKPIs> {
+  const res = await fetch(`${API_BASE_URL}/ged/overview`, {
+    headers: getAuthHeaders()
+  });
+  return handleResponse<GEDOverviewKPIs>(res);
+}
+

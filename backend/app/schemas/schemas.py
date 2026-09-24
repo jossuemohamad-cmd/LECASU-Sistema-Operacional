@@ -693,3 +693,37 @@ class HROverviewKPIs(BaseModel):
     active_departments_count: int
     on_leave_count: int
     monthly_payroll_mzn: float
+
+
+# ================= GED - GESTÃO ELETRÓNICA DE DOCUMENTOS =================
+class DocumentResponse(BaseModel):
+    id: int
+    title: str
+    category: str
+    file_name: str
+    file_path: str
+    file_size_bytes: int
+    file_size_formatted: Optional[str] = None
+    mime_type: Optional[str] = None
+    version: str
+    description: Optional[str] = None
+    project_id: Optional[int] = None
+    client_id: Optional[int] = None
+    uploaded_by_id: Optional[int] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    project_name: Optional[str] = None
+    project_code: Optional[str] = None
+    client_name: Optional[str] = None
+    uploaded_by_name: Optional[str] = None
+    download_url: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class GEDOverviewKPIs(BaseModel):
+    total_documents: int
+    active_categories_count: int
+    total_storage_bytes: int
+    total_storage_formatted: str
+    monthly_uploads_count: int
+

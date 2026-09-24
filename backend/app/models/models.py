@@ -153,4 +153,24 @@ class EmployeeLeave(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     employee = relationship('Employee', back_populates='leaves')
 
+class Document(Base):
+    __tablename__ = 'documents'
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(200), nullable=False)
+    category = Column(String(100), default='Geral')
+    file_name = Column(String(255), nullable=False)
+    file_path = Column(String(500), nullable=False)
+    file_size_bytes = Column(Integer, default=0)
+    mime_type = Column(String(100), nullable=True)
+    version = Column(String(20), default='v1.0')
+    description = Column(Text, nullable=True)
+    project_id = Column(Integer, ForeignKey('projects.id'), nullable=True)
+    client_id = Column(Integer, ForeignKey('clients.id'), nullable=True)
+    uploaded_by_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    project = relationship('Project')
+    client = relationship('Client')
+    uploaded_by = relationship('User')
+
 
