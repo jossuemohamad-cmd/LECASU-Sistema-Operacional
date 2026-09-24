@@ -189,10 +189,10 @@ export const ProjectsView: React.FC = () => {
           <button
             onClick={loadProjects}
             disabled={isLoading}
-            className="p-2 text-slate-600 hover:text-slate-900 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition"
+            className="btn-secondary btn-icon-md"
             title="Atualizar lista de projetos"
           >
-            <RefreshCw size={15} className={isLoading ? 'animate-spin' : ''} />
+            <RefreshCw size={15} className={isLoading ? 'animate-spin text-[#FF8000]' : 'text-neutral-600'} />
           </button>
         </div>
       </div>
@@ -433,14 +433,14 @@ export const ProjectsView: React.FC = () => {
                         <div className="flex items-center justify-end space-x-1.5">
                           <button
                             onClick={() => handleOpenDetails(project)}
-                            className="px-2.5 py-1 text-[11px] font-semibold text-orange-600 hover:text-orange-700 hover:bg-orange-50 rounded border border-orange-200 transition flex items-center space-x-1"
+                            className="btn-secondary btn-sm text-[#FF8000] border-[#FF8000]/30 hover:border-[#FF8000] hover:bg-[#FFF2E5]"
                           >
                             <ListTodo size={12} />
                             <span>Gerir Tarefas</span>
                           </button>
                           <button
                             onClick={() => handleOpenDetails(project)}
-                            className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded transition"
+                            className="btn-ghost btn-icon-sm text-neutral-400 hover:text-neutral-900"
                           >
                             <ChevronRight size={16} />
                           </button>

@@ -252,20 +252,20 @@ export const ServicesView: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2.5">
           <button
             onClick={() => loadData(true)}
             disabled={isLoading}
-            className="flex items-center space-x-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold px-3 py-2 rounded-md shadow-2xs transition disabled:opacity-50"
+            className="btn-secondary btn-md"
             title="Atualizar lista de serviços"
           >
-            <RefreshCw size={14} className={isLoading ? 'animate-spin text-orange-600' : 'text-slate-500'} />
+            <RefreshCw size={14} className={isLoading ? 'animate-spin text-[#FF8000]' : 'text-neutral-600'} />
             <span>{isLoading ? 'Sincronizando...' : 'Atualizar'}</span>
           </button>
 
           <button
             onClick={handleOpenCreateModal}
-            className="flex items-center space-x-1.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold px-4 py-2 rounded-md shadow-xs transition"
+            className="btn-primary btn-md"
           >
             <Plus size={15} />
             <span>+ Novo Serviço</span>
@@ -506,10 +506,10 @@ export const ServicesView: React.FC = () => {
                     <td className="py-3 px-4 text-right">
                       <button
                         onClick={() => handleOpenEditModal(service)}
-                        className="inline-flex items-center space-x-1 px-2.5 py-1 bg-slate-50 hover:bg-orange-50 border border-slate-200 hover:border-orange-300 text-slate-700 hover:text-orange-700 rounded text-[11px] font-semibold transition shadow-2xs"
+                        className="btn-secondary btn-sm"
                         title="Editar detalhes do serviço"
                       >
-                        <Edit3 size={11} className="text-orange-600" />
+                        <Edit3 size={11} className="text-[#FF8000]" />
                         <span>Editar</span>
                       </button>
                     </td>
@@ -527,7 +527,7 @@ export const ServicesView: React.FC = () => {
           <div className="bg-white rounded-lg shadow-xl border border-slate-200 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95">
             <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
               <div className="flex items-center space-x-2">
-                <Wrench size={18} className="text-orange-600" />
+                <Wrench size={18} className="text-[#FF8000]" />
                 <h3 className="font-bold text-sm text-slate-900">
                   {editingService ? 'Editar Serviço Técnico' : 'Novo Serviço no Catálogo'}
                 </h3>
@@ -666,14 +666,14 @@ export const ServicesView: React.FC = () => {
                     setIsCreateModalOpen(false);
                     setEditingService(null);
                   }}
-                  className="px-3 py-1.5 border border-slate-300 rounded text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+                  className="btn-secondary btn-md"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded text-xs font-semibold shadow-xs transition disabled:opacity-50"
+                  className="btn-primary btn-md disabled:opacity-50"
                 >
                   {isSubmitting ? 'A guardar...' : editingService ? 'Atualizar Serviço' : 'Cadastrar Serviço'}
                 </button>

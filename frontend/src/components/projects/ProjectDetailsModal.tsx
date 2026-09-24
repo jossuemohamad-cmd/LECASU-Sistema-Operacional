@@ -243,14 +243,14 @@ export const ProjectDetailsModal: React.FC<ProjectDetailsModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowTaskForm(false)}
-                    className="px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded"
+                    className="btn-secondary btn-sm"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={isAddingTask || !newTaskTitle.trim()}
-                    className="px-4 py-1 text-xs font-semibold text-white bg-orange-600 hover:bg-orange-700 rounded shadow-xs transition flex items-center space-x-1.5 disabled:opacity-50"
+                    className="btn-primary btn-sm disabled:opacity-50"
                   >
                     {isAddingTask ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
                     <span>Guardar Tarefa</span>
@@ -266,7 +266,7 @@ export const ProjectDetailsModal: React.FC<ProjectDetailsModalProps> = ({
                 <p className="text-xs text-slate-500">Nenhuma tarefa técnica adicionada a este projeto.</p>
                 <button
                   onClick={() => setShowTaskForm(true)}
-                  className="mt-2 text-xs font-semibold text-orange-600 hover:underline"
+                  className="btn-secondary btn-sm text-[#FF8000] border-[#FF8000]/30 hover:border-[#FF8000] hover:bg-[#FFF2E5] mt-3"
                 >
                   + Adicionar primeira tarefa
                 </button>
@@ -353,7 +353,7 @@ export const ProjectDetailsModal: React.FC<ProjectDetailsModalProps> = ({
         <div className="px-6 py-3 border-t border-slate-100 bg-slate-50/50 flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition"
+            className="btn-secondary btn-md"
           >
             Fechar
           </button>

@@ -172,18 +172,18 @@ export function FinanceView() {
             Controlo de receitas, faturas emitidas, recebimentos e saldo operacional
           </p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2.5">
           <button
             onClick={() => loadData(true)}
-            className="flex items-center space-x-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition shadow-xs"
+            className="btn-secondary btn-md"
             title="Atualizar dados"
           >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={14} className={loading ? 'animate-spin text-[#FF8000]' : 'text-neutral-600'} />
             <span>Atualizar</span>
           </button>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center space-x-1.5 px-4 py-2 text-xs font-semibold text-white bg-orange-600 rounded-md hover:bg-orange-700 transition shadow-xs"
+            className="btn-primary btn-md"
           >
             <Plus size={16} />
             <span>Emitir Fatura</span>
@@ -412,7 +412,7 @@ export function FinanceView() {
                               <button
                                 onClick={() => handlePayInvoice(inv.id)}
                                 disabled={actionLoading}
-                                className="px-2.5 py-1 text-[11px] font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded transition shadow-xs"
+                                className="btn-success btn-sm"
                                 title="Registar Recebimento"
                               >
                                 Receber
@@ -420,7 +420,7 @@ export function FinanceView() {
                               <button
                                 onClick={() => handleCancelInvoice(inv.id)}
                                 disabled={actionLoading}
-                                className="px-2 py-1 text-[11px] font-medium text-rose-600 hover:bg-rose-50 rounded transition"
+                                className="btn-danger btn-sm"
                                 title="Anular Fatura"
                               >
                                 Cancelar
@@ -551,14 +551,14 @@ export function FinanceView() {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition"
+                  className="btn-secondary btn-md"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="px-4 py-2 text-xs font-semibold text-white bg-orange-600 hover:bg-orange-700 rounded-md transition shadow-xs disabled:opacity-50"
+                  className="btn-primary btn-md disabled:opacity-50"
                 >
                   {actionLoading ? 'A emitir...' : 'Emitir Fatura'}
                 </button>

@@ -266,14 +266,14 @@ export const ClientModal: React.FC<ClientModalProps> = ({
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2 text-xs font-semibold text-slate-700 hover:text-slate-900 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors"
+              className="btn-secondary btn-md"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2 text-xs font-semibold text-white bg-orange-600 hover:bg-orange-700 rounded-md shadow-sm transition-colors flex items-center space-x-2 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="btn-primary btn-md"
             >
               {isSubmitting ? (
                 <>
