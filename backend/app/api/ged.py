@@ -136,11 +136,36 @@ async def upload_document(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cliente associado não encontrado.")
         cl_name = cl.name
 
-    # Generate unique storage filename
+    # Determine structured S3 folder by file extension and category
     original_filename = file.filename or "documento"
-    _, ext = os.path.splitext(original_filename)
+    _, raw_ext = os.path.splitext(original_filename)
+    ext = raw_ext.lower()
+    
+    cat_lower = category.lower().strip()
+    
+    if 'logo' in cat_lower or 'logo' in original_filename.lower():
+        folder = "logos"
+    elif ext == '.pdf':
+        folder = "pdf"
+    elif ext == '.png':
+        folder = "png"
+    elif ext in ['.jpg', '.jpeg', '.webp']:
+        folder = "jpg"
+    elif ext in ['.xlsx', '.xls', '.csv']:
+        folder = "planilhas"
+    elif ext in ['.dwg', '.dxf']:
+        folder = "projetos_cad"
+    elif ext in ['.zip', '.rar', '.7z', '.tar', '.gz']:
+        folder = "arquivos_comprimidos"
+    elif 'contrato' in cat_lower:
+        folder = "contratos"
+    elif 'rh' in cat_lower or 'pessoal' in cat_lower:
+        folder = "rh_pessoal"
+    else:
+        folder = "geral"
+
     unique_name = f"{uuid.uuid4().hex}{ext}"
-    s3_key = f"ged/{category.lower().replace(' ', '_')}/{unique_name}"
+    s3_key = f"ged/{folder}/{unique_name}"
     local_destination_path = os.path.join(UPLOAD_DIR, unique_name)
 
     # Read file content into memory

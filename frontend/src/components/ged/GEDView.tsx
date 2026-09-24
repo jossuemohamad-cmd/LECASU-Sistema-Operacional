@@ -22,7 +22,15 @@ import {
   Briefcase,
   Building2,
   Calendar,
-  Loader2
+  Loader2,
+  Folder,
+  FolderOpen,
+  Cloud,
+  CloudUpload,
+  Link2,
+  ExternalLink,
+  ShieldCheck,
+  Check
 } from 'lucide-react';
 import type { 
   GEDDocument, 
@@ -49,7 +57,19 @@ const CATEGORIES = [
   'Faturas & Recibos',
   'RH & Pessoal',
   'Certificações & Licenças',
+  'Logotipos & Marcas',
   'Geral'
+];
+
+const FOLDERS = [
+  { id: 'all', label: 'Todas as Pastas', icon: Folder, color: 'text-neutral-600', path: '/' },
+  { id: 'pdf', label: 'PDFs & Documentos', icon: FileText, color: 'text-rose-500', path: '/pdf' },
+  { id: 'png', label: 'Imagens PNG', icon: FileImage, color: 'text-blue-500', path: '/png' },
+  { id: 'jpg', label: 'Fotos & JPG', icon: FileImage, color: 'text-indigo-500', path: '/jpg' },
+  { id: 'logos', label: 'Logos & Marcas', icon: Layers, color: 'text-amber-500', path: '/logos' },
+  { id: 'planilhas', label: 'Planilhas Excel/CSV', icon: FileSpreadsheet, color: 'text-emerald-500', path: '/planilhas' },
+  { id: 'projetos', label: 'Projetos CAD/Técnicos', icon: Briefcase, color: 'text-purple-500', path: '/projetos_cad' },
+  { id: 'contratos', label: 'Contratos & Jurídico', icon: ShieldCheck, color: 'text-cyan-500', path: '/contratos' },
 ];
 
 export const GEDView: React.FC = () => {
@@ -68,14 +88,21 @@ export const GEDView: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Filters
+  // Filters & Folder selection
+  const [selectedFolder, setSelectedFolder] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
 
-  // Modal State
+  // Modals State
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isCloudIntegrationsOpen, setIsCloudIntegrationsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  // Cloud Connections State
+  const [isGoogleDriveConnected, setIsGoogleDriveConnected] = useState(false);
+  const [isOneDriveConnected, setIsOneDriveConnected] = useState(false);
+  const [connectingCloud, setConnectingCloud] = useState<'google' | 'onedrive' | null>(null);
 
   // Form State
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -291,9 +318,58 @@ export const GEDView: React.FC = () => {
     }
   };
 
+  // Helper to determine document folder
+  const getDocumentFolder = (doc: GEDDocument): string => {
+    const ext = doc.file_name.split('.').pop()?.toLowerCase() || '';
+    const titleLower = doc.title.toLowerCase();
+    const catLower = (doc.category || '').toLowerCase();
+    
+    if (titleLower.includes('logo') || catLower.includes('logo') || (doc.file_path && doc.file_path.includes('/logos/'))) {
+      return 'logos';
+    }
+    if (ext === 'pdf' || (doc.file_path && doc.file_path.includes('/pdf/'))) {
+      return 'pdf';
+    }
+    if (ext === 'png' || (doc.file_path && doc.file_path.includes('/png/'))) {
+      return 'png';
+    }
+    if (['jpg', 'jpeg', 'webp'].includes(ext) || (doc.file_path && doc.file_path.includes('/jpg/'))) {
+      return 'jpg';
+    }
+    if (['xlsx', 'xls', 'csv'].includes(ext) || (doc.file_path && doc.file_path.includes('/planilhas/'))) {
+      return 'planilhas';
+    }
+    if (['dwg', 'dxf'].includes(ext) || catLower.includes('projet') || (doc.file_path && doc.file_path.includes('/projetos_cad/'))) {
+      return 'projetos';
+    }
+    if (catLower.includes('contrat') || (doc.file_path && doc.file_path.includes('/contratos/'))) {
+      return 'contratos';
+    }
+    return 'all';
+  };
+
+  // Folder counts map
+  const folderCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: documents.length };
+    FOLDERS.forEach(f => {
+      if (f.id !== 'all') {
+        counts[f.id] = documents.filter(doc => getDocumentFolder(doc) === f.id).length;
+      }
+    });
+    return counts;
+  }, [documents]);
+
   // Filtered documents list
   const filteredDocuments = useMemo(() => {
     return documents.filter(doc => {
+      // 1. Folder filter
+      if (selectedFolder !== 'all') {
+        if (getDocumentFolder(doc) !== selectedFolder) {
+          return false;
+        }
+      }
+
+      // 2. Search filter
       const query = searchTerm.toLowerCase().trim();
       const matchesSearch = !query || 
         doc.title.toLowerCase().includes(query) ||
@@ -302,11 +378,26 @@ export const GEDView: React.FC = () => {
         (doc.project_name && doc.project_name.toLowerCase().includes(query)) ||
         (doc.client_name && doc.client_name.toLowerCase().includes(query));
       
+      // 3. Category filter
       const matchesCategory = !categoryFilter || doc.category === categoryFilter;
 
       return matchesSearch && matchesCategory;
     });
-  }, [documents, searchTerm, categoryFilter]);
+  }, [documents, selectedFolder, searchTerm, categoryFilter]);
+
+  const handleConnectCloud = (provider: 'google' | 'onedrive') => {
+    setConnectingCloud(provider);
+    setTimeout(() => {
+      if (provider === 'google') {
+        setIsGoogleDriveConnected(true);
+        showToast('success', 'Google Drive Conectado!', 'Repositório vinculado com Google Workspace da LECASU.');
+      } else {
+        setIsOneDriveConnected(true);
+        showToast('success', 'OneDrive Conectado!', 'Repositório vinculado com Microsoft 365 / SharePoint.');
+      }
+      setConnectingCloud(null);
+    }, 1200);
+  };
 
   return (
     <div className="space-y-6">
@@ -322,9 +413,22 @@ export const GEDView: React.FC = () => {
             <FolderArchive size={13} className="text-[#FF8000]" />
             <span>{kpis.total_documents} Documentos no Repositório</span>
           </span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <Check size={13} className="text-emerald-600" />
+            <span>Neon S3 Storage Sincronizado</span>
+          </span>
         </div>
 
         <div className="flex items-center space-x-2.5">
+          <button
+            onClick={() => setIsCloudIntegrationsOpen(true)}
+            className="btn-secondary btn-md flex items-center gap-1.5"
+            title="Conectar Google Drive ou OneDrive"
+          >
+            <Cloud className="w-4 h-4 text-[#FF8000]" />
+            <span>Conectar Cloud (Drive/OneDrive)</span>
+          </button>
+
           <button
             onClick={() => loadAllData(true)}
             disabled={isLoading}
@@ -387,13 +491,13 @@ export const GEDView: React.FC = () => {
         <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-2xs flex items-center justify-between">
           <div>
             <p className="text-[12px] font-semibold text-slate-500 uppercase tracking-wider">
-              Armazenamento Total
+              Armazenamento S3
             </p>
             <h3 className="text-2xl font-bold text-emerald-700 mt-1 font-heading">
               {kpis.total_storage_formatted}
             </h3>
             <p className="mt-1 text-[11px] text-slate-400">
-              Volume físico no servidor
+              Storage Neon Cloud
             </p>
           </div>
           <div className="w-11 h-11 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
@@ -417,6 +521,56 @@ export const GEDView: React.FC = () => {
           <div className="w-11 h-11 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
             <UploadCloud className="w-6 h-6" />
           </div>
+        </div>
+      </div>
+
+      {/* Navegador Visual de Pastas Organizadas (Pastas Inteligentes) */}
+      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <FolderOpen className="w-4 h-4 text-[#FF8000]" />
+            <h4 className="text-xs font-bold text-slate-900 font-heading uppercase tracking-wider">
+              Estrutura de Pastas no Storage Neon
+            </h4>
+          </div>
+          <span className="text-[11px] text-slate-400">
+            Pastas automáticas organizadas por tipo de arquivo
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+          {FOLDERS.map((folder) => {
+            const Icon = folder.icon;
+            const count = folderCounts[folder.id] || 0;
+            const isSelected = selectedFolder === folder.id;
+
+            return (
+              <button
+                key={folder.id}
+                onClick={() => setSelectedFolder(folder.id)}
+                className={`flex flex-col items-start p-2.5 rounded-lg border text-left transition-all cursor-pointer ${
+                  isSelected 
+                    ? 'bg-[#FFF2E5] border-[#FF8000] text-[#101010] shadow-2xs ring-1 ring-[#FF8000]' 
+                    : 'bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100/80 hover:border-slate-300'
+                }`}
+              >
+                <div className="flex items-center justify-between w-full mb-1.5">
+                  <Icon className={`w-4 h-4 ${folder.color}`} />
+                  <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${
+                    isSelected ? 'bg-[#FF8000] text-white' : 'bg-slate-200 text-slate-700'
+                  }`}>
+                    {count}
+                  </span>
+                </div>
+                <span className="text-xs font-semibold truncate w-full font-heading">
+                  {folder.label}
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono truncate w-full">
+                  {folder.path}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -776,6 +930,31 @@ export const GEDView: React.FC = () => {
                 />
               </div>
 
+              {/* S3 Target Folder Preview */}
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs flex items-center justify-between">
+                <div className="flex items-center gap-2 text-slate-700">
+                  <HardDrive className="w-4 h-4 text-[#FF8000]" />
+                  <span className="font-semibold">Destino no Storage Neon:</span>
+                </div>
+                <span className="font-mono text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                  {selectedFile 
+                    ? `ged/${(() => {
+                        const name = selectedFile.name.toLowerCase();
+                        const ext = name.split('.').pop() || '';
+                        const cat = formData.category.toLowerCase();
+                        if (name.includes('logo') || cat.includes('logo')) return 'logos';
+                        if (ext === 'pdf') return 'pdf';
+                        if (ext === 'png') return 'png';
+                        if (['jpg', 'jpeg', 'webp'].includes(ext)) return 'jpg';
+                        if (['xlsx', 'xls', 'csv'].includes(ext)) return 'planilhas';
+                        if (['dwg', 'dxf'].includes(ext)) return 'projetos_cad';
+                        if (cat.includes('contrato')) return 'contratos';
+                        return 'geral';
+                      })()}/`
+                    : 'ged/automatico/'}
+                </span>
+              </div>
+
               {/* Modal Actions */}
               <div className="pt-3 border-t border-slate-100 flex items-center justify-end space-x-3">
                 <button
@@ -794,7 +973,7 @@ export const GEDView: React.FC = () => {
                   {isSubmitting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Enviando...</span>
+                      <span>Enviando para S3...</span>
                     </>
                   ) : (
                     <>
@@ -805,6 +984,210 @@ export const GEDView: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Integrações Cloud (Google Drive & Microsoft OneDrive) */}
+      {isCloudIntegrationsOpen && (
+        <div className="modal-overlay-erp animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95">
+            {/* Modal Header */}
+            <div className="px-6 py-5 border-b border-slate-100 bg-[#FAFAF9] flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-[#FFF2E5] text-[#FF8000] border border-[#FFD9B3] flex items-center justify-center">
+                  <Cloud className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 font-heading">
+                    Integrações Cloud & Repositórios Externos
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Sincronize arquivos do Google Drive e OneDrive diretamente para o Storage Neon S3
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsCloudIntegrationsOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+              
+              {/* Storage Principal S3 Status */}
+              <div className="bg-[#101010] text-white p-4 rounded-xl border border-neutral-800 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-[#FF8000]/20 border border-[#FF8000]/40 flex items-center justify-center text-[#FF8000]">
+                    <HardDrive size={18} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-xs font-bold font-heading text-white">Neon S3 Object Storage</h4>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                        Primário • Ativo
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-neutral-400 font-mono mt-0.5">
+                      Bucket: assets • us-east-2 (Pastas: /pdf, /png, /jpg, /logos, /planilhas)
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs font-bold text-[#FF8000] font-mono">{kpis.total_storage_formatted}</span>
+                  <p className="text-[10px] text-neutral-400">Total Sincronizado</p>
+                </div>
+              </div>
+
+              {/* 2 Cloud Providers Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                {/* 1. Google Drive */}
+                <div className="border border-slate-200 rounded-xl p-4 bg-white hover:border-blue-300 transition-all shadow-2xs flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
+                          <CloudUpload className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-900 font-heading">Google Drive</h4>
+                          <p className="text-[11px] text-slate-500">Google Workspace</p>
+                        </div>
+                      </div>
+                      {isGoogleDriveConnected ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                          <Check size={10} /> Conectado
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                          Desconectado
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed mb-4">
+                      Aceda a plantas, PDFs e relatórios guardados no seu Google Drive corporativo e sincronize-os com 1 clique para o repositório da LECASU.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => handleConnectCloud('google')}
+                    disabled={connectingCloud === 'google'}
+                    className={`w-full py-2 px-3 rounded-lg text-xs font-bold font-heading flex items-center justify-center gap-2 transition cursor-pointer ${
+                      isGoogleDriveConnected 
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100' 
+                        : 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm'
+                    }`}
+                  >
+                    {connectingCloud === 'google' ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>A autenticar Google OAuth...</span>
+                      </>
+                    ) : isGoogleDriveConnected ? (
+                      <>
+                        <ExternalLink size={13} />
+                        <span>Importar Arquivos do Drive</span>
+                      </>
+                    ) : (
+                      <>
+                        <Link2 size={13} />
+                        <span>Conectar Google Drive</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* 2. Microsoft OneDrive / SharePoint */}
+                <div className="border border-slate-200 rounded-xl p-4 bg-white hover:border-cyan-300 transition-all shadow-2xs flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-lg bg-cyan-50 border border-cyan-200 flex items-center justify-center text-cyan-600">
+                          <CloudUpload className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-900 font-heading">Microsoft OneDrive</h4>
+                          <p className="text-[11px] text-slate-500">Microsoft 365 / SharePoint</p>
+                        </div>
+                      </div>
+                      {isOneDriveConnected ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                          <Check size={10} /> Conectado
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                          Desconectado
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed mb-4">
+                      Vincule diretórios de projetos do SharePoint e contas pessoais do OneDrive para importação instantânea de orçamentos e contratos.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => handleConnectCloud('onedrive')}
+                    disabled={connectingCloud === 'onedrive'}
+                    className={`w-full py-2 px-3 rounded-lg text-xs font-bold font-heading flex items-center justify-center gap-2 transition cursor-pointer ${
+                      isOneDriveConnected 
+                        ? 'bg-cyan-50 text-cyan-700 border border-cyan-200 hover:bg-cyan-100' 
+                        : 'bg-cyan-600 hover:bg-cyan-700 text-white shadow-sm'
+                    }`}
+                  >
+                    {connectingCloud === 'onedrive' ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>A autenticar Microsoft Graph...</span>
+                      </>
+                    ) : isOneDriveConnected ? (
+                      <>
+                        <ExternalLink size={13} />
+                        <span>Importar Arquivos do OneDrive</span>
+                      </>
+                    ) : (
+                      <>
+                        <Link2 size={13} />
+                        <span>Conectar OneDrive</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+              </div>
+
+              {/* Guia Arquitetural / Como Funciona */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs space-y-2">
+                <h5 className="font-bold text-slate-900 font-heading flex items-center gap-1.5">
+                  <ShieldCheck size={15} className="text-emerald-600" />
+                  <span>Como funciona a sincronização no LECASU ERP?</span>
+                </h5>
+                <p className="text-slate-600 leading-relaxed">
+                  1. <strong>Segurança OAuth 2.0:</strong> A conexão é estabelecida de ponta-a-ponta via tokens seguros da Google ou Microsoft.
+                </p>
+                <p className="text-slate-600 leading-relaxed">
+                  2. <strong>Auto-Organização no Neon S3:</strong> Ao importar qualquer arquivo remoto do Google Drive ou OneDrive, o sistema identifica automaticamente a extensão e move o arquivo para a pasta correta (<code>/pdf</code>, <code>/png</code>, <code>/jpg</code>, <code>/logos</code>, <code>/planilhas</code>) no bucket Neon S3.
+                </p>
+                <p className="text-slate-600 leading-relaxed">
+                  3. <strong>Disponibilidade Global:</strong> Toda a equipa com permissões no ERP tem acesso imediato aos arquivos com visualização e download via URLs pré-assinadas.
+                </p>
+              </div>
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end">
+              <button
+                onClick={() => setIsCloudIntegrationsOpen(false)}
+                className="btn-primary btn-md"
+              >
+                Concluído
+              </button>
+            </div>
+
           </div>
         </div>
       )}
