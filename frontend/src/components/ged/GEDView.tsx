@@ -41,6 +41,7 @@ import {
   fetchClients 
 } from '../../services/api';
 import { Toast } from '../common/Toast';
+import { ConfirmationModal } from '../common/ConfirmationModal';
 
 const CATEGORIES = [
   'Contratos',
@@ -186,11 +187,15 @@ export const GEDView: React.FC = () => {
     }
   };
 
-  const handleDelete = async (doc: GEDDocument) => {
-    if (!window.confirm(`Tem a certeza que deseja eliminar permanentemente o documento "${doc.title}"?`)) {
-      return;
-    }
+  const [docToDelete, setDocToDelete] = useState<GEDDocument | null>(null);
 
+  const handleDelete = (doc: GEDDocument) => {
+    setDocToDelete(doc);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!docToDelete) return;
+    const doc = docToDelete;
     setDeletingId(doc.id);
     try {
       await deleteDocument(doc.id);
@@ -198,6 +203,7 @@ export const GEDView: React.FC = () => {
       setDocuments(prev => prev.filter(d => d.id !== doc.id));
       const updatedKpis = await fetchGEDOverviewKPIs();
       setKpis(updatedKpis);
+      setDocToDelete(null);
     } catch (err: any) {
       console.error('Erro ao excluir documento:', err);
       showToast('error', 'Falha ao Excluir', err.message || 'Não foi possível excluir o documento.');
@@ -816,6 +822,25 @@ export const GEDView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Confirmation Modal for Document Deletion */}
+      <ConfirmationModal
+        isOpen={!!docToDelete}
+        onClose={() => setDocToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="Excluir Documento do GED?"
+        description={
+          docToDelete ? (
+            <span>
+              Tem a certeza que deseja excluir permanentemente o documento <strong className="text-[#101010]">"{docToDelete.title}"</strong> ({docToDelete.file_name})? Esta ação não pode ser desfeita.
+            </span>
+          ) : ''
+        }
+        confirmText="Sim, Excluir"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={deletingId !== null}
+      />
     </div>
   );
 };

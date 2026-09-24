@@ -28,6 +28,7 @@ import type {
   Client, 
   Project 
 } from '../../types';
+import { ConfirmationModal } from '../common/ConfirmationModal';
 
 export function FinanceView() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -125,31 +126,33 @@ export function FinanceView() {
     }
   };
 
-  const handlePayInvoice = async (id: number) => {
-    if (!window.confirm('Confirmar registo do recebimento desta fatura?')) return;
-    setActionLoading(true);
-    try {
-      await payInvoice(id);
-      setSuccessMessage('Pagamento registado com sucesso!');
-      await loadData(false);
-      setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Erro ao registar pagamento.');
-    } finally {
-      setActionLoading(false);
-    }
+  const [confirmAction, setConfirmAction] = useState<{ type: 'PAY' | 'CANCEL'; invoice: Invoice } | null>(null);
+
+  const handlePayInvoice = (invoice: Invoice) => {
+    setConfirmAction({ type: 'PAY', invoice });
   };
 
-  const handleCancelInvoice = async (id: number) => {
-    if (!window.confirm('Tem a certeza que deseja anular/cancelar esta fatura?')) return;
+  const handleCancelInvoice = (invoice: Invoice) => {
+    setConfirmAction({ type: 'CANCEL', invoice });
+  };
+
+  const handleConfirmInvoiceAction = async () => {
+    if (!confirmAction) return;
+    const { type, invoice } = confirmAction;
     setActionLoading(true);
     try {
-      await cancelInvoice(id);
-      setSuccessMessage('Fatura cancelada.');
+      if (type === 'PAY') {
+        await payInvoice(invoice.id);
+        setSuccessMessage(`Pagamento da fatura ${invoice.invoice_number || invoice.id} registado com sucesso!`);
+      } else {
+        await cancelInvoice(invoice.id);
+        setSuccessMessage(`Fatura ${invoice.invoice_number || invoice.id} cancelada com sucesso.`);
+      }
+      setConfirmAction(null);
       await loadData(false);
-      setTimeout(() => setSuccessMessage(null), 3000);
+      setTimeout(() => setSuccessMessage(null), 3500);
     } catch (err: any) {
-      setErrorMessage(err.message || 'Erro ao cancelar fatura.');
+      setErrorMessage(err.message || 'Erro ao processar ação na fatura.');
     } finally {
       setActionLoading(false);
     }
@@ -410,7 +413,7 @@ export function FinanceView() {
                           {isPending && (
                             <>
                               <button
-                                onClick={() => handlePayInvoice(inv.id)}
+                                onClick={() => handlePayInvoice(inv)}
                                 disabled={actionLoading}
                                 className="btn-success btn-sm"
                                 title="Registar Recebimento"
@@ -418,7 +421,7 @@ export function FinanceView() {
                                 Receber
                               </button>
                               <button
-                                onClick={() => handleCancelInvoice(inv.id)}
+                                onClick={() => handleCancelInvoice(inv)}
                                 disabled={actionLoading}
                                 className="btn-danger btn-sm"
                                 title="Anular Fatura"
@@ -567,6 +570,39 @@ export function FinanceView() {
           </div>
         </div>
       )}
+
+      {/* Modal de Confirmação para Ações Financeiras */}
+      <ConfirmationModal
+        isOpen={!!confirmAction}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={handleConfirmInvoiceAction}
+        title={
+          confirmAction?.type === 'PAY'
+            ? 'Confirmar Recebimento da Fatura?'
+            : 'Anular / Cancelar Fatura Comercial?'
+        }
+        description={
+          confirmAction ? (
+            confirmAction.type === 'PAY' ? (
+              <span>
+                Deseja confirmar a liquidação e entrada em caixa do valor de{' '}
+                <strong className="text-emerald-700 font-bold">{formatMZN(confirmAction.invoice.amount)}</strong> referente à fatura{' '}
+                <strong className="text-[#101010]">"{confirmAction.invoice.invoice_number || `FAT-${confirmAction.invoice.id}`}"</strong>?
+              </span>
+            ) : (
+              <span>
+                Tem a certeza que deseja anular a fatura{' '}
+                <strong className="text-[#101010]">"{confirmAction.invoice.invoice_number || `FAT-${confirmAction.invoice.id}`}"</strong> no valor de{' '}
+                <strong>{formatMZN(confirmAction.invoice.amount)}</strong>? O status passará para cancelado.
+              </span>
+            )
+          ) : ''
+        }
+        confirmText={confirmAction?.type === 'PAY' ? 'Confirmar Recebimento' : 'Sim, Cancelar Fatura'}
+        cancelText="Voltar"
+        variant={confirmAction?.type === 'PAY' ? 'success' : 'danger'}
+        isLoading={actionLoading}
+      />
     </div>
   );
 }

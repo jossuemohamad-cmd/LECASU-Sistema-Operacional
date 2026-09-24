@@ -15,6 +15,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import type { Project, Task, TaskCreateInput, TaskUpdateInput } from '../../types';
+import { ConfirmationModal } from '../common/ConfirmationModal';
 
 interface ProjectDetailsModalProps {
   project: Project | null;
@@ -39,6 +40,8 @@ export const ProjectDetailsModal: React.FC<ProjectDetailsModalProps> = ({
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [updatingTaskId, setUpdatingTaskId] = useState<number | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<{ id: number; title: string } | null>(null);
+  const [isDeletingTask, setIsDeletingTask] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   if (!isOpen || !project) return null;
@@ -83,13 +86,16 @@ export const ProjectDetailsModal: React.FC<ProjectDetailsModalProps> = ({
     }
   };
 
-  const handleDeleteTask = async (taskId: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!confirm('Deseja realmente remover esta tarefa?')) return;
+  const handleConfirmDeleteTask = async () => {
+    if (!taskToDelete) return;
     try {
-      await onDeleteTask(taskId);
+      setIsDeletingTask(true);
+      await onDeleteTask(taskToDelete.id);
+      setTaskToDelete(null);
     } catch (err: any) {
       setErrorMessage(err.message || 'Erro ao remover tarefa.');
+    } finally {
+      setIsDeletingTask(false);
     }
   };
 
@@ -334,8 +340,12 @@ export const ProjectDetailsModal: React.FC<ProjectDetailsModalProps> = ({
 
                       <div className="flex items-center space-x-1 flex-shrink-0">
                         <button
-                          onClick={(e) => handleDeleteTask(task.id, e)}
-                          className="p-1 text-slate-300 hover:text-rose-600 rounded transition opacity-0 group-hover:opacity-100"
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTaskToDelete({ id: task.id, title: task.title });
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition opacity-80 group-hover:opacity-100"
                           title="Remover tarefa"
                         >
                           <Trash2 size={15} />
@@ -350,7 +360,7 @@ export const ProjectDetailsModal: React.FC<ProjectDetailsModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 border-t border-slate-100 bg-slate-50/50 flex justify-end">
+        <div className="px-6 py-4 border-t border-[#EDEDEA] bg-[#FAFAF9] flex justify-end">
           <button
             onClick={onClose}
             className="btn-secondary btn-md"
@@ -359,6 +369,25 @@ export const ProjectDetailsModal: React.FC<ProjectDetailsModalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Confirmation Modal for Task Deletion */}
+      <ConfirmationModal
+        isOpen={!!taskToDelete}
+        onClose={() => setTaskToDelete(null)}
+        onConfirm={handleConfirmDeleteTask}
+        title="Remover Tarefa do Projeto?"
+        description={
+          taskToDelete ? (
+            <span>
+              Tem certeza que deseja remover a tarefa <strong className="text-[#101010]">"{taskToDelete.title}"</strong>? Esta ação é irreversível.
+            </span>
+          ) : ''
+        }
+        confirmText="Sim, Remover"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={isDeletingTask}
+      />
     </div>
   );
 };

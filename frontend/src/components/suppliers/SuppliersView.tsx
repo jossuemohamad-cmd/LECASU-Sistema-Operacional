@@ -36,6 +36,7 @@ import {
   fetchProjects 
 } from '../../services/api';
 import { Toast } from '../common/Toast';
+import { ConfirmationModal } from '../common/ConfirmationModal';
 
 const CATEGORIES = [
   'Equipamentos Solares',
@@ -272,16 +273,28 @@ export const SuppliersView: React.FC = () => {
     }
   };
 
-  const handlePayPurchase = async (order: PurchaseOrder) => {
+  const [purchaseToPay, setPurchaseToPay] = useState<PurchaseOrder | null>(null);
+  const [isPayingPurchase, setIsPayingPurchase] = useState(false);
+
+  const handlePayPurchase = (order: PurchaseOrder) => {
     if (order.status === 'PAID') return;
+    setPurchaseToPay(order);
+  };
+
+  const handleConfirmPayPurchase = async () => {
+    if (!purchaseToPay) return;
     try {
-      const paid = await payPurchaseOrder(order.id);
+      setIsPayingPurchase(true);
+      const paid = await payPurchaseOrder(purchaseToPay.id);
       setPurchases(prev => prev.map(p => p.id === paid.id ? paid : p));
       addToast('success', 'Pagamento Registado', `A ordem de compra ${paid.order_number} foi liquidada com sucesso.`);
+      setPurchaseToPay(null);
       loadData(false);
     } catch (err: any) {
       console.error('Erro ao liquidar pagamento:', err);
       addToast('error', 'Erro no Pagamento', err.message || 'Não foi possível liquidar o pedido.');
+    } finally {
+      setIsPayingPurchase(false);
     }
   };
 
@@ -993,6 +1006,28 @@ export const SuppliersView: React.FC = () => {
 
       {/* TOAST NOTIFICATIONS */}
       <Toast toasts={toasts} onDismiss={removeToast} />
+
+      {/* MODAL DE CONFIRMAÇÃO DE PAGAMENTO DE COMPRA */}
+      <ConfirmationModal
+        isOpen={!!purchaseToPay}
+        onClose={() => setPurchaseToPay(null)}
+        onConfirm={handleConfirmPayPurchase}
+        title="Liquidar Ordem de Compra?"
+        description={
+          purchaseToPay ? (
+            <span>
+              Deseja confirmar a liquidação e pagamento no valor de{' '}
+              <strong className="text-emerald-700 font-bold">{formatCurrency(purchaseToPay.total_amount)}</strong> referente ao pedido{' '}
+              <strong className="text-[#101010]">"{purchaseToPay.order_number}"</strong> para o fornecedor{' '}
+              <strong>{purchaseToPay.supplier_name || 'Fornecedor'}</strong>?
+            </span>
+          ) : ''
+        }
+        confirmText="Confirmar Liquidação"
+        cancelText="Voltar"
+        variant="success"
+        isLoading={isPayingPurchase}
+      />
     </div>
   );
 };

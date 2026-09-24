@@ -15,7 +15,9 @@ import {
   Bell, 
   LogOut,
   ChevronLeft,
-  ShieldCheck
+  ShieldCheck,
+  CheckCircle2,
+  X
 } from 'lucide-react';
 import { ClientsProposalsView } from './components/clients/ClientsProposalsView';
 import { ProjectsView } from './components/projects/ProjectsView';
@@ -28,6 +30,7 @@ import { HRView } from './components/hr/HRView';
 import { GEDView } from './components/ged/GEDView';
 import { FinanceView } from './components/finance/FinanceView';
 import { LoginView } from './components/auth/LoginView';
+import { ConfirmationModal } from './components/common/ConfirmationModal';
 import { getAuthToken, removeAuthToken, fetchCurrentUser, prefetchAllCoreData } from './services/api';
 import type { User } from './types';
 
@@ -61,6 +64,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [openNewRecordTrigger, setOpenNewRecordTrigger] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [globalSearch, setGlobalSearch] = useState('');
 
   useEffect(() => {
     const token = getAuthToken();
@@ -82,6 +88,7 @@ export default function App() {
   }, []);
 
   const handleLogout = () => {
+    setIsLogoutModalOpen(false);
     removeAuthToken();
     setCurrentUser(null);
     setIsAuthenticated(false);
@@ -92,6 +99,18 @@ export default function App() {
     setIsAuthenticated(true);
     setActiveTab('dashboard');
     prefetchAllCoreData();
+  };
+
+  // Quick module search filter
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!globalSearch.trim()) return;
+    const query = globalSearch.toLowerCase().trim();
+    const matchedTab = TABS.find(t => t.name.toLowerCase().includes(query) || t.id.toLowerCase().includes(query));
+    if (matchedTab) {
+      setActiveTab(matchedTab.id);
+      setGlobalSearch('');
+    }
   };
 
   if (!isAuthenticated) {
@@ -184,29 +203,60 @@ export default function App() {
       */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F5F5F3]">
         {/* TOPBAR / HEADER FIXO (64px de altura, px-6 padding horizontal) */}
-        <header className="h-16 bg-white border-b border-[#E2E2DE] flex items-center justify-between px-6 z-10 flex-shrink-0 shadow-xs">
+        <header className="h-16 bg-white border-b border-[#E2E2DE] flex items-center justify-between px-6 z-10 flex-shrink-0 shadow-xs relative">
           {/* SEARCH BAR (40px height, 12px px) */}
-          <div className="flex items-center w-80 md:w-96">
+          <form onSubmit={handleSearchSubmit} className="flex items-center w-80 md:w-96">
             <div className="relative w-full">
               <Search className="absolute left-3 top-3 text-neutral-400" size={16} />
               <input
                 type="text"
-                placeholder="Pesquisa rápida no sistema..."
+                placeholder="Pesquisa rápida de módulos... (Enter para navegar)"
+                value={globalSearch}
+                onChange={(e) => setGlobalSearch(e.target.value)}
                 className="w-full h-10 pl-9 pr-4 text-[13px] bg-[#F5F5F3] border border-[#E2E2DE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF8000]/20 focus:border-[#FF8000] focus:bg-white transition"
               />
             </div>
-          </div>
+          </form>
 
           {/* RIGHT ACTIONS */}
           <div className="flex items-center space-x-4">
-            <button 
-              className="text-neutral-500 hover:text-neutral-900 relative p-2 rounded-lg hover:bg-neutral-100 transition"
-              title="Notificações"
-            >
-              <Bell size={18} />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#FF8000] rounded-full"></span>
-            </button>
+            {/* NOTIFICAÇÕES */}
+            <div className="relative">
+              <button 
+                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                className="text-neutral-500 hover:text-neutral-900 relative p-2 rounded-lg hover:bg-neutral-100 transition"
+                title="Notificações do Sistema"
+              >
+                <Bell size={18} />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#FF8000] rounded-full"></span>
+              </button>
+
+              {/* Notification Popover Dropdown */}
+              {isNotificationsOpen && (
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-[#E2E2DE] z-30 p-4 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="flex items-center justify-between pb-3 border-b border-[#EDEDEA]">
+                    <h4 className="text-xs font-bold text-[#101010] font-heading">Notificações do Sistema</h4>
+                    <button 
+                      onClick={() => setIsNotificationsOpen(false)}
+                      className="text-neutral-400 hover:text-neutral-600 p-1 rounded"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                  <div className="py-3 space-y-2">
+                    <div className="flex items-start space-x-2.5 p-2 rounded-lg bg-[#FAFAF9] border border-[#EDEDEA]">
+                      <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0 mt-0.5" />
+                      <div className="text-xs">
+                        <p className="font-semibold text-[#101010]">Base de Dados Sincronizada</p>
+                        <p className="text-[#737370] text-[11px] mt-0.5">PostgreSQL Neon DB conectado e operacional.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
             
+            {/* PERFIL DO UTILIZADOR */}
             <div className="flex items-center space-x-3 border-l border-[#E2E2DE] pl-4">
               <div className="w-9 h-9 rounded-full bg-[#101010] text-white font-heading font-bold text-xs flex items-center justify-center flex-shrink-0 border border-neutral-700 shadow-xs">
                 {(currentUser?.name || 'A').charAt(0).toUpperCase()}
@@ -220,7 +270,7 @@ export default function App() {
                 </p>
               </div>
               <button
-                onClick={handleLogout}
+                onClick={() => setIsLogoutModalOpen(true)}
                 className="p-2 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition ml-1"
                 title="Terminar Sessão"
               >
@@ -263,6 +313,18 @@ export default function App() {
           </div>
         </main>
       </div>
+
+      {/* MODAL DE CONFIRMAÇÃO DE ENCERRAMENTO DE SESSÃO */}
+      <ConfirmationModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={handleLogout}
+        title="Terminar Sessão?"
+        description="Deseja realmente sair da sua conta no sistema LECASU ERP? Terá de introduzir as credenciais para voltar a aceder."
+        confirmText="Sim, Terminar Sessão"
+        cancelText="Permanecer Conectado"
+        variant="warning"
+      />
     </div>
   );
 }
