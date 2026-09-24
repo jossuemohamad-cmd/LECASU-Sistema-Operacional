@@ -8,7 +8,6 @@ import {
   CheckCircle2, 
   AlertCircle, 
   ChevronRight, 
-  ArrowUpRight,
   Calendar,
   ListTodo,
   TrendingUp,
@@ -218,70 +217,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* ATALHOS RÁPIDOS OPERACIONAIS */}
-      <div className="bg-white border border-[#E2E2DE] rounded-xl p-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 rounded-lg bg-[#FFF2E5] flex items-center justify-center text-[#FF8000]">
-            <ArrowUpRight size={16} />
-          </div>
-          <span className="text-xs font-bold text-[#101010] uppercase tracking-wider font-heading">
-            Acesso Rápido aos Módulos:
-          </span>
-        </div>
-        
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => onNavigate('clientes')}
-            className="btn-secondary btn-sm hover:border-[#FF8000] hover:text-[#FF8000] hover:bg-[#FFF2E5]"
-          >
-            <Users size={13} className="text-[#FF8000]" />
-            <span>Clientes & Propostas</span>
-          </button>
-          <button
-            onClick={() => onNavigate('projetos')}
-            className="btn-secondary btn-sm hover:border-[#FF8000] hover:text-[#FF8000] hover:bg-[#FFF2E5]"
-          >
-            <Briefcase size={13} className="text-[#FF8000]" />
-            <span>Projetos & Obras</span>
-          </button>
-          <button
-            onClick={() => onNavigate('financeiro')}
-            className="btn-secondary btn-sm hover:border-[#FF8000] hover:text-[#FF8000] hover:bg-[#FFF2E5]"
-          >
-            <Wallet size={13} className="text-[#FF8000]" />
-            <span>Financeiro & Caixa</span>
-          </button>
-          <button
-            onClick={() => onNavigate('equipa')}
-            className="btn-secondary btn-sm hover:border-[#FF8000] hover:text-[#FF8000] hover:bg-[#FFF2E5]"
-          >
-            <HardHat size={13} className="text-[#FF8000]" />
-            <span>Equipa Técnica</span>
-          </button>
-          <button
-            onClick={() => onNavigate('fornecedores')}
-            className="btn-secondary btn-sm hover:border-[#FF8000] hover:text-[#FF8000] hover:bg-[#FFF2E5]"
-          >
-            <Truck size={13} className="text-[#FF8000]" />
-            <span>Fornecedores</span>
-          </button>
-          <button
-            onClick={() => onNavigate('rh')}
-            className="btn-secondary btn-sm hover:border-[#FF8000] hover:text-[#FF8000] hover:bg-[#FFF2E5]"
-          >
-            <UserCheck size={13} className="text-[#FF8000]" />
-            <span>RH & Salários</span>
-          </button>
-          <button
-            onClick={() => onNavigate('ged')}
-            className="btn-secondary btn-sm hover:border-[#FF8000] hover:text-[#FF8000] hover:bg-[#FFF2E5]"
-          >
-            <FolderArchive size={13} className="text-[#FF8000]" />
-            <span>GED Documentos</span>
-          </button>
-        </div>
-      </div>
-
       {/* ERROR ALERT */}
       {error && (
         <div className="bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-xl flex items-start space-x-3 text-xs">
@@ -313,7 +248,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* 1. Total Faturado */}
-          <div className="card-erp p-5 hover:border-[#FF8000]/40 transition-all flex flex-col justify-between">
+          <div className="bg-white border border-[#E2E2DE] rounded-xl shadow-xs p-5 hover:border-[#FF8000]/40 transition-all flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-[#737370]">Faturação Emitida</span>
               <div className="w-8 h-8 rounded-lg bg-[#FFF2E5] text-[#FF8000] flex items-center justify-center">
@@ -332,7 +267,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           </div>
 
           {/* 2. Total Recebido */}
-          <div className="card-erp p-5 hover:border-emerald-400 transition-all flex flex-col justify-between">
+          <div className="bg-white border border-[#E2E2DE] rounded-xl shadow-xs p-5 hover:border-emerald-400 transition-all flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-[#737370]">Receitas em Caixa</span>
               <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
@@ -351,7 +286,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           </div>
 
           {/* 3. Pendente / A Receber */}
-          <div className="card-erp p-5 hover:border-amber-400 transition-all flex flex-col justify-between">
+          <div className="bg-white border border-[#E2E2DE] rounded-xl shadow-xs p-5 hover:border-amber-400 transition-all flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-[#737370]">Contas a Receber</span>
               <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
@@ -370,7 +305,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           </div>
 
           {/* 4. Pipeline Comercial / Propostas */}
-          <div className="card-erp p-5 hover:border-[#FF8000]/40 transition-all flex flex-col justify-between">
+          <div className="bg-white border border-[#E2E2DE] rounded-xl shadow-xs p-5 hover:border-[#FF8000]/40 transition-all flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-[#737370]">Propostas & Pipeline</span>
               <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
@@ -404,7 +339,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* 1. Projetos Ativos */}
-          <div className="card-erp p-5 hover:border-[#FF8000]/40 transition-all flex flex-col justify-between">
+          <div className="bg-white border border-[#E2E2DE] rounded-xl shadow-xs p-5 hover:border-[#FF8000]/40 transition-all flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-[#737370]">Projetos & Obras</span>
               <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
@@ -434,7 +369,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           </div>
 
           {/* 2. Equipe Técnica & Tarefas */}
-          <div className="card-erp p-5 hover:border-[#FF8000]/40 transition-all flex flex-col justify-between">
+          <div className="bg-white border border-[#E2E2DE] rounded-xl shadow-xs p-5 hover:border-[#FF8000]/40 transition-all flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-[#737370]">Equipa & Intervenções</span>
               <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
@@ -464,7 +399,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           </div>
 
           {/* 3. Fornecedores & Compras */}
-          <div className="card-erp p-5 hover:border-[#FF8000]/40 transition-all flex flex-col justify-between">
+          <div className="bg-white border border-[#E2E2DE] rounded-xl shadow-xs p-5 hover:border-[#FF8000]/40 transition-all flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-[#737370]">Compras & Suprimentos</span>
               <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
@@ -486,7 +421,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           </div>
 
           {/* 4. Recursos Humanos & GED */}
-          <div className="card-erp p-5 hover:border-[#FF8000]/40 transition-all flex flex-col justify-between">
+          <div className="bg-white border border-[#E2E2DE] rounded-xl shadow-xs p-5 hover:border-[#FF8000]/40 transition-all flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-[#737370]">Pessoal & Documentos</span>
               <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
@@ -515,7 +450,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* PROJETOS EM ANDAMENTO */}
-        <div className="card-erp p-5 flex flex-col justify-between">
+        <div className="bg-white border border-[#E2E2DE] rounded-xl shadow-xs p-5 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between pb-4 border-b border-[#E2E2DE]">
               <div className="flex items-center space-x-2">
@@ -547,7 +482,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                   {(!data?.recent_projects || data.recent_projects.length === 0) ? (
                     <tr>
                       <td colSpan={4} className="py-8 text-center text-xs text-neutral-500">
-                        Nenhum projeto registado. Clique em Atalhos para criar.
+                        Nenhum projeto registado.
                       </td>
                     </tr>
                   ) : (
@@ -593,7 +528,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         </div>
 
         {/* FATURAS RECENTES & RECEBIMENTOS */}
-        <div className="card-erp p-5 flex flex-col justify-between">
+        <div className="bg-white border border-[#E2E2DE] rounded-xl shadow-xs p-5 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between pb-4 border-b border-[#E2E2DE]">
               <div className="flex items-center space-x-2">
@@ -668,7 +603,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* INTERVENÇÕES TÉCNICAS PENDENTES (2 colunas) */}
-        <div className="card-erp p-5 lg:col-span-2">
+        <div className="bg-white border border-[#E2E2DE] rounded-xl shadow-xs p-5 lg:col-span-2">
           <div className="flex items-center justify-between pb-4 border-b border-[#E2E2DE]">
             <div className="flex items-center space-x-2">
               <ListTodo size={16} className="text-[#FF8000]" />
@@ -733,7 +668,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         </div>
 
         {/* RESUMO GERAL DE MÓDULOS E RECURSOS (1 coluna) */}
-        <div className="card-erp p-5 flex flex-col justify-between">
+        <div className="bg-white border border-[#E2E2DE] rounded-xl shadow-xs p-5 flex flex-col justify-between">
           <div>
             <div className="flex items-center space-x-2 pb-4 border-b border-[#E2E2DE]">
               <Layers size={16} className="text-[#FF8000]" />

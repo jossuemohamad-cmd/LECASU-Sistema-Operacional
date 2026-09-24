@@ -415,6 +415,14 @@ button, input, select, textarea, label, table, .font-sans, .font-body {
     font-size: 0.6875rem;
   }
 
+  /* Cards Oficiais do ERP com Fundo Branco */
+  .card-erp {
+    background-color: #FFFFFF !important;
+    border: 1px solid #E2E2DE !important;
+    border-radius: 0.75rem !important; /* 12px */
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04) !important;
+  }
+
   /* Modal Overlay Oficial (100vh, 100vw, Z-Index Superior) */
   .modal-overlay-erp {
     position: fixed !important;
