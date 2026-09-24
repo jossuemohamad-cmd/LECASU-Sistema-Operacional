@@ -55,15 +55,15 @@ body {
   min-height: 100vh;
 }
 
-/* Previne o fundo branco/azul claro do autofill do Chrome/Edge em inputs escuros */
+/* Autofill Chrome/Edge compatível com o tema limpo da LECASU */
 input:-webkit-autofill,
 input:-webkit-autofill:hover, 
 input:-webkit-autofill:focus, 
 input:-webkit-autofill:active {
-  -webkit-box-shadow: 0 0 0 1000px #0c0e14 inset !important;
-  -webkit-text-fill-color: #ffffff !important;
-  caret-color: #ffffff !important;
-  border-color: rgba(255, 128, 0, 0.4) !important;
+  -webkit-box-shadow: 0 0 0 1000px #FAFAF9 inset !important;
+  -webkit-text-fill-color: #101010 !important;
+  caret-color: #101010 !important;
+  border-color: #E2E2DE !important;
   transition: background-color 5000s ease-in-out 0s;
 }
 
