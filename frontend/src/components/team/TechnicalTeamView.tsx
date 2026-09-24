@@ -14,6 +14,8 @@ import {
   Filter,
   ArrowRightLeft,
   ListTodo,
+  ChevronLeft,
+  ChevronRight,
   X
 } from 'lucide-react';
 import type { Technician, TeamTask, TeamKPIs, ToastMessage } from '../../types';
@@ -36,6 +38,15 @@ export const TechnicalTeamView: React.FC = () => {
   const [selectedTechFilter, setSelectedTechFilter] = useState<number | 'ALL'>('ALL');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Pagination for Technicians Table (4 per view)
+  const [techPage, setTechPage] = useState(1);
+  const TECHS_PER_PAGE = 4;
+  const totalTechPages = Math.max(1, Math.ceil(technicians.length / TECHS_PER_PAGE));
+  const paginatedTechnicians = useMemo(() => {
+    const start = (techPage - 1) * TECHS_PER_PAGE;
+    return technicians.slice(start, start + TECHS_PER_PAGE);
+  }, [technicians, techPage]);
 
   // Allocation Modal State
   const [selectedTaskForAssign, setSelectedTaskForAssign] = useState<TeamTask | null>(null);
@@ -312,7 +323,7 @@ export const TechnicalTeamView: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                technicians.map((tech) => {
+                paginatedTechnicians.map((tech) => {
                   const isSelected = selectedTechFilter === tech.id;
                   const initials = tech.name
                     .split(' ')
@@ -395,6 +406,38 @@ export const TechnicalTeamView: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* PAGINAÇÃO 4 POR VIEW */}
+        {technicians.length > TECHS_PER_PAGE && (
+          <div className="p-3 border-t border-[#E2E2DE] bg-neutral-50/50 flex items-center justify-between text-xs text-neutral-600">
+            <span>
+              A mostrar {((techPage - 1) * TECHS_PER_PAGE) + 1} a {Math.min(techPage * TECHS_PER_PAGE, technicians.length)} de {technicians.length} técnicos
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setTechPage(p => Math.max(1, p - 1))}
+                disabled={techPage === 1}
+                className="btn-secondary btn-sm flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Página Anterior"
+              >
+                <ChevronLeft size={14} />
+                <span>Anterior</span>
+              </button>
+              <span className="font-semibold text-neutral-800 px-1">
+                Página {techPage} de {totalTechPages}
+              </span>
+              <button
+                onClick={() => setTechPage(p => Math.min(totalTechPages, p + 1))}
+                disabled={techPage === totalTechPages}
+                className="btn-secondary btn-sm flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Próxima Página"
+              >
+                <span>Próxima</span>
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* TABELA DE INTERVENÇÕES & TAREFAS TÉCNICAS */}
