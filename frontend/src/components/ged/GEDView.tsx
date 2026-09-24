@@ -48,6 +48,7 @@ import {
 } from '../../services/api';
 import { Toast } from '../common/Toast';
 import { ConfirmationModal } from '../common/ConfirmationModal';
+import { GoogleDriveExplorerModal } from './GoogleDriveExplorerModal';
 
 const CATEGORIES = [
   'Contratos',
@@ -94,6 +95,7 @@ export const GEDView: React.FC = () => {
   // Modals State
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isCloudIntegrationsOpen, setIsCloudIntegrationsOpen] = useState(false);
+  const [isGoogleDriveExplorerOpen, setIsGoogleDriveExplorerOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
@@ -1028,7 +1030,8 @@ export const GEDView: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      window.open('https://drive.google.com', '_blank', 'noopener,noreferrer');
+                      setIsCloudIntegrationsOpen(false);
+                      setIsGoogleDriveExplorerOpen(true);
                     }}
                     className="w-full py-2.5 px-3 rounded-xl text-xs font-bold font-heading flex items-center justify-center gap-2 bg-[#1A73E8] hover:bg-[#1557B0] text-white shadow-sm transition cursor-pointer"
                   >
@@ -1111,6 +1114,17 @@ export const GEDView: React.FC = () => {
         cancelText="Cancelar"
         variant="danger"
         isLoading={deletingId !== null}
+      />
+
+      {/* Modal do Explorador Real do Google Drive */}
+      <GoogleDriveExplorerModal
+        isOpen={isGoogleDriveExplorerOpen}
+        onClose={() => setIsGoogleDriveExplorerOpen(false)}
+        onSuccess={(fileName) => {
+          setIsGoogleDriveExplorerOpen(false);
+          loadAllData();
+          showToast('success', 'Documento Importado do Google Drive', `"${fileName}" foi sincronizado com sucesso para o Repositório e Storage Neon.`);
+        }}
       />
     </div>
   );
