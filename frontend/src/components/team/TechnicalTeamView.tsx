@@ -268,84 +268,132 @@ export const TechnicalTeamView: React.FC = () => {
         </div>
       </div>
 
-      {/* GRADE DE CARTÕES DA EQUIPE TÉCNICA */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-            <Users size={16} className="text-orange-600" />
-            Membros da Equipa Técnica
-          </h2>
-          <span className="text-xs text-slate-500">
-            Clique num técnico para filtrar as suas intervenções
-          </span>
+      {/* TABELA DE MEMBROS DA EQUIPA TÉCNICA */}
+      <div className="bg-white rounded-xl border border-[#E2E2DE] shadow-xs overflow-hidden">
+        <div className="p-4 border-b border-[#E2E2DE] bg-neutral-50/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="flex items-center space-x-2">
+            <Users size={16} className="text-[#FF8000]" />
+            <h2 className="text-sm font-bold text-[#101010] font-heading">
+              Membros da Equipa Técnica
+            </h2>
+            <span className="text-xs text-neutral-500 font-medium">
+              ({technicians.length} profissionais)
+            </span>
+          </div>
+          {selectedTechFilter !== 'ALL' && (
+            <button
+              onClick={() => setSelectedTechFilter('ALL')}
+              className="px-2.5 py-1 text-xs font-semibold text-[#FF8000] hover:text-[#e07000] bg-[#FFF2E5] rounded-md border border-[#FFD9B3] flex items-center gap-1 self-start sm:self-auto transition"
+              title="Limpar filtro de técnico ativo"
+            >
+              <span>Mostrar Todos</span>
+              <X size={12} />
+            </button>
+          )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {technicians.map((tech) => {
-            const isSelected = selectedTechFilter === tech.id;
-            const initials = tech.name
-              .split(' ')
-              .map(n => n[0])
-              .filter(Boolean)
-              .slice(0, 2)
-              .join('')
-              .toUpperCase();
+        <div className="table-scroll-container">
+          <table className="table-erp">
+            <thead>
+              <tr className="table-header-erp">
+                <th className="px-4 text-left">Profissional</th>
+                <th className="px-4 text-left">Função / Cargo</th>
+                <th className="px-4 text-left">E-mail</th>
+                <th className="px-4 text-left">Telefone</th>
+                <th className="px-4 text-center">Tarefas Ativas</th>
+                <th className="px-4 text-right">Ação</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E2E2DE]">
+              {technicians.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center text-xs text-neutral-500">
+                    Nenhum técnico cadastrado na base de dados.
+                  </td>
+                </tr>
+              ) : (
+                technicians.map((tech) => {
+                  const isSelected = selectedTechFilter === tech.id;
+                  const initials = tech.name
+                    .split(' ')
+                    .map(n => n[0])
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .join('')
+                    .toUpperCase();
 
-            return (
-              <div
-                key={tech.id}
-                onClick={() => setSelectedTechFilter(isSelected ? 'ALL' : tech.id)}
-                className={`p-4 rounded-lg border transition cursor-pointer flex flex-col justify-between ${
-                  isSelected 
-                    ? 'bg-orange-50/60 border-orange-400 ring-2 ring-orange-400/20 shadow-xs' 
-                    : 'bg-white border-slate-200 hover:border-slate-300 shadow-2xs hover:bg-slate-50/50'
-                }`}
-              >
-                <div>
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="w-10 h-10 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center tracking-wider border-2 border-white shadow-xs">
-                      {initials}
-                    </div>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${
-                      tech.role === 'engenheiro'
-                        ? 'bg-purple-100 text-purple-700'
-                        : 'bg-slate-100 text-slate-700'
-                    }`}>
-                      {tech.role}
-                    </span>
-                  </div>
+                  return (
+                    <tr
+                      key={tech.id}
+                      className={`table-row-erp transition cursor-pointer ${
+                        isSelected ? 'bg-orange-50/70 font-medium' : ''
+                      }`}
+                      onClick={() => setSelectedTechFilter(isSelected ? 'ALL' : tech.id)}
+                    >
+                      <td className="table-cell-erp cell-nowrap">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 rounded-full bg-[#101010] text-white font-bold text-xs flex items-center justify-center tracking-wider shrink-0 shadow-2xs">
+                            {initials}
+                          </div>
+                          <div>
+                            <span className="font-semibold text-[#101010] block">{tech.name}</span>
+                            <span className="text-[11px] text-neutral-400">ID #{tech.id}</span>
+                          </div>
+                        </div>
+                      </td>
 
-                  <h3 className="text-sm font-bold text-slate-900 truncate" title={tech.name}>
-                    {tech.name}
-                  </h3>
+                      <td className="table-cell-erp cell-nowrap">
+                        <span className={`px-2 py-0.5 rounded text-[11px] font-semibold uppercase ${
+                          tech.role?.toLowerCase() === 'engenheiro'
+                            ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                            : 'bg-neutral-100 text-neutral-700 border border-[#E2E2DE]'
+                        }`}>
+                          {tech.role}
+                        </span>
+                      </td>
 
-                  <div className="mt-2 space-y-1 text-[11px] text-slate-500">
-                    <p className="flex items-center gap-1.5 truncate" title={tech.email}>
-                      <Mail size={12} className="text-slate-400 flex-shrink-0" />
-                      {tech.email}
-                    </p>
-                    {tech.phone && (
-                      <p className="flex items-center gap-1.5 font-mono text-[11px] text-slate-600">
-                        <Phone size={12} className="text-slate-400 flex-shrink-0" />
-                        {tech.phone}
-                      </p>
-                    )}
-                  </div>
-                </div>
+                      <td className="table-cell-erp cell-nowrap text-xs text-neutral-600">
+                        <div className="flex items-center gap-1.5">
+                          <Mail size={12} className="text-neutral-400 shrink-0" />
+                          <span>{tech.email || '—'}</span>
+                        </div>
+                      </td>
 
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="text-[11px] text-slate-500">Tarefas ativas:</span>
-                  <span className={`font-bold px-2 py-0.5 rounded text-xs ${
-                    tech.active_tasks_count > 0 
-                      ? 'bg-orange-100 text-orange-800' 
-                      : 'bg-slate-100 text-slate-600'
-                  }`}>
-                    {tech.active_tasks_count} em mãos
-                  </span>
-                </div>
-              </div>
-            );
-          })}
+                      <td className="table-cell-erp cell-nowrap text-xs font-mono text-neutral-600">
+                        <div className="flex items-center gap-1.5">
+                          <Phone size={12} className="text-neutral-400 shrink-0" />
+                          <span>{tech.phone || '—'}</span>
+                        </div>
+                      </td>
+
+                      <td className="table-cell-erp cell-nowrap text-center">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
+                          tech.active_tasks_count > 0
+                            ? 'bg-orange-100 text-orange-800'
+                            : 'bg-neutral-100 text-neutral-600'
+                        }`}>
+                          {tech.active_tasks_count} em mãos
+                        </span>
+                      </td>
+
+                      <td className="table-cell-erp cell-nowrap text-right" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => setSelectedTechFilter(isSelected ? 'ALL' : tech.id)}
+                          className={`btn-sm text-xs font-medium ${
+                            isSelected 
+                              ? 'btn-primary' 
+                              : 'btn-secondary'
+                          }`}
+                        >
+                          {isSelected ? 'Filtrado' : 'Filtrar Tarefas'}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
