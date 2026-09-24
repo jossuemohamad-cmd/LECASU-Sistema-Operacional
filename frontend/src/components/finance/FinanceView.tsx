@@ -161,25 +161,24 @@ export function FinanceView() {
 
   return (
     <div className="space-y-6">
-      {/* HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <Wallet className="text-orange-600" size={26} />
-            Gestão Financeira & Faturação
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Controlo de receitas, faturas emitidas, recebimentos e saldo operacional
-          </p>
+      {/* Action Toolbar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#E2E2DE] gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-[#FFF2E5] text-[#FF8000] border border-[#FFD9B3]">
+            <Wallet size={13} className="text-[#FF8000]" />
+            <span>Faturação & Controlo Financeiro</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-neutral-100 text-neutral-600 border border-[#E2E2DE]">
+            <span>{invoices.length} Faturas Registadas</span>
+          </span>
         </div>
         <div className="flex items-center space-x-2.5">
           <button
             onClick={() => loadData(true)}
-            className="btn-secondary btn-md"
+            className="btn-secondary btn-icon-md"
             title="Atualizar dados"
           >
             <RefreshCw size={14} className={loading ? 'animate-spin text-[#FF8000]' : 'text-neutral-600'} />
-            <span>Atualizar</span>
           </button>
           <button
             onClick={() => setIsModalOpen(true)}

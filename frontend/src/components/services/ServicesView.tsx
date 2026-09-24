@@ -228,31 +228,23 @@ export const ServicesView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* HEADER OFICIAL */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between pb-5 border-b border-slate-200 gap-4">
-        <div>
-          <div className="flex items-center space-x-2">
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-              Catálogo de Serviços & Tabela Base
-            </h1>
-            <span className="px-2 py-0.5 bg-orange-100 text-orange-800 text-[11px] font-semibold rounded">
-              Módulo 03
-            </span>
-          </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Padronização de serviços técnicos, preços base e unidades para propostas comerciais e execução.
-          </p>
+      {/* Action Toolbar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#E2E2DE] gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-[#FFF2E5] text-[#FF8000] border border-[#FFD9B3]">
+            <Wrench size={13} className="text-[#FF8000]" />
+            <span>{services.length} Serviços no Catálogo</span>
+          </span>
         </div>
 
         <div className="flex items-center space-x-2.5">
           <button
             onClick={() => loadData(true)}
             disabled={isLoading}
-            className="btn-secondary btn-md"
+            className="btn-secondary btn-icon-md"
             title="Atualizar lista de serviços"
           >
             <RefreshCw size={14} className={isLoading ? 'animate-spin text-[#FF8000]' : 'text-neutral-600'} />
-            <span>{isLoading ? 'Sincronizando...' : 'Atualizar'}</span>
           </button>
 
           <button
@@ -260,7 +252,7 @@ export const ServicesView: React.FC = () => {
             className="btn-primary btn-md"
           >
             <Plus size={15} />
-            <span>+ Novo Serviço</span>
+            <span>Novo Serviço</span>
           </button>
         </div>
       </div>

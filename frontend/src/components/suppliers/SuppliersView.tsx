@@ -314,48 +314,43 @@ export const SuppliersView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* HEADER OFICIAL */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between pb-5 border-b border-slate-200 gap-4">
-        <div>
-          <div className="flex items-center space-x-2">
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-              Fornecedores & Gestão de Compras
-            </h1>
-            <span className="px-2 py-0.5 bg-orange-100 text-orange-800 text-[11px] font-semibold rounded">
-              Módulo 07
-            </span>
-          </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Gestão de parceiros comerciais de insumos, equipamentos solares, ordens de compra e liquidação de despesas.
-          </p>
+      {/* Action Toolbar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#E2E2DE] gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-[#FFF2E5] text-[#FF8000] border border-[#FFD9B3]">
+            <Truck size={13} className="text-[#FF8000]" />
+            <span>{suppliers.length} Fornecedores Registados</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-neutral-100 text-neutral-600 border border-[#E2E2DE]">
+            <span>{purchases.length} Ordens de Compra</span>
+          </span>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2.5">
           <button
             onClick={() => loadData(true)}
             disabled={isLoading}
-            className="flex items-center space-x-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold px-3 py-2 rounded-md shadow-2xs transition disabled:opacity-50 cursor-pointer"
+            className="btn-secondary btn-icon-md"
             title="Sincronizar dados"
           >
-            <RefreshCw size={14} className={isLoading ? 'animate-spin text-orange-600' : 'text-slate-500'} />
-            <span>{isLoading ? 'Sincronizando...' : 'Atualizar'}</span>
+            <RefreshCw size={14} className={isLoading ? 'animate-spin text-[#FF8000]' : 'text-neutral-600'} />
           </button>
 
           {activeTab === 'suppliers' ? (
             <button
               onClick={handleOpenSupplierModal}
-              className="flex items-center space-x-1.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold px-4 py-2 rounded-md shadow-xs transition cursor-pointer"
+              className="btn-primary btn-md"
             >
               <Plus size={15} />
-              <span>+ Novo Fornecedor</span>
+              <span>Novo Fornecedor</span>
             </button>
           ) : (
             <button
               onClick={handleOpenPurchaseModal}
-              className="flex items-center space-x-1.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold px-4 py-2 rounded-md shadow-xs transition cursor-pointer"
+              className="btn-primary btn-md"
             >
               <Plus size={15} />
-              <span>+ Nova Compra</span>
+              <span>Nova Compra</span>
             </button>
           )}
         </div>

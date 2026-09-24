@@ -173,18 +173,17 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
       {/* Toast Notification Container */}
       <Toast toasts={toasts} onDismiss={removeToast} />
 
-      {/* Top Header & Quick Stats */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-5 border-b border-slate-200 gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <span>Clientes & Propostas</span>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-              {clients.length} {clients.length === 1 ? 'cliente' : 'clientes'}
-            </span>
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Gestão comercial, carteira de clientes e propostas técnicas no PostgreSQL
-          </p>
+      {/* Action Toolbar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#E2E2DE] gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-[#FFF2E5] text-[#FF8000] border border-[#FFD9B3]">
+            <Users size={13} className="text-[#FF8000]" />
+            <span>{clients.length} {clients.length === 1 ? 'Cliente Registado' : 'Clientes Registados'}</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-neutral-100 text-neutral-600 border border-[#E2E2DE]">
+            <FileSpreadsheet size={13} className="text-neutral-500" />
+            <span>{stats.totalProposals} Propostas Comerciais</span>
+          </span>
         </div>
 
         <div className="flex items-center space-x-2.5">
@@ -206,7 +205,7 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
             className="btn-secondary btn-md disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <FileSpreadsheet size={15} className="text-neutral-500" />
-            <span>+ Nova Proposta</span>
+            <span>Nova Proposta</span>
           </button>
 
           <button
@@ -214,7 +213,7 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
             className="btn-primary btn-md"
           >
             <Plus size={15} />
-            <span>+ Novo Registo</span>
+            <span>Novo Cliente</span>
           </button>
         </div>
       </div>

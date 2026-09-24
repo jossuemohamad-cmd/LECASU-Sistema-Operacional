@@ -171,18 +171,17 @@ export const ProjectsView: React.FC = () => {
     <div className="space-y-6">
       <Toast toasts={toasts} onDismiss={removeToast} />
 
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-5 border-b border-slate-200 gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <span>04. Projetos & Execução Técnica</span>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-              {projects.length} {projects.length === 1 ? 'projeto' : 'projetos'}
-            </span>
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Acompanhamento de obras, tarefas técnicas operacionais e progresso de execução
-          </p>
+      {/* Action Toolbar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#E2E2DE] gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-[#FFF2E5] text-[#FF8000] border border-[#FFD9B3]">
+            <Clock size={13} className="text-[#FF8000]" />
+            <span>{stats.activeProjects} Projetos Ativos</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <CheckCircle2 size={13} className="text-emerald-600" />
+            <span>{stats.completedProjects} Concluídos ({stats.totalProjects} Total)</span>
+          </span>
         </div>
 
         <div className="flex items-center space-x-2.5">
