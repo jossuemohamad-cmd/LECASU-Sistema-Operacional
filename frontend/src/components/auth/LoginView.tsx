@@ -24,6 +24,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(() => Boolean(localStorage.getItem('lecasu_remember_email')));
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(1);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Forgot Password Modal State
@@ -48,7 +49,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
     try {
       setIsLoading(true);
+      setLoadingStep(1);
       setErrorMessage(null);
+
+      // Dynamic loading step indicators for real-time user feedback
+      const stepTimer1 = setTimeout(() => setLoadingStep(2), 1200);
+      const stepTimer2 = setTimeout(() => setLoadingStep(3), 2600);
       
       if (rememberMe) {
         localStorage.setItem('lecasu_remember_email', email.trim());
@@ -57,11 +63,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       }
 
       const res = await loginUser({ email, password });
+      clearTimeout(stepTimer1);
+      clearTimeout(stepTimer2);
       onLoginSuccess(res.user);
     } catch (err: any) {
       console.error('Erro ao iniciar sessão:', err);
       setErrorMessage(err.message || 'Falha na autenticação. Verifique as credenciais.');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -299,7 +306,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                       <div className="absolute inset-0 rounded-full border-2 border-white/20" />
                       <div className="absolute inset-0 rounded-full border-2 border-white border-t-transparent animate-spin" />
                     </div>
-                    <span className="font-semibold tracking-wide">A autenticar credenciais...</span>
+                    <span className="font-semibold tracking-wide">
+                      {loadingStep === 1 && 'A verificar credenciais...'}
+                      {loadingStep === 2 && 'A autenticar perfil e permissões...'}
+                      {loadingStep >= 3 && 'A sincronizar dados do sistema...'}
+                    </span>
                   </div>
                 ) : (
                   <div className="flex items-center justify-center space-x-2">
@@ -310,6 +321,43 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               </button>
             </div>
           </form>
+
+          {/* ELEGANT FULL-CARD LOADING OVERLAY DURING AUTHENTICATION */}
+          {isLoading && (
+            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-200">
+              {/* GLOWING LOGO */}
+              <div className="relative mb-4">
+                <div className="absolute -inset-2 bg-orange-600/40 rounded-2xl blur-md animate-pulse" />
+                <div className="relative w-14 h-14 rounded-2xl bg-orange-600 flex items-center justify-center text-white font-black text-2xl shadow-xl">
+                  L
+                </div>
+              </div>
+
+              {/* DUAL SPINNER */}
+              <div className="relative w-8 h-8 my-2">
+                <div className="absolute inset-0 rounded-full border-2 border-orange-500/20" />
+                <div className="absolute inset-0 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" />
+              </div>
+
+              {/* STEP TEXT */}
+              <h4 className="text-sm font-bold text-white mt-2">
+                LECASU Sistema Operacional
+              </h4>
+              <p className="text-xs text-orange-400 font-medium mt-1 animate-pulse">
+                {loadingStep === 1 && 'A validar credenciais de segurança...'}
+                {loadingStep === 2 && 'A carregar perfil de utilizador e acessos...'}
+                {loadingStep >= 3 && 'A sincronizar dados operacionais...'}
+              </p>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Por favor aguarde um instante
+              </p>
+
+              {/* PROGRESS BAR */}
+              <div className="w-48 h-1 bg-slate-800 rounded-full overflow-hidden mt-4">
+                <div className="h-full bg-gradient-to-r from-orange-600 via-amber-400 to-orange-600 w-full animate-[shimmer_1.5s_infinite_linear]" />
+              </div>
+            </div>
+          )}
 
         </div>
 
