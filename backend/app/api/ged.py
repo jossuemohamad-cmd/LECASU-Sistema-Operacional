@@ -5,7 +5,7 @@ import mimetypes
 from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, extract
 
@@ -13,11 +13,18 @@ from app.core.database import get_db
 from app.models.models import Document, Project, Client, User
 from app.core.security import get_current_user
 from app.schemas.schemas import DocumentResponse, GEDOverviewKPIs, GenericMessageResponse
+from app.services.storage import (
+    upload_file_to_s3,
+    generate_presigned_url,
+    delete_file_from_s3,
+    test_storage_connection
+)
 
 router = APIRouter()
 
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'uploads')
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
 
 def format_file_size(size_in_bytes: int) -> str:
     if size_in_bytes < 1024:
@@ -28,6 +35,15 @@ def format_file_size(size_in_bytes: int) -> str:
         return f"{size_in_bytes / (1024 * 1024):.2f} MB"
     else:
         return f"{size_in_bytes / (1024 * 1024 * 1024):.2f} GB"
+
+
+@router.get('/ged/storage-health', summary='Status de Conexão com Neon S3 Storage')
+def check_storage_health():
+    """
+    Verifica se o Neon S3 Object Storage está ativo e operacional.
+    """
+    return test_storage_connection()
+
 
 @router.get('/ged/documents', response_model=List[DocumentResponse], summary='Listar documentos do repositório GED')
 def list_documents(
@@ -47,13 +63,13 @@ def list_documents(
         )
     )
 
-    if category:
-        query = query.filter(Document.category == category)
+    if category and category.strip() and category.upper() != 'ALL':
+        query = query.filter(Document.category == category.strip())
     if project_id:
         query = query.filter(Document.project_id == project_id)
     if client_id:
         query = query.filter(Document.client_id == client_id)
-    if search:
+    if search and search.strip():
         search_clean = f"%{search.strip().lower()}%"
         query = query.filter(
             func.lower(Document.title).like(search_clean) | 
@@ -124,27 +140,40 @@ async def upload_document(
     original_filename = file.filename or "documento"
     _, ext = os.path.splitext(original_filename)
     unique_name = f"{uuid.uuid4().hex}{ext}"
-    destination_path = os.path.join(UPLOAD_DIR, unique_name)
+    s3_key = f"ged/{category.lower().replace(' ', '_')}/{unique_name}"
+    local_destination_path = os.path.join(UPLOAD_DIR, unique_name)
 
-    try:
-        with open(destination_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Falha ao gravar arquivo em disco: {str(e)}"
-        )
-
-    file_size = os.path.getsize(destination_path)
+    # Read file content into memory
+    file_bytes = await file.read()
+    file_size = len(file_bytes)
     mime_type, _ = mimetypes.guess_type(original_filename)
+    content_type = mime_type or file.content_type or "application/octet-stream"
+
+    # 1. Upload directly to Neon S3 Object Storage
+    try:
+        upload_file_to_s3(
+            file_bytes=file_bytes,
+            key=s3_key,
+            content_type=content_type
+        )
+        stored_path = s3_key
+    except Exception:
+        stored_path = unique_name
+
+    # 2. Local disk backup
+    try:
+        with open(local_destination_path, "wb") as buffer:
+            buffer.write(file_bytes)
+    except Exception:
+        pass
 
     new_doc = Document(
         title=title.strip(),
         category=category.strip() if category else 'Geral',
         file_name=original_filename,
-        file_path=unique_name,
+        file_path=stored_path,
         file_size_bytes=file_size,
-        mime_type=mime_type or file.content_type,
+        mime_type=content_type,
         version=version.strip() if version else 'v1.0',
         description=description.strip() if description else None,
         project_id=project_id,
@@ -181,6 +210,23 @@ async def upload_document(
     )
 
 
+@router.get('/ged/documents/{document_id}/presigned-url', summary='Obter URL assinada temporária S3')
+def get_document_presigned_url(
+    document_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Documento não encontrado.")
+
+    try:
+        url = generate_presigned_url(doc.file_path, expires_in=3600)
+        return {"presigned_url": url, "expires_in": 3600, "file_name": doc.file_name}
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Falha ao gerar URL assinada: {str(e)}")
+
+
 @router.get('/ged/documents/{document_id}/download', summary='Descarregar arquivo do GED')
 def download_document(
     document_id: int,
@@ -190,7 +236,17 @@ def download_document(
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Documento não encontrado.")
 
-    file_path = os.path.join(UPLOAD_DIR, doc.file_path)
+    # If file is stored in S3, redirect directly to presigned URL
+    if doc.file_path.startswith("ged/") or "/" in doc.file_path:
+        try:
+            s3_url = generate_presigned_url(doc.file_path, expires_in=3600)
+            return RedirectResponse(url=s3_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+        except Exception:
+            pass
+
+    # Fallback local file
+    filename_only = os.path.basename(doc.file_path)
+    file_path = os.path.join(UPLOAD_DIR, filename_only)
     if not os.path.exists(file_path):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Arquivo físico não encontrado no servidor.")
 
@@ -211,8 +267,15 @@ def delete_document(
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Documento não encontrado.")
 
+    # Remove from S3
+    try:
+        delete_file_from_s3(doc.file_path)
+    except Exception:
+        pass
+
     # Remove physical file if exists
-    file_path = os.path.join(UPLOAD_DIR, doc.file_path)
+    filename_only = os.path.basename(doc.file_path)
+    file_path = os.path.join(UPLOAD_DIR, filename_only)
     if os.path.exists(file_path):
         try:
             os.remove(file_path)
