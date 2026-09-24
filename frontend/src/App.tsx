@@ -11,12 +11,13 @@ import {
   FolderArchive, 
   Settings, 
   Menu, 
-  Search, 
   Bell, 
   LogOut,
   ChevronLeft,
   ShieldCheck,
   CheckCircle2,
+  Clock,
+  Database,
   X
 } from 'lucide-react';
 import { ClientsProposalsView } from './components/clients/ClientsProposalsView';
@@ -35,16 +36,16 @@ import { getAuthToken, removeAuthToken, fetchCurrentUser, prefetchAllCoreData } 
 import type { User } from './types';
 
 const TABS = [
-  { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard },
-  { id: 'clientes', name: 'Clientes & Propostas', icon: Users },
-  { id: 'servicos', name: 'Serviços', icon: Wrench },
-  { id: 'projetos', name: 'Projetos', icon: Briefcase },
-  { id: 'equipa', name: 'Equipa Técnica', icon: HardHat },
-  { id: 'financeiro', name: 'Gestão Financeira', icon: Wallet },
-  { id: 'fornecedores', name: 'Fornecedores', icon: Truck },
-  { id: 'rh', name: 'Recursos Humanos', icon: UserCheck },
-  { id: 'ged', name: 'Repositório GED', icon: FolderArchive },
-  { id: 'definicoes', name: 'Definições', icon: Settings },
+  { id: 'dashboard', name: 'Dashboard Geral', moduleNumber: 'Módulo 01', icon: LayoutDashboard, desc: 'Visão executiva e indicadores consolidados em tempo real' },
+  { id: 'clientes', name: 'Clientes & Propostas', moduleNumber: 'Módulo 02', icon: Users, desc: 'Gestão de carteira comercial, clientes e propostas técnicas' },
+  { id: 'servicos', name: 'Catálogo de Serviços', moduleNumber: 'Módulo 03', icon: Wrench, desc: 'Tabela de preços base, unidades e serviços técnicos' },
+  { id: 'projetos', name: 'Projetos & Obras', moduleNumber: 'Módulo 04', icon: Briefcase, desc: 'Acompanhamento de prazos, execução e tarefas de engenharia' },
+  { id: 'equipa', name: 'Equipa Técnica', moduleNumber: 'Módulo 05', icon: HardHat, desc: 'Alocação de técnicos e ordens de intervenção em campo' },
+  { id: 'financeiro', name: 'Gestão Financeira', moduleNumber: 'Módulo 06', icon: Wallet, desc: 'Faturação comercial, recebimentos e contas a receber (MZN)' },
+  { id: 'fornecedores', name: 'Fornecedores & Compras', moduleNumber: 'Módulo 07', icon: Truck, desc: 'Ordens de compra, fornecedores homologados e suprimentos' },
+  { id: 'rh', name: 'Recursos Humanos', moduleNumber: 'Módulo 08', icon: UserCheck, desc: 'Gestão de colaboradores, assiduidade, licenças e salários' },
+  { id: 'ged', name: 'Repositório GED', moduleNumber: 'Módulo 09', icon: FolderArchive, desc: 'Arquivo digital de documentos técnicos, contratos e plantas' },
+  { id: 'definicoes', name: 'Definições do Sistema', moduleNumber: 'Módulo 10', icon: Settings, desc: 'Controlo de utilizadores, perfis de acesso e parâmetros globais' },
 ];
 
 export default function App() {
@@ -66,7 +67,16 @@ export default function App() {
   const [openNewRecordTrigger, setOpenNewRecordTrigger] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [globalSearch, setGlobalSearch] = useState('');
+  
+  // Relógio dinâmico em tempo real
+  const [currentTime, setCurrentTime] = useState<Date>(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const token = getAuthToken();
@@ -101,21 +111,12 @@ export default function App() {
     prefetchAllCoreData();
   };
 
-  // Quick module search filter
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!globalSearch.trim()) return;
-    const query = globalSearch.toLowerCase().trim();
-    const matchedTab = TABS.find(t => t.name.toLowerCase().includes(query) || t.id.toLowerCase().includes(query));
-    if (matchedTab) {
-      setActiveTab(matchedTab.id);
-      setGlobalSearch('');
-    }
-  };
-
   if (!isAuthenticated) {
     return <LoginView onLoginSuccess={handleLoginSuccess} />;
   }
+
+  const activeTabInfo = TABS.find(t => t.id === activeTab) || TABS[0];
+  const ActiveTabIcon = activeTabInfo.icon;
 
   return (
     <div className="flex h-screen bg-[#F5F5F3] overflow-hidden font-sans text-[#101010]">
@@ -144,7 +145,7 @@ export default function App() {
           </div>
           <button 
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="text-neutral-400 hover:text-white p-1.5 rounded-lg hover:bg-[#1F1F1F] transition flex items-center justify-center"
+            className="text-neutral-400 hover:text-white p-1.5 rounded-lg hover:bg-[#1F1F1F] transition flex items-center justify-center cursor-pointer"
             title={sidebarOpen ? "Recolher menu (68px)" : "Expandir menu (256px)"}
           >
             {sidebarOpen ? <ChevronLeft size={18} /> : <Menu size={18} />}
@@ -160,7 +161,7 @@ export default function App() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`w-full flex items-center rounded-lg text-[13px] font-medium transition-all ${
+                className={`w-full flex items-center rounded-lg text-[13px] font-medium transition-all cursor-pointer ${
                   sidebarOpen 
                     ? 'px-3 py-2.5 justify-start' 
                     : 'h-10 px-0 justify-center'
@@ -202,29 +203,57 @@ export default function App() {
         2. ÁREA PRINCIPAL DA APLICAÇÃO (AppShell Main Area)
       */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F5F5F3]">
-        {/* TOPBAR / HEADER FIXO (64px de altura, px-6 padding horizontal) */}
+        {/* TOPBAR / HEADER CORPORATIVO DINÂMICO (64px de altura, px-6 padding horizontal) */}
         <header className="h-16 bg-white border-b border-[#E2E2DE] flex items-center justify-between px-6 z-10 flex-shrink-0 shadow-xs relative">
-          {/* SEARCH BAR (40px height, 12px px) */}
-          <form onSubmit={handleSearchSubmit} className="flex items-center w-80 md:w-96">
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-3 text-neutral-400" size={16} />
-              <input
-                type="text"
-                placeholder="Pesquisa rápida de módulos... (Enter para navegar)"
-                value={globalSearch}
-                onChange={(e) => setGlobalSearch(e.target.value)}
-                className="w-full h-10 pl-9 pr-4 text-[13px] bg-[#F5F5F3] border border-[#E2E2DE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF8000]/20 focus:border-[#FF8000] focus:bg-white transition"
-              />
+          
+          {/* IDENTIFICAÇÃO DINÂMICA DO MÓDULO ATUAL (TÍTULO E ÍCONE) */}
+          <div className="flex items-center space-x-3.5">
+            <div className="w-9 h-9 rounded-xl bg-[#FFF2E5] text-[#FF8000] border border-[#FFE0BF] flex items-center justify-center flex-shrink-0 shadow-xs">
+              <ActiveTabIcon size={18} />
             </div>
-          </form>
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="text-[10px] font-bold tracking-wider uppercase text-[#FF8000] font-heading bg-[#FFF2E5] px-2 py-0.5 rounded border border-[#FFE0BF]">
+                  {activeTabInfo.moduleNumber}
+                </span>
+                <span className="text-neutral-300">•</span>
+                <h2 className="text-sm sm:text-base font-bold text-[#101010] font-heading tracking-tight leading-none">
+                  {activeTabInfo.name}
+                </h2>
+              </div>
+              <p className="text-[11px] text-[#737370] hidden md:block leading-tight mt-0.5 font-sans">
+                {activeTabInfo.desc}
+              </p>
+            </div>
+          </div>
 
-          {/* RIGHT ACTIONS */}
-          <div className="flex items-center space-x-4">
+          {/* WIDGETS DINÂMICOS & AÇÕES DO HEADER */}
+          <div className="flex items-center space-x-3 sm:space-x-4">
+            
+            {/* RELÓGIO & DATA DINÂMICA EM TEMPO REAL */}
+            <div className="hidden lg:flex items-center space-x-2.5 bg-[#F5F5F3] border border-[#E2E2DE] px-3.5 py-1.5 rounded-xl text-xs shadow-xs">
+              <Clock size={14} className="text-[#FF8000]" />
+              <span className="font-mono font-bold text-[#101010] text-xs tracking-wider">
+                {currentTime.toLocaleTimeString('pt-MZ', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </span>
+              <span className="text-neutral-300">|</span>
+              <span className="text-neutral-600 font-medium capitalize text-[11px]">
+                {currentTime.toLocaleDateString('pt-MZ', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
+              </span>
+            </div>
+
+            {/* STATUS DO BANCO DE DADOS NEON */}
+            <div className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <Database size={13} className="text-emerald-600" />
+              <span className="text-[11px]">Neon DB Online</span>
+            </div>
+
             {/* NOTIFICAÇÕES */}
             <div className="relative">
               <button 
                 onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-                className="text-neutral-500 hover:text-neutral-900 relative p-2 rounded-lg hover:bg-neutral-100 transition"
+                className="text-neutral-500 hover:text-neutral-900 relative p-2 rounded-lg hover:bg-neutral-100 transition cursor-pointer"
                 title="Notificações do Sistema"
               >
                 <Bell size={18} />
@@ -238,7 +267,7 @@ export default function App() {
                     <h4 className="text-xs font-bold text-[#101010] font-heading">Notificações do Sistema</h4>
                     <button 
                       onClick={() => setIsNotificationsOpen(false)}
-                      className="text-neutral-400 hover:text-neutral-600 p-1 rounded"
+                      className="text-neutral-400 hover:text-neutral-600 p-1 rounded cursor-pointer"
                     >
                       <X size={14} />
                     </button>
@@ -257,7 +286,7 @@ export default function App() {
             </div>
             
             {/* PERFIL DO UTILIZADOR */}
-            <div className="flex items-center space-x-3 border-l border-[#E2E2DE] pl-4">
+            <div className="flex items-center space-x-3 border-l border-[#E2E2DE] pl-3 sm:pl-4">
               <div className="w-9 h-9 rounded-full bg-[#101010] text-white font-heading font-bold text-xs flex items-center justify-center flex-shrink-0 border border-neutral-700 shadow-xs">
                 {(currentUser?.name || 'A').charAt(0).toUpperCase()}
               </div>
@@ -271,7 +300,7 @@ export default function App() {
               </div>
               <button
                 onClick={() => setIsLogoutModalOpen(true)}
-                className="p-2 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition ml-1"
+                className="p-2 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition ml-1 cursor-pointer"
                 title="Terminar Sessão"
               >
                 <LogOut size={16} />
