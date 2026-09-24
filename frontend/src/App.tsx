@@ -13,7 +13,9 @@ import {
   Menu, 
   Search, 
   Bell, 
-  LogOut
+  LogOut,
+  ChevronLeft,
+  ShieldCheck
 } from 'lucide-react';
 import { ClientsProposalsView } from './components/clients/ClientsProposalsView';
 import { ProjectsView } from './components/projects/ProjectsView';
@@ -96,38 +98,41 @@ export default function App() {
     return <LoginView onLoginSuccess={handleLoginSuccess} />;
   }
 
-
-
   return (
     <div className="flex h-screen bg-[#F5F5F3] overflow-hidden font-sans text-[#101010]">
-      {/* SIDEBAR OFICIAL LECASU */}
+      {/* 
+        1. SIDEBAR RETRÁTIL DA APLICAÇÃO (AppShell Sidebar)
+        - 256px expandida (w-64)
+        - 68px recolhida (w-[68px])
+        - Ícones centralizados quando recolhida
+      */}
       <aside 
         className={`${
-          sidebarOpen ? 'w-64' : 'w-20'
-        } bg-[#101010] text-white flex flex-col transition-all duration-200 border-r border-[#222222] z-20 flex-shrink-0 shadow-lg`}
+          sidebarOpen ? 'w-64' : 'w-[68px]'
+        } bg-[#101010] text-white flex flex-col transition-[width] duration-200 ease-in-out border-r border-[#222222] z-20 flex-shrink-0 shadow-lg select-none`}
       >
-        {/* LOGO AREA */}
+        {/* LOGO & TOGGLE HEADER (64px altura) */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-[#222222]">
           <div className="flex items-center space-x-3 overflow-hidden">
-            <div className="w-8 h-8 rounded-lg bg-[#FF8000] flex items-center justify-center font-heading font-extrabold text-white tracking-wider flex-shrink-0 shadow-sm">
+            <div className="w-8 h-8 rounded-lg bg-[#FF8000] flex items-center justify-center font-heading font-extrabold text-white text-base tracking-wider flex-shrink-0 shadow-sm">
               L
             </div>
             {sidebarOpen && (
-              <span className="font-heading font-bold text-lg tracking-tight text-white whitespace-nowrap">
+              <span className="font-heading font-bold text-base tracking-tight text-white whitespace-nowrap">
                 LECASU <span className="text-[#FF8000] text-xs font-semibold tracking-wider">ERP</span>
               </span>
             )}
           </div>
           <button 
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="text-neutral-400 hover:text-white p-1.5 rounded-md hover:bg-[#1F1F1F] transition"
-            title={sidebarOpen ? "Recolher menu" : "Expandir menu"}
+            className="text-neutral-400 hover:text-white p-1.5 rounded-lg hover:bg-[#1F1F1F] transition flex items-center justify-center"
+            title={sidebarOpen ? "Recolher menu (68px)" : "Expandir menu (256px)"}
           >
-            <Menu size={18} />
+            {sidebarOpen ? <ChevronLeft size={18} /> : <Menu size={18} />}
           </button>
         </div>
 
-        {/* NAVEGAÇÃO DAS 10 ABAS */}
+        {/* NAVEGAÇÃO DOS MÓDULOS */}
         <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
           {TABS.map((tab) => {
             const Icon = tab.icon;
@@ -136,7 +141,11 @@ export default function App() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`w-full flex items-center px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all ${
+                className={`w-full flex items-center rounded-lg text-[13px] font-medium transition-all ${
+                  sidebarOpen 
+                    ? 'px-3 py-2.5 justify-start' 
+                    : 'h-10 px-0 justify-center'
+                } ${
                   isActive
                     ? 'bg-[#FF8000] text-white font-heading font-semibold shadow-md shadow-[#FF8000]/20'
                     : 'text-neutral-300 hover:bg-[#1A1A1A] hover:text-white'
@@ -152,40 +161,57 @@ export default function App() {
           })}
         </nav>
 
-        {/* VERSÃO NO RODAPÉ */}
-        {sidebarOpen && (
-          <div className="p-4 border-t border-[#222222] text-[11px] text-neutral-500 font-sans flex items-center justify-between">
-            <span>LECASU OS v2.0</span>
-            <span className="w-2 h-2 rounded-full bg-[#FF8000] animate-pulse"></span>
-          </div>
-        )}
+        {/* RODAPÉ DA SIDEBAR */}
+        <div className={`p-4 border-t border-[#222222] text-[11px] text-neutral-500 font-sans flex items-center ${
+          sidebarOpen ? 'justify-between' : 'justify-center'
+        }`}>
+          {sidebarOpen ? (
+            <>
+              <div className="flex items-center space-x-1.5">
+                <ShieldCheck size={14} className="text-emerald-500" />
+                <span>LECASU OS v2.0</span>
+              </div>
+              <span className="w-2 h-2 rounded-full bg-[#FF8000] animate-pulse" title="Sistema online"></span>
+            </>
+          ) : (
+            <span className="w-2 h-2 rounded-full bg-[#FF8000] animate-pulse" title="Online v2.0"></span>
+          )}
+        </div>
       </aside>
 
-      {/* ÁREA PRINCIPAL */}
+      {/* 
+        2. ÁREA PRINCIPAL DA APLICAÇÃO (AppShell Main Area)
+      */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F5F5F3]">
-        {/* HEADER OFICIAL */}
+        {/* TOPBAR / HEADER FIXO (64px de altura, px-6 padding horizontal) */}
         <header className="h-16 bg-white border-b border-[#E2E2DE] flex items-center justify-between px-6 z-10 flex-shrink-0 shadow-xs">
-          <div className="flex items-center w-96">
+          {/* SEARCH BAR (40px height, 12px px) */}
+          <div className="flex items-center w-80 md:w-96">
             <div className="relative w-full">
-              <Search className="absolute left-3 top-2.5 text-neutral-400" size={16} />
+              <Search className="absolute left-3 top-3 text-neutral-400" size={16} />
               <input
                 type="text"
                 placeholder="Pesquisa rápida no sistema..."
-                className="w-full pl-9 pr-4 py-1.5 text-xs bg-[#F5F5F3] border border-[#E2E2DE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF8000]/30 focus:border-[#FF8000] focus:bg-white transition"
+                className="w-full h-10 pl-9 pr-4 text-[13px] bg-[#F5F5F3] border border-[#E2E2DE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF8000]/20 focus:border-[#FF8000] focus:bg-white transition"
               />
             </div>
           </div>
 
+          {/* RIGHT ACTIONS */}
           <div className="flex items-center space-x-4">
-            <button className="text-neutral-500 hover:text-neutral-800 relative p-1.5 rounded-lg hover:bg-neutral-100 transition">
+            <button 
+              className="text-neutral-500 hover:text-neutral-900 relative p-2 rounded-lg hover:bg-neutral-100 transition"
+              title="Notificações"
+            >
               <Bell size={18} />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-[#FF8000] rounded-full"></span>
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#FF8000] rounded-full"></span>
             </button>
+            
             <div className="flex items-center space-x-3 border-l border-[#E2E2DE] pl-4">
-              <div className="w-8 h-8 rounded-full bg-[#101010] text-white font-heading font-bold text-xs flex items-center justify-center flex-shrink-0 border border-neutral-700">
+              <div className="w-9 h-9 rounded-full bg-[#101010] text-white font-heading font-bold text-xs flex items-center justify-center flex-shrink-0 border border-neutral-700 shadow-xs">
                 {(currentUser?.name || 'A').charAt(0).toUpperCase()}
               </div>
-              <div className="text-left text-xs">
+              <div className="text-left text-xs hidden sm:block">
                 <p className="font-heading font-semibold text-[#101010] leading-tight">
                   {currentUser?.name || 'Admin LECASU'}
                 </p>
@@ -195,7 +221,7 @@ export default function App() {
               </div>
               <button
                 onClick={handleLogout}
-                className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition ml-1"
+                className="p-2 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition ml-1"
                 title="Terminar Sessão"
               >
                 <LogOut size={16} />
@@ -204,9 +230,11 @@ export default function App() {
           </div>
         </header>
 
-        {/* CONTEÚDO DA ABA SELECIONADA */}
-        <main className="flex-1 overflow-y-auto p-6 bg-[#F5F5F3]">
-          <div className="max-w-7xl mx-auto">
+        {/* 
+          3. CONTAINER PRINCIPAL DE CONTEÚDO (Padding 24px desktop, 16px mobile, Max-Width 1440px)
+        */}
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-[#F5F5F3]">
+          <div className="max-w-[1440px] mx-auto w-full">
             {activeTab === 'dashboard' ? (
               <DashboardView onNavigate={(tab) => setActiveTab(tab)} />
             ) : activeTab === 'clientes' ? (
