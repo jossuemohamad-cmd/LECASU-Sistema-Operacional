@@ -1,12 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   FolderArchive, 
-  Layers, 
   HardDrive, 
   UploadCloud, 
   Search, 
-  Filter, 
-  Plus, 
   RefreshCw, 
   Download, 
   Trash2, 
@@ -15,20 +12,22 @@ import {
   FileImage, 
   FileCode, 
   FileArchive, 
-  File, 
+  File as FileIcon, 
   X, 
   CheckCircle2, 
-  AlertCircle, 
-  Briefcase,
-  Building2,
-  Calendar,
-  Loader2,
-  Folder,
-  FolderOpen,
-  Cloud,
-  ExternalLink,
-  ShieldCheck,
-  Check
+  Loader2, 
+  Folder, 
+  FolderOpen, 
+  Cloud, 
+  ExternalLink, 
+  ShieldCheck, 
+  Home, 
+  ChevronRight, 
+  ArrowUp, 
+  ArrowLeft, 
+  ArrowRight, 
+  CheckSquare, 
+  Square 
 } from 'lucide-react';
 import type { 
   GEDDocument, 
@@ -50,6 +49,26 @@ import { Toast } from '../common/Toast';
 import { ConfirmationModal } from '../common/ConfirmationModal';
 import { GoogleDriveExplorerModal, getStoredGoogleToken } from './GoogleDriveExplorerModal';
 
+interface FolderNode {
+  id: string;
+  name: string;
+  path: string;
+  color: string;
+  description: string;
+}
+
+const SYSTEM_FOLDERS: FolderNode[] = [
+  { id: 'pdf', name: 'pdf', path: '/pdf', color: 'text-rose-500', description: 'Documentos, Relatórios e Especificações Técnicas' },
+  { id: 'png', name: 'png', path: '/png', color: 'text-blue-500', description: 'Imagens e Gráficos em PNG' },
+  { id: 'jpg', name: 'jpg', path: '/jpg', color: 'text-indigo-500', description: 'Fotografias de Obras e Imagens JPEG' },
+  { id: 'logos', name: 'logos', path: '/logos', color: 'text-amber-500', description: 'Identidade Visual e Marcas da Empresa' },
+  { id: 'planilhas', name: 'planilhas', path: '/planilhas', color: 'text-emerald-500', description: 'Folhas de Cálculo, Medições e Orçamentos' },
+  { id: 'projetos_cad', name: 'projetos_cad', path: '/projetos_cad', color: 'text-purple-500', description: 'Plantas de Engenharia, DWG e Modelos Técnicos' },
+  { id: 'contratos', name: 'contratos', path: '/contratos', color: 'text-cyan-500', description: 'Contratos, Acordos e Documentação Jurídica' },
+  { id: 'rh_pessoal', name: 'rh_pessoal', path: '/rh_pessoal', color: 'text-teal-500', description: 'Fichas de Funcionários e RH' },
+  { id: 'geral', name: 'geral', path: '/geral', color: 'text-neutral-500', description: 'Outros Ficheiros e Documentos Diversos' },
+];
+
 const CATEGORIES = [
   'Contratos',
   'Projetos Técnicos',
@@ -58,17 +77,6 @@ const CATEGORIES = [
   'Certificações & Licenças',
   'Logotipos & Marcas',
   'Geral'
-];
-
-const FOLDERS = [
-  { id: 'all', label: 'Todas as Pastas', icon: Folder, color: 'text-neutral-600', path: '/' },
-  { id: 'pdf', label: 'PDFs & Documentos', icon: FileText, color: 'text-rose-500', path: '/pdf' },
-  { id: 'png', label: 'Imagens PNG', icon: FileImage, color: 'text-blue-500', path: '/png' },
-  { id: 'jpg', label: 'Fotos & JPG', icon: FileImage, color: 'text-indigo-500', path: '/jpg' },
-  { id: 'logos', label: 'Logos & Marcas', icon: Layers, color: 'text-amber-500', path: '/logos' },
-  { id: 'planilhas', label: 'Planilhas Excel/CSV', icon: FileSpreadsheet, color: 'text-emerald-500', path: '/planilhas' },
-  { id: 'projetos', label: 'Projetos CAD/Técnicos', icon: Briefcase, color: 'text-purple-500', path: '/projetos_cad' },
-  { id: 'contratos', label: 'Contratos & Jurídico', icon: ShieldCheck, color: 'text-cyan-500', path: '/contratos' },
 ];
 
 export const GEDView: React.FC = () => {
@@ -85,12 +93,14 @@ export const GEDView: React.FC = () => {
   });
 
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  // Filters & Folder selection
-  const [selectedFolder, setSelectedFolder] = useState<string>('all');
+  // File Manager Navigation State
+  const [currentPath, setCurrentPath] = useState<string>('/'); // '/' is root, '/pdf', '/png', etc.
+  const [history, setHistory] = useState<string[]>(['/']);
+  const [historyIndex, setHistoryIndex] = useState<number>(0);
+  const [isTreeExpanded, setIsTreeExpanded] = useState<boolean>(true);
+  const [selectedDocIds, setSelectedDocIds] = useState<number[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
 
   // Modals State
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -125,7 +135,6 @@ export const GEDView: React.FC = () => {
 
   const loadAllData = async (showToastFeedback = false) => {
     setIsLoading(true);
-    setError(null);
     try {
       const [docsData, kpisData, projectsData, clientsData] = await Promise.all([
         fetchDocuments(),
@@ -138,11 +147,11 @@ export const GEDView: React.FC = () => {
       setProjects(projectsData);
       setClients(clientsData);
       if (showToastFeedback) {
-        showToast('success', 'GED Atualizado', 'Repositório sincronizado com o banco de dados.');
+        showToast('success', 'Repositório Atualizado', 'Gestor de ficheiros sincronizado com o Storage Neon.');
       }
     } catch (err: any) {
-      console.error('Erro ao carregar repositório GED:', err);
-      setError(err.message || 'Erro ao carregar dados do GED.');
+      console.error('Erro ao carregar dados do GED:', err);
+      showToast('error', 'Erro de Sincronização', err.message || 'Erro ao carregar dados do Gestor de Ficheiros.');
     } finally {
       setIsLoading(false);
     }
@@ -151,6 +160,123 @@ export const GEDView: React.FC = () => {
   useEffect(() => {
     loadAllData();
   }, []);
+
+  // Determine which folder a document belongs to
+  const getDocumentFolderName = (doc: GEDDocument): string => {
+    const ext = doc.file_name.split('.').pop()?.toLowerCase() || '';
+    const titleLower = doc.title.toLowerCase();
+    const catLower = (doc.category || '').toLowerCase();
+    const filePath = (doc.file_path || '').toLowerCase();
+    
+    if (filePath.includes('/logos/') || titleLower.includes('logo') || catLower.includes('logo')) {
+      return 'logos';
+    }
+    if (filePath.includes('/pdf/') || ext === 'pdf') {
+      return 'pdf';
+    }
+    if (filePath.includes('/png/') || ext === 'png') {
+      return 'png';
+    }
+    if (filePath.includes('/jpg/') || ['jpg', 'jpeg', 'webp'].includes(ext)) {
+      return 'jpg';
+    }
+    if (filePath.includes('/planilhas/') || ['xlsx', 'xls', 'csv'].includes(ext)) {
+      return 'planilhas';
+    }
+    if (filePath.includes('/projetos_cad/') || ['dwg', 'dxf'].includes(ext) || catLower.includes('projet')) {
+      return 'projetos_cad';
+    }
+    if (filePath.includes('/contratos/') || catLower.includes('contrat')) {
+      return 'contratos';
+    }
+    if (filePath.includes('/rh_pessoal/') || catLower.includes('rh') || catLower.includes('pessoal')) {
+      return 'rh_pessoal';
+    }
+    return 'geral';
+  };
+
+  // Folder documents count map
+  const folderCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    SYSTEM_FOLDERS.forEach(f => {
+      counts[f.id] = documents.filter(doc => getDocumentFolderName(doc) === f.id).length;
+    });
+    return counts;
+  }, [documents]);
+
+  // Navigate to a folder path
+  const navigateTo = (path: string) => {
+    if (path === currentPath) return;
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(path);
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+    setCurrentPath(path);
+    setSelectedDocIds([]);
+  };
+
+  // Navigation: Go Back
+  const handleGoBack = () => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      setCurrentPath(history[newIndex]);
+      setSelectedDocIds([]);
+    }
+  };
+
+  // Navigation: Go Forward
+  const handleGoForward = () => {
+    if (historyIndex < history.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      setCurrentPath(history[newIndex]);
+      setSelectedDocIds([]);
+    }
+  };
+
+  // Navigation: Up One Level
+  const handleUpLevel = () => {
+    if (currentPath !== '/') {
+      navigateTo('/');
+    }
+  };
+
+  // Select all visible documents in current folder
+  const handleSelectAll = () => {
+    setSelectedDocIds(currentFolderDocuments.map(d => d.id));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedDocIds([]);
+  };
+
+  const toggleSelectDoc = (id: number) => {
+    setSelectedDocIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  // Documents inside current path
+  const currentFolderDocuments = useMemo(() => {
+    return documents.filter(doc => {
+      if (searchTerm.trim()) {
+        const q = searchTerm.toLowerCase().trim();
+        return (
+          doc.title.toLowerCase().includes(q) ||
+          doc.file_name.toLowerCase().includes(q) ||
+          (doc.description && doc.description.toLowerCase().includes(q))
+        );
+      }
+
+      if (currentPath === '/') {
+        return false;
+      }
+
+      const folderId = currentPath.replace('/', '');
+      return getDocumentFolderName(doc) === folderId;
+    });
+  }, [documents, currentPath, searchTerm]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -186,7 +312,7 @@ export const GEDView: React.FC = () => {
       if (formData.client_id) data.append('client_id', formData.client_id);
 
       await uploadDocument(data);
-      showToast('success', 'Documento Arquivado!', `"${formData.title}" foi enviado com sucesso.`);
+      showToast('success', 'Ficheiro Arquivado!', `"${formData.title}" foi enviado com sucesso para o Neon S3.`);
       setIsUploadModalOpen(false);
       setSelectedFile(null);
       setFormData({
@@ -221,14 +347,15 @@ export const GEDView: React.FC = () => {
     setDeletingId(doc.id);
     try {
       await deleteDocument(doc.id);
-      showToast('success', 'Documento Excluído', `"${doc.title}" foi removido do repositório.`);
+      showToast('success', 'Ficheiro Eliminado', `"${doc.title}" foi removido do Neon S3 e da base de dados.`);
       setDocuments(prev => prev.filter(d => d.id !== doc.id));
+      setSelectedDocIds(prev => prev.filter(id => id !== doc.id));
       const updatedKpis = await fetchGEDOverviewKPIs();
       setKpis(updatedKpis);
       setDocToDelete(null);
     } catch (err: any) {
       console.error('Erro ao excluir documento:', err);
-      showToast('error', 'Falha ao Excluir', err.message || 'Não foi possível excluir o documento.');
+      showToast('error', 'Falha ao Eliminar', err.message || 'Não foi possível excluir o ficheiro.');
     } finally {
       setDeletingId(null);
     }
@@ -247,45 +374,21 @@ export const GEDView: React.FC = () => {
   const getFileIcon = (fileName: string, mimeType?: string | null) => {
     const ext = fileName.split('.').pop()?.toLowerCase() || '';
     if (ext === 'pdf' || mimeType?.includes('pdf')) {
-      return (
-        <div className="w-9 h-9 rounded-lg bg-red-50 text-red-600 border border-red-200 flex items-center justify-center flex-shrink-0">
-          <FileText className="w-5 h-5" />
-        </div>
-      );
+      return <FileText className="w-5 h-5 text-rose-500 flex-shrink-0" />;
     }
     if (['png', 'jpg', 'jpeg', 'svg', 'webp', 'gif'].includes(ext) || mimeType?.includes('image')) {
-      return (
-        <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center flex-shrink-0">
-          <FileImage className="w-5 h-5" />
-        </div>
-      );
+      return <FileImage className="w-5 h-5 text-blue-500 flex-shrink-0" />;
     }
     if (['xlsx', 'xls', 'csv'].includes(ext) || mimeType?.includes('spreadsheet') || mimeType?.includes('excel')) {
-      return (
-        <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center flex-shrink-0">
-          <FileSpreadsheet className="w-5 h-5" />
-        </div>
-      );
+      return <FileSpreadsheet className="w-5 h-5 text-emerald-500 flex-shrink-0" />;
     }
     if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext) || mimeType?.includes('zip')) {
-      return (
-        <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center flex-shrink-0">
-          <FileArchive className="w-5 h-5" />
-        </div>
-      );
+      return <FileArchive className="w-5 h-5 text-amber-500 flex-shrink-0" />;
     }
     if (['js', 'ts', 'py', 'json', 'html', 'css', 'sql'].includes(ext)) {
-      return (
-        <div className="w-9 h-9 rounded-lg bg-purple-50 text-purple-600 border border-purple-200 flex items-center justify-center flex-shrink-0">
-          <FileCode className="w-5 h-5" />
-        </div>
-      );
+      return <FileCode className="w-5 h-5 text-purple-500 flex-shrink-0" />;
     }
-    return (
-      <div className="w-9 h-9 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center flex-shrink-0">
-        <File className="w-5 h-5" />
-      </div>
-    );
+    return <FileIcon className="w-5 h-5 text-slate-500 flex-shrink-0" />;
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -296,478 +399,538 @@ export const GEDView: React.FC = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const getCategoryBadge = (category: string) => {
-    switch (category) {
-      case 'Contratos':
-        return <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">Contratos</span>;
-      case 'Projetos Técnicos':
-        return <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">Projetos Técnicos</span>;
-      case 'Faturas & Recibos':
-        return <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Faturas & Recibos</span>;
-      case 'RH & Pessoal':
-        return <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">RH & Pessoal</span>;
-      case 'Certificações & Licenças':
-        return <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-cyan-50 text-cyan-700 border border-cyan-200">Certificações</span>;
-      default:
-        return <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">{category || 'Geral'}</span>;
-    }
+  const getFormatName = (fileName: string, mimeType?: string | null): string => {
+    const ext = fileName.split('.').pop()?.toLowerCase() || '';
+    if (ext === 'pdf') return 'Documento PDF';
+    if (ext === 'png') return 'Imagem PNG';
+    if (['jpg', 'jpeg'].includes(ext)) return 'Fotografia JPEG';
+    if (ext === 'webp') return 'Imagem WebP';
+    if (['xlsx', 'xls'].includes(ext)) return 'Folha de Cálculo Excel';
+    if (ext === 'csv') return 'Tabela CSV';
+    if (['dwg', 'dxf'].includes(ext)) return 'Projeto CAD (AutoCAD)';
+    if (['zip', 'rar', '7z'].includes(ext)) return 'Arquivo Comprimido';
+    return mimeType || 'Ficheiro Binário';
   };
-
-  // Helper to determine document folder
-  const getDocumentFolder = (doc: GEDDocument): string => {
-    const ext = doc.file_name.split('.').pop()?.toLowerCase() || '';
-    const titleLower = doc.title.toLowerCase();
-    const catLower = (doc.category || '').toLowerCase();
-    
-    if (titleLower.includes('logo') || catLower.includes('logo') || (doc.file_path && doc.file_path.includes('/logos/'))) {
-      return 'logos';
-    }
-    if (ext === 'pdf' || (doc.file_path && doc.file_path.includes('/pdf/'))) {
-      return 'pdf';
-    }
-    if (ext === 'png' || (doc.file_path && doc.file_path.includes('/png/'))) {
-      return 'png';
-    }
-    if (['jpg', 'jpeg', 'webp'].includes(ext) || (doc.file_path && doc.file_path.includes('/jpg/'))) {
-      return 'jpg';
-    }
-    if (['xlsx', 'xls', 'csv'].includes(ext) || (doc.file_path && doc.file_path.includes('/planilhas/'))) {
-      return 'planilhas';
-    }
-    if (['dwg', 'dxf'].includes(ext) || catLower.includes('projet') || (doc.file_path && doc.file_path.includes('/projetos_cad/'))) {
-      return 'projetos';
-    }
-    if (catLower.includes('contrat') || (doc.file_path && doc.file_path.includes('/contratos/'))) {
-      return 'contratos';
-    }
-    return 'all';
-  };
-
-  // Folder counts map
-  const folderCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: documents.length };
-    FOLDERS.forEach(f => {
-      if (f.id !== 'all') {
-        counts[f.id] = documents.filter(doc => getDocumentFolder(doc) === f.id).length;
-      }
-    });
-    return counts;
-  }, [documents]);
-
-  // Filtered documents list
-  const filteredDocuments = useMemo(() => {
-    return documents.filter(doc => {
-      // 1. Folder filter
-      if (selectedFolder !== 'all') {
-        if (getDocumentFolder(doc) !== selectedFolder) {
-          return false;
-        }
-      }
-
-      // 2. Search filter
-      const query = searchTerm.toLowerCase().trim();
-      const matchesSearch = !query || 
-        doc.title.toLowerCase().includes(query) ||
-        doc.file_name.toLowerCase().includes(query) ||
-        (doc.description && doc.description.toLowerCase().includes(query)) ||
-        (doc.project_name && doc.project_name.toLowerCase().includes(query)) ||
-        (doc.client_name && doc.client_name.toLowerCase().includes(query));
-      
-      // 3. Category filter
-      const matchesCategory = !categoryFilter || doc.category === categoryFilter;
-
-      return matchesSearch && matchesCategory;
-    });
-  }, [documents, selectedFolder, searchTerm, categoryFilter]);
-
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 font-sans select-none">
       <Toast 
         toasts={toasts} 
         onDismiss={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} 
       />
 
-      {/* Action Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#E2E2DE] gap-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-[#FFF2E5] text-[#FF8000] border border-[#FFD9B3]">
-            <FolderArchive size={13} className="text-[#FF8000]" />
-            <span>{kpis.total_documents} Documentos no Repositório</span>
-          </span>
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <Check size={13} className="text-emerald-600" />
-            <span>Neon S3 Storage Sincronizado</span>
-          </span>
-        </div>
-
-        <div className="flex items-center space-x-2.5">
+      {/* =========================================================================
+          1. BARRA SUPERIOR DE FERRAMENTAS DO GESTOR DE FICHEIROS (File Manager Toolbar)
+         ========================================================================= */}
+      <div className="bg-white border border-[#E2E2DE] rounded-xl p-2.5 shadow-2xs flex flex-wrap items-center justify-between gap-2.5">
+        
+        {/* Botões de Navegação & Ações Rápidas (Estilo File Manager / cPanel) */}
+        <div className="flex items-center gap-1 flex-wrap">
           <button
-            onClick={() => setIsCloudIntegrationsOpen(true)}
-            className="btn-secondary btn-md flex items-center gap-1.5"
-            title="Conectar Google Drive ou OneDrive"
+            type="button"
+            onClick={() => navigateTo('/')}
+            className={`btn-ghost btn-sm flex items-center gap-1.5 ${currentPath === '/' ? 'bg-[#FFF2E5] text-[#FF8000] font-bold' : 'text-neutral-700'}`}
+            title="Ir para o Início / Raiz"
           >
-            <Cloud className="w-4 h-4 text-[#FF8000]" />
-            <span>Conectar Cloud (Drive/OneDrive)</span>
+            <Home size={15} className={currentPath === '/' ? 'text-[#FF8000]' : 'text-neutral-500'} />
+            <span className="text-xs">Início</span>
+          </button>
+
+          <div className="h-4 w-px bg-neutral-200 mx-1" />
+
+          <button
+            type="button"
+            onClick={handleUpLevel}
+            disabled={currentPath === '/'}
+            className="btn-ghost btn-sm flex items-center gap-1 text-neutral-700 disabled:opacity-35"
+            title="Subir um nível de diretório"
+          >
+            <ArrowUp size={14} />
+            <span className="text-xs">Subir Um Nível</span>
           </button>
 
           <button
+            type="button"
+            onClick={handleGoBack}
+            disabled={historyIndex === 0}
+            className="btn-ghost btn-sm flex items-center gap-1 text-neutral-700 disabled:opacity-35"
+            title="Voltar"
+          >
+            <ArrowLeft size={14} />
+            <span className="text-xs">Voltar</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleGoForward}
+            disabled={historyIndex >= history.length - 1}
+            className="btn-ghost btn-sm flex items-center gap-1 text-neutral-700 disabled:opacity-35"
+            title="Avançar"
+          >
+            <ArrowRight size={14} />
+            <span className="text-xs">Avançar</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => loadAllData(true)}
             disabled={isLoading}
-            className="btn-secondary btn-icon-md"
-            title="Atualizar Repositório"
+            className="btn-ghost btn-sm flex items-center gap-1 text-neutral-700"
+            title="Recarregar e sincronizar"
           >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-[#FF8000]' : 'text-neutral-600'}`} />
+            <RefreshCw size={14} className={isLoading ? 'animate-spin text-[#FF8000]' : ''} />
+            <span className="text-xs">Recarregar</span>
+          </button>
+
+          <div className="h-4 w-px bg-neutral-200 mx-1" />
+
+          <button
+            type="button"
+            onClick={handleSelectAll}
+            className="btn-ghost btn-sm flex items-center gap-1 text-neutral-600"
+            title="Selecionar todos os ficheiros da pasta"
+          >
+            <CheckSquare size={13} />
+            <span className="text-xs">Selecionar Tudo</span>
           </button>
 
           <button
+            type="button"
+            onClick={handleDeselectAll}
+            disabled={selectedDocIds.length === 0}
+            className="btn-ghost btn-sm flex items-center gap-1 text-neutral-600 disabled:opacity-35"
+            title="Desmarcar seleção"
+          >
+            <Square size={13} />
+            <span className="text-xs">Desmarcar Tudo</span>
+          </button>
+        </div>
+
+        {/* Ações Primárias (Upload, Conectar Cloud) */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsCloudIntegrationsOpen(true)}
+            className="btn-secondary btn-sm flex items-center gap-1.5"
+            title="Repositórios em Nuvem (Google Drive / OneDrive)"
+          >
+            <Cloud size={14} className="text-[#FF8000]" />
+            <span className="text-xs font-semibold">Repositórios Cloud</span>
+            {getStoredGoogleToken() && (
+              <span className="w-2 h-2 rounded-full bg-emerald-500 ml-0.5" title="Google Drive Conectado" />
+            )}
+          </button>
+
+          <button
+            type="button"
             onClick={() => setIsUploadModalOpen(true)}
-            className="btn-primary btn-md"
+            className="btn-primary btn-sm flex items-center gap-1.5 shadow-sm"
           >
-            <Plus className="w-4 h-4" />
-            <span>Novo Documento</span>
+            <UploadCloud size={14} />
+            <span className="text-xs font-bold">Novo Arquivo</span>
           </button>
         </div>
       </div>
 
-      {/* 4 KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Documentos no Repositório */}
-        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-2xs flex items-center justify-between">
-          <div>
-            <p className="text-[12px] font-semibold text-slate-500 uppercase tracking-wider">
-              Documentos no Repositório
-            </p>
-            <h3 className="text-2xl font-bold text-slate-900 mt-1 font-heading">
-              {kpis.total_documents}
-            </h3>
-            <p className="mt-1 text-[11px] text-emerald-600 font-medium flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-              Arquivos homologados
-            </p>
-          </div>
-          <div className="w-11 h-11 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center text-orange-600">
-            <FolderArchive className="w-6 h-6" />
-          </div>
-        </div>
-
-        {/* Card 2: Categorias Homologadas */}
-        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-2xs flex items-center justify-between">
-          <div>
-            <p className="text-[12px] font-semibold text-slate-500 uppercase tracking-wider">
-              Categorias Homologadas
-            </p>
-            <h3 className="text-2xl font-bold text-blue-700 mt-1 font-heading">
-              {kpis.active_categories_count}
-            </h3>
-            <p className="mt-1 text-[11px] text-slate-400">
-              Estruturação ativa
-            </p>
-          </div>
-          <div className="w-11 h-11 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
-            <Layers className="w-6 h-6" />
-          </div>
-        </div>
-
-        {/* Card 3: Armazenamento Total */}
-        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-2xs flex items-center justify-between">
-          <div>
-            <p className="text-[12px] font-semibold text-slate-500 uppercase tracking-wider">
-              Armazenamento S3
-            </p>
-            <h3 className="text-2xl font-bold text-emerald-700 mt-1 font-heading">
-              {kpis.total_storage_formatted}
-            </h3>
-            <p className="mt-1 text-[11px] text-slate-400">
-              Storage Neon Cloud
-            </p>
-          </div>
-          <div className="w-11 h-11 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
-            <HardDrive className="w-6 h-6" />
-          </div>
-        </div>
-
-        {/* Card 4: Uploads no Mês Atual */}
-        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-2xs flex items-center justify-between">
-          <div>
-            <p className="text-[12px] font-semibold text-slate-500 uppercase tracking-wider">
-              Uploads no Mês
-            </p>
-            <h3 className="text-2xl font-bold text-amber-700 mt-1 font-heading">
-              {kpis.monthly_uploads_count}
-            </h3>
-            <p className="mt-1 text-[11px] text-slate-400">
-              Novas adições recentes
-            </p>
-          </div>
-          <div className="w-11 h-11 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
-            <UploadCloud className="w-6 h-6" />
-          </div>
-        </div>
-      </div>
-
-      {/* Navegador Visual de Pastas Organizadas (Pastas Inteligentes) */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <FolderOpen className="w-4 h-4 text-[#FF8000]" />
-            <h4 className="text-xs font-bold text-slate-900 font-heading uppercase tracking-wider">
-              Estrutura de Pastas no Storage Neon
-            </h4>
-          </div>
-          <span className="text-[11px] text-slate-400">
-            Pastas automáticas organizadas por tipo de arquivo
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
-          {FOLDERS.map((folder) => {
-            const Icon = folder.icon;
-            const count = folderCounts[folder.id] || 0;
-            const isSelected = selectedFolder === folder.id;
-
-            return (
-              <button
-                key={folder.id}
-                onClick={() => setSelectedFolder(folder.id)}
-                className={`flex flex-col items-start p-2.5 rounded-lg border text-left transition-all cursor-pointer ${
-                  isSelected 
-                    ? 'bg-[#FFF2E5] border-[#FF8000] text-[#101010] shadow-2xs ring-1 ring-[#FF8000]' 
-                    : 'bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100/80 hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-center justify-between w-full mb-1.5">
-                  <Icon className={`w-4 h-4 ${folder.color}`} />
-                  <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${
-                    isSelected ? 'bg-[#FF8000] text-white' : 'bg-slate-200 text-slate-700'
-                  }`}>
-                    {count}
-                  </span>
-                </div>
-                <span className="text-xs font-semibold truncate w-full font-heading">
-                  {folder.label}
-                </span>
-                <span className="text-[10px] text-slate-400 font-mono truncate w-full">
-                  {folder.path}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Toolbar / Filters */}
-      <div className="bg-white border border-slate-200 rounded-lg p-3.5 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
-        <div className="relative w-full md:w-96">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Pesquisar por título, arquivo, projeto ou cliente..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:bg-white transition"
-          />
-        </div>
-
-        <div className="flex items-center gap-2.5 w-full md:w-auto">
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            <select
-              value={categoryFilter}
-              onChange={e => setCategoryFilter(e.target.value)}
-              className="w-full md:w-48 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:bg-white transition"
-            >
-              <option value="">Todas as Categorias</option>
-              {CATEGORIES.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
-
-          {(searchTerm || categoryFilter) && (
+      {/* =========================================================================
+          2. PAINEL PRINCIPAL: ÁRVORE DE DIRETÓRIOS (ESQUERDA) + EXPLORADOR (DIREITA)
+         ========================================================================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+        
+        {/* -----------------------------------------------------------------------
+            PAINEL ESQUERDO: ÁRVORE DE DIRETÓRIOS (Folder Tree Explorer)
+           ----------------------------------------------------------------------- */}
+        <div className="lg:col-span-3 bg-white border border-[#E2E2DE] rounded-xl overflow-hidden shadow-2xs">
+          
+          {/* Cabeçalho do Caminho / Path Input */}
+          <div className="p-3 bg-[#FAFAF9] border-b border-[#EDEDEA] flex items-center justify-between gap-1.5">
+            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+              <Home size={15} className="text-[#FF8000] shrink-0" />
+              <div className="px-2 py-1 bg-white border border-[#E2E2DE] rounded-md text-[11px] font-mono text-[#101010] truncate w-full shadow-2xs">
+                {currentPath === '/' ? '/assets/ged' : `/assets/ged${currentPath}`}
+              </div>
+            </div>
             <button
-              onClick={() => {
-                setSearchTerm('');
-                setCategoryFilter('');
-              }}
-              className="btn-ghost btn-sm text-slate-500"
+              type="button"
+              onClick={() => setIsTreeExpanded(!isTreeExpanded)}
+              className="btn-ghost btn-sm text-[11px] text-[#737370] hover:text-[#101010] px-2 py-1 shrink-0"
+              title={isTreeExpanded ? 'Reduzir todas as pastas' : 'Expandir todas as pastas'}
             >
-              Limpar Filtros
+              {isTreeExpanded ? 'Reduzir' : 'Expandir'}
             </button>
-          )}
-        </div>
-      </div>
-
-      {/* Error state */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg flex items-start space-x-3 text-xs">
-          <AlertCircle size={18} className="flex-shrink-0 mt-0.5 text-red-500" />
-          <div className="flex-1">
-            <span className="font-semibold block text-red-900">Erro de Carregamento</span>
-            <span>{error}</span>
           </div>
-          <button 
-            onClick={() => loadAllData(true)} 
-            className="underline font-semibold hover:text-red-900 ml-2"
-          >
-            Tentar novamente
-          </button>
-        </div>
-      )}
 
-      {/* Technical Documents Table */}
-      <div className="table-container-erp">
-        <div className="table-scroll-container">
-          <table className="table-erp">
-            <thead>
-              <tr className="table-header-erp">
-                <th className="px-4 text-center w-12">Tipo</th>
-                <th className="px-4">Título & Arquivo</th>
-                <th className="px-4">Versão</th>
-                <th className="px-4">Categoria</th>
-                <th className="px-4">Vínculo</th>
-                <th className="px-4">Tamanho</th>
-                <th className="px-4">Data Envio</th>
-                <th className="px-4 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-xs">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <RefreshCw className="w-5 h-5 text-orange-600 animate-spin" />
-                      <span>Carregando repositório de documentos...</span>
-                    </div>
-                  </td>
-                </tr>
-              ) : filteredDocuments.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <FolderArchive className="w-8 h-8 text-slate-300" />
-                      <p className="text-sm font-semibold text-slate-700 font-heading">Nenhum documento encontrado</p>
-                      <p className="text-xs text-slate-500 max-w-sm">
-                        {searchTerm || categoryFilter 
-                          ? 'Tente ajustar os critérios de pesquisa ou limpar os filtros.' 
-                          : 'Clique no botão acima para realizar o upload do primeiro documento oficial.'}
-                      </p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                filteredDocuments.map(doc => (
-                  <tr 
-                    key={doc.id}
-                    className="table-row-erp hover:bg-slate-50/80 transition-colors group"
-                  >
-                    {/* Icon Column */}
-                    <td className="px-4 text-center cell-nowrap">
-                      {getFileIcon(doc.file_name, doc.mime_type)}
-                    </td>
+          {/* Lista de Pastas e Subpastas */}
+          <div className="p-2 space-y-0.5 max-h-[620px] overflow-y-auto">
+            
+            {/* Raiz: (/home/lecasu-storage/assets) */}
+            <button
+              type="button"
+              onClick={() => navigateTo('/')}
+              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs transition cursor-pointer ${
+                currentPath === '/' 
+                  ? 'bg-[#FFF2E5] text-[#FF8000] font-bold shadow-2xs' 
+                  : 'text-neutral-700 hover:bg-[#FAFAF9]'
+              }`}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <FolderOpen size={16} className={currentPath === '/' ? 'text-[#FF8000]' : 'text-neutral-400'} />
+                <span className="font-heading truncate font-semibold">assets (Raiz)</span>
+              </div>
+              <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded bg-neutral-100 text-neutral-600">
+                {kpis.total_documents}
+              </span>
+            </button>
 
-                    {/* Title & File Name */}
-                    <td className="px-4 min-w-[240px]">
-                      <div className="font-semibold text-slate-900 font-heading">
-                        {doc.title}
+            {/* Subpastas com hierarquia */}
+            {isTreeExpanded && (
+              <div className="pl-4 space-y-0.5 border-l border-neutral-200 ml-3.5 my-1">
+                {SYSTEM_FOLDERS.map((folder) => {
+                  const isActive = currentPath === folder.path;
+                  const count = folderCounts[folder.id] || 0;
+
+                  return (
+                    <button
+                      key={folder.id}
+                      type="button"
+                      onClick={() => navigateTo(folder.path)}
+                      className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs transition cursor-pointer group ${
+                        isActive 
+                          ? 'bg-[#FFF2E5] text-[#FF8000] font-bold ring-1 ring-[#FF8000]/30 shadow-2xs' 
+                          : 'text-neutral-700 hover:bg-[#FAFAF9]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Folder size={15} className={isActive ? 'text-[#FF8000]' : 'text-amber-500'} />
+                        <span className="font-mono text-xs truncate">
+                          {folder.name}
+                        </span>
                       </div>
-                      <div className="text-[11px] text-slate-500 font-mono mt-0.5">
-                        {doc.file_name}
-                      </div>
-                      {doc.description && (
-                        <p className="text-[11px] text-slate-400 mt-0.5 italic">
-                          {doc.description}
-                        </p>
-                      )}
-                    </td>
-
-                    {/* Version */}
-                    <td className="px-4 cell-nowrap">
-                      <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-700 font-mono text-[11px] font-semibold">
-                        {doc.version || 'v1.0'}
+                      <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
+                        isActive ? 'bg-[#FF8000] text-white font-bold' : 'bg-neutral-100 text-neutral-500 group-hover:bg-neutral-200'
+                      }`}>
+                        {count}
                       </span>
-                    </td>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
-                    {/* Category */}
-                    <td className="px-4 cell-nowrap">
-                      {getCategoryBadge(doc.category)}
-                    </td>
+            {/* Informação de Capacidade / Storage */}
+            <div className="mt-4 pt-3 border-t border-neutral-100 px-2 text-[11px] text-neutral-500">
+              <div className="flex items-center justify-between mb-1">
+                <span className="flex items-center gap-1 text-neutral-600 font-medium">
+                  <HardDrive size={13} className="text-[#FF8000]" />
+                  <span>Storage Neon S3</span>
+                </span>
+                <span className="font-mono font-bold text-neutral-800">{kpis.total_storage_formatted}</span>
+              </div>
+              <p className="text-[10px] text-neutral-400">
+                Sincronização em tempo real ativa
+              </p>
+            </div>
 
-                    {/* Link (Project or Client) */}
-                    <td className="px-4 min-w-[160px] cell-nowrap">
-                      {doc.project_name ? (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                          <Briefcase className="w-3 h-3" />
-                          <span>{doc.project_name}</span>
-                        </span>
-                      ) : doc.client_name ? (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
-                          <Building2 className="w-3 h-3" />
-                          <span>{doc.client_name}</span>
-                        </span>
-                      ) : (
-                        <span className="text-slate-400 text-[11px] italic">
-                          Geral
-                        </span>
-                      )}
-                    </td>
+          </div>
+        </div>
 
-                    {/* File Size */}
-                    <td className="px-4 text-slate-600 text-xs font-mono cell-nowrap">
-                      {formatFileSize(doc.file_size_bytes)}
-                    </td>
+        {/* -----------------------------------------------------------------------
+            PAINEL DIREITO: EXPLORADOR DE FICHEIROS E TABELA DE CONTEÚDO
+           ----------------------------------------------------------------------- */}
+        <div className="lg:col-span-9 bg-white border border-[#E2E2DE] rounded-xl shadow-2xs overflow-hidden flex flex-col">
+          
+          {/* Breadcrumb Path & Search Bar */}
+          <div className="p-3 bg-[#FAFAF9] border-b border-[#EDEDEA] flex flex-col sm:flex-row items-center justify-between gap-3">
+            
+            {/* Breadcrumb clicável */}
+            <div className="flex items-center gap-1.5 text-xs text-[#101010] flex-wrap w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={() => navigateTo('/')}
+                className="font-bold text-[#FF8000] hover:underline flex items-center gap-1"
+              >
+                <Home size={14} />
+                <span>assets</span>
+              </button>
+              
+              {currentPath !== '/' && (
+                <>
+                  <ChevronRight size={13} className="text-neutral-400" />
+                  <span className="font-bold text-[#101010] font-mono bg-white px-2 py-0.5 rounded border border-[#E2E2DE]">
+                    {currentPath.replace('/', '')}
+                  </span>
+                </>
+              )}
+            </div>
 
-                    {/* Created Date */}
-                    <td className="px-4 text-slate-500 text-xs cell-nowrap">
-                      {doc.created_at ? (
-                        <span className="flex items-center">
-                          <Calendar size={12} className="mr-1 text-slate-400" />
-                          {new Date(doc.created_at).toLocaleDateString('pt-MZ')}
-                        </span>
-                      ) : '—'}
-                    </td>
+            {/* Search Input */}
+            <div className="relative w-full sm:w-72">
+              <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Pesquisar ficheiro..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 bg-white border border-[#E2E2DE] rounded-lg text-xs text-[#101010] placeholder-neutral-400 focus:outline-none focus:ring-1 focus:ring-[#FF8000] focus:border-[#FF8000]"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          </div>
 
-                    {/* Actions */}
-                    <td className="px-4 td-actions cell-nowrap">
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => handleDownload(doc)}
-                          className="btn-secondary btn-icon-sm"
-                          title="Descarregar Arquivo"
-                        >
-                          <Download className="w-4 h-4 text-slate-600" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(doc)}
-                          disabled={deletingId === doc.id}
-                          className="btn-ghost btn-icon-sm text-rose-500 hover:text-rose-700 hover:bg-rose-50"
-                          title="Excluir Documento"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+          {/* Tabela de Ficheiros e Pastas */}
+          <div className="table-scroll-container min-h-[460px]">
+            <table className="table-erp">
+              <thead>
+                <tr className="table-header-erp text-[11px]">
+                  <th className="w-8 px-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={currentFolderDocuments.length > 0 && selectedDocIds.length === currentFolderDocuments.length}
+                      onChange={(e) => e.target.checked ? handleSelectAll() : handleDeselectAll()}
+                      className="rounded border-[#E2E2DE] text-[#FF8000] focus:ring-[#FF8000] accent-[#FF8000] cursor-pointer"
+                    />
+                  </th>
+                  <th className="px-4">Nome do Ficheiro / Pasta</th>
+                  <th className="px-4 w-28">Tamanho</th>
+                  <th className="px-4 w-36">Data de Envio</th>
+                  <th className="px-4 w-44">Formato / Tipo</th>
+                  <th className="px-4 w-24 text-right">Ações</th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-[#F0F0ED] text-xs">
+                
+                {/* 1. SE ESTIVER DENTRO DE UMA PASTA, MOSTRAR LINHA DE SUBIR NÍVEL (..) */}
+                {currentPath !== '/' && !searchTerm && (
+                  <tr 
+                    onDoubleClick={handleUpLevel}
+                    onClick={handleUpLevel}
+                    className="hover:bg-[#FFF8F2] transition-colors cursor-pointer group select-none"
+                    title="Duplo clique para subir ao diretório anterior"
+                  >
+                    <td className="px-3 text-center"></td>
+                    <td className="px-4 py-2.5 flex items-center gap-2.5">
+                      <Folder size={17} className="text-amber-500 shrink-0" />
+                      <span className="font-mono font-bold text-[#101010] group-hover:text-[#FF8000]">.. (Diretório Anterior)</span>
+                    </td>
+                    <td className="px-4 text-neutral-400 font-mono text-[11px]">—</td>
+                    <td className="px-4 text-neutral-400 text-[11px]">—</td>
+                    <td className="px-4 text-neutral-400 text-[11px]">Pasta de Ficheiros</td>
+                    <td className="px-4 text-right"></td>
+                  </tr>
+                )}
+
+                {/* 2. SE ESTIVER NA RAIZ E NÃO HOUVER BUSCA, LISTAR AS PASTAS PRINCIPAIS */}
+                {currentPath === '/' && !searchTerm && (
+                  SYSTEM_FOLDERS.map((folder) => {
+                    const count = folderCounts[folder.id] || 0;
+                    return (
+                      <tr
+                        key={folder.id}
+                        onDoubleClick={() => navigateTo(folder.path)}
+                        className="hover:bg-[#FFF8F2] transition-colors cursor-pointer group"
+                        title="Duplo clique para abrir a pasta"
+                      >
+                        <td className="px-3 text-center">
+                          <Folder size={16} className="text-amber-500 mx-auto" />
+                        </td>
+                        <td className="px-4 py-3">
+                          <button
+                            type="button"
+                            onClick={() => navigateTo(folder.path)}
+                            className="text-left group-hover:text-[#FF8000] transition"
+                          >
+                            <span className="font-bold text-sm text-[#101010] font-mono group-hover:text-[#FF8000]">
+                              {folder.name}
+                            </span>
+                            <p className="text-[11px] text-[#737370] mt-0.5">
+                              {folder.description}
+                            </p>
+                          </button>
+                        </td>
+                        <td className="px-4 font-mono text-[11px] text-neutral-500">
+                          {count} {count === 1 ? 'ficheiro' : 'ficheiros'}
+                        </td>
+                        <td className="px-4 text-neutral-400 text-[11px]">
+                          Automático
+                        </td>
+                        <td className="px-4 text-neutral-600 text-[11px]">
+                          Pasta do Sistema
+                        </td>
+                        <td className="px-4 text-right">
+                          <button
+                            type="button"
+                            onClick={() => navigateTo(folder.path)}
+                            className="btn-secondary btn-sm text-[11px] py-1 px-2.5"
+                          >
+                            Abrir
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+
+                {/* 3. LISTA DE FICHEIROS DENTRO DA PASTA ATUAL OU RESULTADO DA PESQUISA */}
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={6} className="py-14 text-center text-neutral-400">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <RefreshCw className="w-5 h-5 text-[#FF8000] animate-spin" />
+                        <span className="text-xs">A sincronizar ficheiros com o Neon S3...</span>
                       </div>
                     </td>
                   </tr>
-                ))
+                ) : currentFolderDocuments.length === 0 && (currentPath !== '/' || searchTerm) ? (
+                  <tr>
+                    <td colSpan={6} className="py-14 text-center text-neutral-400">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <FolderArchive className="w-9 h-9 text-neutral-300" />
+                        <p className="text-sm font-bold text-neutral-700 font-heading">Esta pasta está vazia</p>
+                        <p className="text-xs text-neutral-400 max-w-sm">
+                          {searchTerm 
+                            ? 'Nenhum ficheiro encontrado com os termos pesquisados.' 
+                            : 'Clique em "Novo Arquivo" acima para fazer upload para este diretório.'}
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  currentFolderDocuments.map((doc) => {
+                    const isSelected = selectedDocIds.includes(doc.id);
+
+                    return (
+                      <tr 
+                        key={doc.id}
+                        className={`hover:bg-[#FAFAF9] transition-colors group ${isSelected ? 'bg-[#FFF2E5]/50' : ''}`}
+                      >
+                        {/* Checkbox */}
+                        <td className="px-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelectDoc(doc.id)}
+                            className="rounded border-[#E2E2DE] text-[#FF8000] focus:ring-[#FF8000] accent-[#FF8000] cursor-pointer"
+                          />
+                        </td>
+
+                        {/* Nome do Ficheiro */}
+                        <td className="px-4 py-2.5 min-w-[260px]">
+                          <div className="flex items-center space-x-3">
+                            {getFileIcon(doc.file_name, doc.mime_type)}
+                            <div className="min-w-0 flex-1">
+                              <div className="font-bold text-[#101010] font-heading truncate max-w-md group-hover:text-[#FF8000] transition">
+                                {doc.title}
+                              </div>
+                              <div className="text-[11px] text-neutral-400 font-mono truncate">
+                                {doc.file_name}
+                              </div>
+                              {doc.description && (
+                                <p className="text-[11px] text-neutral-400 italic truncate max-w-md">
+                                  {doc.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Tamanho */}
+                        <td className="px-4 font-mono text-[11px] text-neutral-700 whitespace-nowrap">
+                          {formatFileSize(doc.file_size_bytes)}
+                        </td>
+
+                        {/* Data */}
+                        <td className="px-4 text-neutral-500 text-[11px] whitespace-nowrap">
+                          {doc.created_at ? new Date(doc.created_at).toLocaleDateString('pt-MZ', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          }) : '—'}
+                        </td>
+
+                        {/* Formato */}
+                        <td className="px-4 text-neutral-600 text-[11px] whitespace-nowrap">
+                          {getFormatName(doc.file_name, doc.mime_type)}
+                        </td>
+
+                        {/* Ações */}
+                        <td className="px-4 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleDownload(doc)}
+                              className="btn-secondary btn-icon-sm"
+                              title="Descarregar ficheiro"
+                            >
+                              <Download className="w-3.5 h-3.5 text-neutral-600" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(doc)}
+                              disabled={deletingId === doc.id}
+                              className="btn-ghost btn-icon-sm text-rose-500 hover:text-rose-700 hover:bg-rose-50"
+                              title="Eliminar ficheiro"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+
+              </tbody>
+            </table>
+          </div>
+
+          {/* Barra de Status no Rodapé */}
+          <div className="px-4 py-2.5 bg-[#FAFAF9] border-t border-[#EDEDEA] flex flex-wrap items-center justify-between text-xs text-[#737370]">
+            <div className="flex items-center gap-3">
+              <span>
+                <strong>{currentFolderDocuments.length}</strong> ficheiros na pasta atual
+              </span>
+              {selectedDocIds.length > 0 && (
+                <span className="font-semibold text-[#FF8000]">
+                  ({selectedDocIds.length} selecionados)
+                </span>
               )}
-            </tbody>
-          </table>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <ShieldCheck size={14} className="text-emerald-600" />
+              <span>Armazenamento Sincronizado: <strong>{kpis.total_storage_formatted}</strong></span>
+            </div>
+          </div>
+
         </div>
       </div>
 
-      {/* Modal: + Novo Documento / Upload */}
+      {/* =========================================================================
+          3. MODAL: NOVO ARQUIVO / UPLOAD
+         ========================================================================= */}
       {isUploadModalOpen && (
         <div className="modal-overlay-erp animate-in fade-in duration-200">
-          <div className="bg-white border border-slate-200 rounded-lg w-full max-w-lg overflow-hidden shadow-xl">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
               <div className="flex items-center space-x-2.5">
-                <div className="w-8 h-8 rounded bg-orange-100 text-orange-600 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-xl bg-orange-100 text-[#FF8000] flex items-center justify-center">
                   <UploadCloud className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-slate-900 leading-tight">Upload de Documento</h3>
-                  <p className="text-xs text-slate-500">Arquivamento eletrónico com controle de versões</p>
+                  <h3 className="text-base font-bold text-slate-900 leading-tight font-heading">Carregar Novo Arquivo</h3>
+                  <p className="text-xs text-slate-500">Armazenamento direto no Storage Neon S3</p>
                 </div>
               </div>
               <button
@@ -785,7 +948,7 @@ export const GEDView: React.FC = () => {
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Arquivo Físico <span className="text-rose-500">*</span>
                 </label>
-                <div className="border-2 border-dashed border-slate-300 hover:border-orange-500 rounded-lg p-5 text-center cursor-pointer transition-colors bg-slate-50">
+                <div className="border-2 border-dashed border-slate-300 hover:border-orange-500 rounded-xl p-5 text-center cursor-pointer transition-colors bg-slate-50">
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -828,7 +991,7 @@ export const GEDView: React.FC = () => {
                     placeholder="ex: Contrato de Fornecimento Solar"
                     value={formData.title}
                     onChange={e => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
                   />
                 </div>
                 <div>
@@ -840,7 +1003,7 @@ export const GEDView: React.FC = () => {
                     placeholder="v1.0"
                     value={formData.version}
                     onChange={e => setFormData({ ...formData, version: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-xs text-slate-900 font-mono placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 font-mono placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
                   />
                 </div>
               </div>
@@ -853,7 +1016,7 @@ export const GEDView: React.FC = () => {
                 <select
                   value={formData.category}
                   onChange={e => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
                 >
                   {CATEGORIES.map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
@@ -861,7 +1024,7 @@ export const GEDView: React.FC = () => {
                 </select>
               </div>
 
-              {/* Project Link */}
+              {/* Project & Client Link */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -870,7 +1033,7 @@ export const GEDView: React.FC = () => {
                   <select
                     value={formData.project_id}
                     onChange={e => setFormData({ ...formData, project_id: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
                   >
                     <option value="">Nenhum Projeto</option>
                     {projects.map(p => (
@@ -888,7 +1051,7 @@ export const GEDView: React.FC = () => {
                   <select
                     value={formData.client_id}
                     onChange={e => setFormData({ ...formData, client_id: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
                   >
                     <option value="">Nenhum Cliente</option>
                     {clients.map(c => (
@@ -898,22 +1061,8 @@ export const GEDView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Description */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Descrição / Observações Técnicas
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="Informações adicionais sobre o documento ou revisão..."
-                  value={formData.description}
-                  onChange={e => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 resize-none"
-                />
-              </div>
-
               {/* S3 Target Folder Preview */}
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs flex items-center justify-between">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs flex items-center justify-between">
                 <div className="flex items-center gap-2 text-slate-700">
                   <HardDrive className="w-4 h-4 text-[#FF8000]" />
                   <span className="font-semibold">Destino no Storage Neon:</span>
@@ -960,7 +1109,7 @@ export const GEDView: React.FC = () => {
                   ) : (
                     <>
                       <UploadCloud className="w-4 h-4" />
-                      <span>Arquivar Documento</span>
+                      <span>Arquivar Ficheiro</span>
                     </>
                   )}
                 </button>
@@ -970,7 +1119,9 @@ export const GEDView: React.FC = () => {
         </div>
       )}
 
-      {/* Modal: Repositórios em Nuvem (Google Drive & OneDrive) - Simples & Elegante */}
+      {/* =========================================================================
+          4. MODAL: REPOSITÓRIOS EM NUVEM (Google Drive & OneDrive)
+         ========================================================================= */}
       {isCloudIntegrationsOpen && (
         <div className="modal-overlay-erp animate-in fade-in duration-200">
           <div className="bg-white border border-[#E2E2DE] rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl animate-in zoom-in-95">
@@ -1104,26 +1255,9 @@ export const GEDView: React.FC = () => {
         </div>
       )}
 
-      {/* Confirmation Modal for Document Deletion */}
-      <ConfirmationModal
-        isOpen={!!docToDelete}
-        onClose={() => setDocToDelete(null)}
-        onConfirm={handleConfirmDelete}
-        title="Excluir Documento do GED?"
-        description={
-          docToDelete ? (
-            <span>
-              Tem a certeza que deseja excluir permanentemente o documento <strong className="text-[#101010]">"{docToDelete.title}"</strong> ({docToDelete.file_name})? Esta ação não pode ser desfeita.
-            </span>
-          ) : ''
-        }
-        confirmText="Sim, Excluir"
-        cancelText="Cancelar"
-        variant="danger"
-        isLoading={deletingId !== null}
-      />
-
-      {/* Modal do Explorador Real do Google Drive */}
+      {/* =========================================================================
+          5. MODAL: GOOGLE DRIVE EXPLORER
+         ========================================================================= */}
       <GoogleDriveExplorerModal
         isOpen={isGoogleDriveExplorerOpen}
         onClose={() => setIsGoogleDriveExplorerOpen(false)}
@@ -1132,6 +1266,27 @@ export const GEDView: React.FC = () => {
           loadAllData();
           showToast('success', 'Documento Importado do Google Drive', `"${fileName}" foi sincronizado com sucesso para o Repositório e Storage Neon.`);
         }}
+      />
+
+      {/* =========================================================================
+          6. MODAL: CONFIRMAÇÃO DE EXCLUSÃO
+         ========================================================================= */}
+      <ConfirmationModal
+        isOpen={!!docToDelete}
+        onClose={() => setDocToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="Excluir Ficheiro do GED?"
+        description={
+          docToDelete ? (
+            <span>
+              Tem a certeza que deseja excluir permanentemente o ficheiro <strong className="text-[#101010]">"{docToDelete.title}"</strong> ({docToDelete.file_name}) do Storage Neon? Esta ação não pode ser desfeita.
+            </span>
+          ) : ''
+        }
+        confirmText="Sim, Excluir"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={deletingId !== null}
       />
     </div>
   );
