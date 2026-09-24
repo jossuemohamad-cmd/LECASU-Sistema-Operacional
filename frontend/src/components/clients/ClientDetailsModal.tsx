@@ -17,6 +17,7 @@ import {
   Loader2 
 } from 'lucide-react';
 import type { Client, Proposal } from '../../types';
+import { formatMZN } from '../../utils/formatters';
 
 interface ClientDetailsModalProps {
   client: Client | null;
@@ -38,11 +39,7 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({
   if (!isOpen || !client) return null;
 
   const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('pt-MZ', {
-      style: 'currency',
-      currency: 'MZN',
-      minimumFractionDigits: 2
-    }).format(val || 0);
+    return formatMZN(val);
   };
 
   const getStatusBadge = (status: string) => {
@@ -85,7 +82,7 @@ export const ClientDetailsModal: React.FC<ClientDetailsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-[2px] flex items-center justify-center p-4">
+    <div className="modal-overlay-erp animate-in fade-in">
       <div className="bg-white rounded-lg border border-slate-200 shadow-xl max-w-2xl w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">

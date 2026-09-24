@@ -461,7 +461,7 @@ export const SettingsView: React.FC = () => {
 
       {/* MODAL + NOVO UTILIZADOR */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+        <div className="modal-overlay-erp animate-in fade-in">
           <div className="bg-white rounded-lg shadow-xl border border-slate-200 max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95">
             <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
               <div className="flex items-center space-x-2">
@@ -588,7 +588,7 @@ export const SettingsView: React.FC = () => {
 
       {/* MODAL REDEFINIÇÃO ADMINISTRATIVA DE PALAVRA-PASSE */}
       {userToReset && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in">
+        <div className="modal-overlay-erp animate-in fade-in">
           <div className="bg-white rounded-lg shadow-xl border border-slate-200 max-w-md w-full overflow-hidden animate-in zoom-in-95">
             <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
               <div className="flex items-center space-x-2">

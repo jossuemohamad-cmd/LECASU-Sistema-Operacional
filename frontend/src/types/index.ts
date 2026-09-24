@@ -108,13 +108,53 @@ export interface Invoice {
 }
 
 export interface DashboardKPIs {
+  // Clients & Commercial
   active_clients_count: number;
-  active_projects_count: number;
+  total_proposals_count: number;
   open_proposals_count: number;
+  accepted_proposals_count: number;
+  proposals_total_amount: number;
+
+  // Projects & Technical Operations
+  total_projects_count: number;
+  active_projects_count: number;
+  completed_projects_count: number;
+  average_project_progress: number;
+  total_tasks_count: number;
+  pending_tasks_count: number;
+  completed_tasks_count: number;
+  technicians_count: number;
+
+  // Financial Performance
   total_invoiced: number;
   total_received: number;
   pending_amount: number;
-  average_project_progress: number;
+  invoices_paid_count: number;
+  invoices_pending_count: number;
+
+  // Services Catalog
+  total_services_count: number;
+  active_services_count: number;
+
+  // Suppliers & Procurement
+  suppliers_count: number;
+  purchase_orders_count: number;
+  pending_purchase_orders_count: number;
+  total_purchases_amount: number;
+  pending_purchases_amount: number;
+
+  // Human Resources (RH)
+  employees_count: number;
+  active_employees_count: number;
+  total_payroll_monthly: number;
+  active_leaves_count: number;
+
+  // GED & Repositories
+  documents_count: number;
+
+  // System & Users
+  system_users_count: number;
+  active_users_count: number;
 }
 
 export interface DashboardRecentProject {

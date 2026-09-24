@@ -37,6 +37,7 @@ import {
 } from '../../services/api';
 import { Toast } from '../common/Toast';
 import { ConfirmationModal } from '../common/ConfirmationModal';
+import { formatMZN } from '../../utils/formatters';
 
 const CATEGORIES = [
   'Equipamentos Solares',
@@ -113,11 +114,7 @@ export const SuppliersView: React.FC = () => {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('pt-MZ', {
-      style: 'currency',
-      currency: 'MZN',
-      minimumFractionDigits: 2
-    }).format(amount || 0);
+    return formatMZN(amount);
   };
 
   const loadData = async (showToast = false) => {
@@ -730,7 +727,7 @@ export const SuppliersView: React.FC = () => {
 
       {/* MODAL NOVO FORNECEDOR */}
       {isSupplierModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in">
+        <div className="modal-overlay-erp animate-in fade-in">
           <div className="bg-white rounded-lg shadow-xl border border-slate-200 max-w-lg w-full overflow-hidden animate-in zoom-in-95">
             <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
               <div className="flex items-center space-x-2">
@@ -880,7 +877,7 @@ export const SuppliersView: React.FC = () => {
 
       {/* MODAL NOVA ORDEM DE COMPRA */}
       {isPurchaseModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in">
+        <div className="modal-overlay-erp animate-in fade-in">
           <div className="bg-white rounded-lg shadow-xl border border-slate-200 max-w-lg w-full overflow-hidden animate-in zoom-in-95">
             <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
               <div className="flex items-center space-x-2">

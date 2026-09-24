@@ -17,6 +17,7 @@ import {
 import type { Service, ServiceCreateInput, ServiceKPIs, ToastMessage } from '../../types';
 import { fetchServices, fetchServiceCategories, fetchServiceKPIs, createService, updateService } from '../../services/api';
 import { Toast } from '../common/Toast';
+import { formatMZN } from '../../utils/formatters';
 
 const PREDEFINED_CATEGORIES = [
   'Energia Solar',
@@ -223,15 +224,6 @@ export const ServicesView: React.FC = () => {
       console.error('Erro ao alternar status:', err);
       addToast('error', 'Erro ao alterar status', err.message);
     }
-  };
-
-  // Format currency
-  const formatMZN = (val: number | undefined | null) => {
-    const amount = val || 0;
-    return new Intl.NumberFormat('pt-MZ', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount) + ' MZN';
   };
 
   return (
@@ -525,7 +517,7 @@ export const ServicesView: React.FC = () => {
 
       {/* MODAL DE CRIAÇÃO / EDIÇÃO DE SERVIÇO */}
       {(isCreateModalOpen || editingService) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+        <div className="modal-overlay-erp animate-in fade-in">
           <div className="bg-white rounded-lg shadow-xl border border-slate-200 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95">
             <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
               <div className="flex items-center space-x-2">

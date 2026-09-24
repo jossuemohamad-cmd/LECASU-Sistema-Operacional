@@ -5,19 +5,27 @@ import {
   Wallet, 
   Clock, 
   RefreshCw, 
-  Plus, 
   CheckCircle2, 
   AlertCircle, 
   ChevronRight, 
   ArrowUpRight,
   Calendar,
   ListTodo,
-  DollarSign
+  TrendingUp,
+  Truck,
+  HardHat,
+  UserCheck,
+  FolderArchive,
+  Wrench,
+  Layers,
+  FileText,
+  Receipt
 } from 'lucide-react';
 
 import type { DashboardOverview, ToastMessage } from '../../types';
 import { fetchDashboardOverview } from '../../services/api';
 import { Toast } from '../common/Toast';
+import { formatMZN, formatDate } from '../../utils/formatters';
 
 interface DashboardViewProps {
   onNavigate: (tab: string) => void;
@@ -48,12 +56,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       const res = await fetchDashboardOverview();
       setData(res);
       if (showToast) {
-        addToast('success', 'Painel atualizado', 'Dados sincronizados com o PostgreSQL em tempo real.');
+        addToast('success', 'Painel atualizado', 'Estatísticas consolidadas de todos os módulos.');
       }
     } catch (err: any) {
       console.error('Erro ao carregar dashboard:', err);
       setError(err.message || 'Falha ao conectar com o servidor API.');
-      addToast('error', 'Falha na sincronização', 'Não foi possível carregar os dados do dashboard.');
+      addToast('error', 'Falha na sincronização', 'Não foi possível carregar as estatísticas.');
     } finally {
       setIsLoading(false);
     }
@@ -63,31 +71,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     loadDashboardData();
   }, []);
 
-  // Format currency in MZN (Meticais)
-  const formatMZN = (val: number | undefined | null) => {
-    const amount = val || 0;
-    return new Intl.NumberFormat('pt-MZ', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount) + ' MZN';
-  };
-
-  // Format friendly date
-  const formatDate = (dateStr: string | null | undefined) => {
-    if (!dateStr) return 'Sem prazo';
-    try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('pt-MZ', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      });
-    } catch {
-      return dateStr;
-    }
-  };
-
-  // Today formatted header string
   const getTodayFormatted = () => {
     const today = new Date();
     return today.toLocaleDateString('pt-MZ', {
@@ -102,7 +85,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     switch (status?.toUpperCase()) {
       case 'PAID':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
             Pago
           </span>
@@ -110,46 +93,46 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       case 'ISSUED':
       case 'PENDING':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5"></span>
             Pendente
           </span>
         );
       case 'CANCELLED':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-neutral-100 text-neutral-600 border border-neutral-200">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-neutral-100 text-neutral-600 border border-neutral-200">
             Cancelada
           </span>
         );
       case 'IN_PROGRESS':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-1.5"></span>
             Em Execução
           </span>
         );
       case 'COMPLETED':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
             Concluído
           </span>
         );
       case 'PLANNING':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">
             Planeamento
           </span>
         );
       case 'TODO':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-neutral-100 text-neutral-700 border border-neutral-200">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-neutral-100 text-neutral-700 border border-neutral-200">
             A Fazer
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-neutral-100 text-neutral-700">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-neutral-100 text-neutral-700">
             {status}
           </span>
         );
@@ -158,33 +141,67 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
   const kpis = data?.kpis || {
     active_clients_count: 0,
-    active_projects_count: 0,
+    total_proposals_count: 0,
     open_proposals_count: 0,
+    accepted_proposals_count: 0,
+    proposals_total_amount: 0,
+    total_projects_count: 0,
+    active_projects_count: 0,
+    completed_projects_count: 0,
+    average_project_progress: 0,
+    total_tasks_count: 0,
+    pending_tasks_count: 0,
+    completed_tasks_count: 0,
+    technicians_count: 0,
     total_invoiced: 0,
     total_received: 0,
     pending_amount: 0,
-    average_project_progress: 0
+    invoices_paid_count: 0,
+    invoices_pending_count: 0,
+    total_services_count: 0,
+    active_services_count: 0,
+    suppliers_count: 0,
+    purchase_orders_count: 0,
+    pending_purchase_orders_count: 0,
+    total_purchases_amount: 0,
+    pending_purchases_amount: 0,
+    employees_count: 0,
+    active_employees_count: 0,
+    total_payroll_monthly: 0,
+    active_leaves_count: 0,
+    documents_count: 0,
+    system_users_count: 0,
+    active_users_count: 0
   };
+
+  const collectionRate = kpis.total_invoiced > 0 
+    ? Math.min(100, Math.round((kpis.total_received / kpis.total_invoiced) * 100)) 
+    : 0;
+
+  const taskCompletionRate = kpis.total_tasks_count > 0
+    ? Math.round((kpis.completed_tasks_count / kpis.total_tasks_count) * 100)
+    : 0;
 
   return (
     <div className="space-y-6">
-      {/* 
-        HEADER DE BOAS-VINDAS & AÇÕES DO DASHBOARD (8-Point Grid Spacing)
-      */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between pb-6 border-b border-[#E2E2DE] gap-4">
+      {/* Toast Notification Container */}
+      <Toast toasts={toasts} onDismiss={removeToast} />
+
+      {/* HEADER PRINCIPAL */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between pb-5 border-b border-[#E2E2DE] gap-4">
         <div>
           <div className="flex items-center space-x-3">
             <h1 className="text-2xl font-bold text-[#101010] tracking-tight font-heading">
-              Visão Geral Operacional & Financeira
+              Painel Central & Estatísticas do Sistema
             </h1>
             <span className="badge-lecasu-orange flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-[#FF8000] animate-pulse"></span>
-              Tempo Real
+              PostgreSQL Neon Online
             </span>
           </div>
           <p className="text-xs text-[#737370] mt-1 capitalize flex items-center gap-2">
             <Calendar size={14} className="text-[#FF8000]" />
-            {getTodayFormatted()} • Painel central de inteligência operacional
+            {getTodayFormatted()} • Indicadores consolidados de todos os 10 módulos corporativos
           </p>
         </div>
 
@@ -193,24 +210,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             onClick={() => loadDashboardData(true)}
             disabled={isLoading}
             className="btn-secondary btn-md"
-            title="Sincronizar indicadores em tempo real"
+            title="Sincronizar estatísticas em tempo real"
           >
             <RefreshCw size={15} className={isLoading ? 'animate-spin text-[#FF8000]' : 'text-neutral-600'} />
-            <span>{isLoading ? 'Sincronizando...' : 'Atualizar'}</span>
+            <span>{isLoading ? 'Sincronizando...' : 'Atualizar Dados'}</span>
           </button>
         </div>
       </div>
 
-      {/* 
-        BARRA DE AÇÕES RÁPIDAS (High-Density ERP Toolbar)
-      */}
+      {/* ATALHOS RÁPIDOS OPERACIONAIS */}
       <div className="bg-white border border-[#E2E2DE] rounded-xl p-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center space-x-2">
           <div className="w-8 h-8 rounded-lg bg-[#FFF2E5] flex items-center justify-center text-[#FF8000]">
             <ArrowUpRight size={16} />
           </div>
           <span className="text-xs font-bold text-[#101010] uppercase tracking-wider font-heading">
-            Atalhos Operacionais:
+            Acesso Rápido aos Módulos:
           </span>
         </div>
         
@@ -219,22 +234,50 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             onClick={() => onNavigate('clientes')}
             className="btn-secondary btn-sm hover:border-[#FF8000] hover:text-[#FF8000] hover:bg-[#FFF2E5]"
           >
-            <Plus size={14} className="text-[#FF8000]" />
-            <span>Novo Cliente / Proposta</span>
+            <Users size={13} className="text-[#FF8000]" />
+            <span>Clientes & Propostas</span>
           </button>
           <button
             onClick={() => onNavigate('projetos')}
             className="btn-secondary btn-sm hover:border-[#FF8000] hover:text-[#FF8000] hover:bg-[#FFF2E5]"
           >
-            <Briefcase size={14} className="text-[#FF8000]" />
-            <span>Projetos & Tarefas</span>
+            <Briefcase size={13} className="text-[#FF8000]" />
+            <span>Projetos & Obras</span>
           </button>
           <button
             onClick={() => onNavigate('financeiro')}
             className="btn-secondary btn-sm hover:border-[#FF8000] hover:text-[#FF8000] hover:bg-[#FFF2E5]"
           >
-            <Wallet size={14} className="text-[#FF8000]" />
-            <span>Módulo Financeiro</span>
+            <Wallet size={13} className="text-[#FF8000]" />
+            <span>Financeiro & Caixa</span>
+          </button>
+          <button
+            onClick={() => onNavigate('equipa')}
+            className="btn-secondary btn-sm hover:border-[#FF8000] hover:text-[#FF8000] hover:bg-[#FFF2E5]"
+          >
+            <HardHat size={13} className="text-[#FF8000]" />
+            <span>Equipa Técnica</span>
+          </button>
+          <button
+            onClick={() => onNavigate('fornecedores')}
+            className="btn-secondary btn-sm hover:border-[#FF8000] hover:text-[#FF8000] hover:bg-[#FFF2E5]"
+          >
+            <Truck size={13} className="text-[#FF8000]" />
+            <span>Fornecedores</span>
+          </button>
+          <button
+            onClick={() => onNavigate('rh')}
+            className="btn-secondary btn-sm hover:border-[#FF8000] hover:text-[#FF8000] hover:bg-[#FFF2E5]"
+          >
+            <UserCheck size={13} className="text-[#FF8000]" />
+            <span>RH & Salários</span>
+          </button>
+          <button
+            onClick={() => onNavigate('ged')}
+            className="btn-secondary btn-sm hover:border-[#FF8000] hover:text-[#FF8000] hover:bg-[#FFF2E5]"
+          >
+            <FolderArchive size={13} className="text-[#FF8000]" />
+            <span>GED Documentos</span>
           </button>
         </div>
       </div>
@@ -248,360 +291,531 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             <span>{error}</span>
           </div>
           <button 
-            onClick={() => loadDashboardData(true)} 
-            className="underline font-semibold hover:text-rose-900 ml-2"
+            onClick={() => loadDashboardData()} 
+            className="btn-secondary btn-sm text-xs text-rose-700 hover:bg-rose-100"
           >
-            Tentar novamente
+            Tentar Novamente
           </button>
         </div>
       )}
 
       {/* 
-        GRADE DE 4 CARDS DE KPI (Tremor / Shadcn High-Density Style)
-        - Padding: 20px a 24px (p-5 / p-6)
-        - Border radius: 12px (rounded-xl)
-        - Border: 1px border-[#E2E2DE]
+        SEÇÃO 1: PULSO FINANCEIRO & COMERCIAL (4 Cards Executivos)
       */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        {/* KPI 1: Faturação Consolidada */}
-        <div className="bg-white p-5 md:p-6 rounded-xl border border-[#E2E2DE] shadow-xs hover:border-[#D4D4D0] transition flex flex-col justify-between">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-semibold text-[#737370] uppercase tracking-wider font-heading">
-                Faturação Consolidada
-              </p>
-              <h3 className="text-2xl font-bold text-[#101010] mt-1.5 font-heading tracking-tight">
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-[#737370] font-heading flex items-center gap-1.5">
+            <TrendingUp size={15} className="text-[#FF8000]" />
+            Performance Financeira & Comercial
+          </h2>
+          <span className="text-[11px] text-neutral-500 font-medium">Valores em Meticais (MZN)</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* 1. Total Faturado */}
+          <div className="card-erp p-5 hover:border-[#FF8000]/40 transition-all flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-[#737370]">Faturação Emitida</span>
+              <div className="w-8 h-8 rounded-lg bg-[#FFF2E5] text-[#FF8000] flex items-center justify-center">
+                <Wallet size={16} />
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="text-xl font-extrabold text-[#101010] font-heading tracking-tight cell-nowrap">
                 {formatMZN(kpis.total_invoiced)}
-              </h3>
-            </div>
-            <div className="w-10 h-10 rounded-lg bg-[#FFF2E5] border border-[#FFEACC] flex items-center justify-center text-[#FF8000] flex-shrink-0">
-              <DollarSign size={20} />
+              </div>
+              <div className="text-[11px] text-neutral-500 mt-1 flex items-center justify-between">
+                <span>{kpis.invoices_paid_count + kpis.invoices_pending_count} faturas no total</span>
+                <span className="text-emerald-700 font-semibold">{kpis.invoices_paid_count} liquidadas</span>
+              </div>
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-[#EDEDEA] flex items-center justify-between text-xs">
-            <span className="text-[#737370]">Recebido em caixa:</span>
-            <span className="font-semibold text-emerald-600 flex items-center gap-1 font-heading">
-              <CheckCircle2 size={13} />
-              {formatMZN(kpis.total_received)}
-            </span>
-          </div>
-        </div>
 
-        {/* KPI 2: Projetos em Execução */}
-        <div className="bg-white p-5 md:p-6 rounded-xl border border-[#E2E2DE] shadow-xs hover:border-[#D4D4D0] transition flex flex-col justify-between">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-semibold text-[#737370] uppercase tracking-wider font-heading">
-                Projetos em Execução
-              </p>
-              <h3 className="text-2xl font-bold text-[#101010] mt-1.5 font-heading tracking-tight">
-                {kpis.active_projects_count} <span className="text-xs font-normal text-[#737370]">ativos</span>
-              </h3>
+          {/* 2. Total Recebido */}
+          <div className="card-erp p-5 hover:border-emerald-400 transition-all flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-[#737370]">Receitas em Caixa</span>
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <CheckCircle2 size={16} />
+              </div>
             </div>
-            <div className="w-10 h-10 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0">
-              <Briefcase size={20} />
-            </div>
-          </div>
-          <div className="mt-4 pt-3 border-t border-[#EDEDEA]">
-            <div className="flex items-center justify-between text-xs mb-1.5">
-              <span className="text-[#737370]">Avanço médio:</span>
-              <span className="font-bold text-blue-700 font-heading">{kpis.average_project_progress}%</span>
-            </div>
-            <div className="w-full bg-[#EDEDEA] rounded-full h-1.5 overflow-hidden">
-              <div 
-                className="bg-[#FF8000] h-1.5 rounded-full transition-all duration-500" 
-                style={{ width: `${Math.min(100, Math.max(0, kpis.average_project_progress))}%` }}
-              />
+            <div className="mt-3">
+              <div className="text-xl font-extrabold text-emerald-700 font-heading tracking-tight cell-nowrap">
+                {formatMZN(kpis.total_received)}
+              </div>
+              <div className="text-[11px] text-neutral-500 mt-1 flex items-center justify-between">
+                <span>Taxa de Liquidação</span>
+                <span className="font-bold text-emerald-700">{collectionRate}%</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* KPI 3: Clientes na Carteira */}
-        <div className="bg-white p-5 md:p-6 rounded-xl border border-[#E2E2DE] shadow-xs hover:border-[#D4D4D0] transition flex flex-col justify-between">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-semibold text-[#737370] uppercase tracking-wider font-heading">
-                Clientes na Carteira
-              </p>
-              <h3 className="text-2xl font-bold text-[#101010] mt-1.5 font-heading tracking-tight">
-                {kpis.active_clients_count} <span className="text-xs font-normal text-[#737370]">registados</span>
-              </h3>
+          {/* 3. Pendente / A Receber */}
+          <div className="card-erp p-5 hover:border-amber-400 transition-all flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-[#737370]">Contas a Receber</span>
+              <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                <Clock size={16} />
+              </div>
             </div>
-            <div className="w-10 h-10 rounded-lg bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600 flex-shrink-0">
-              <Users size={20} />
-            </div>
-          </div>
-          <div className="mt-4 pt-3 border-t border-[#EDEDEA] flex items-center justify-between text-xs">
-            <span className="text-[#737370]">Propostas ativas:</span>
-            <span className="font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-100">
-              {kpis.open_proposals_count} abertas
-            </span>
-          </div>
-        </div>
-
-        {/* KPI 4: Contas a Receber / Pendentes */}
-        <div className="bg-white p-5 md:p-6 rounded-xl border border-[#E2E2DE] shadow-xs hover:border-[#D4D4D0] transition flex flex-col justify-between">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-semibold text-[#737370] uppercase tracking-wider font-heading">
-                Contas a Receber
-              </p>
-              <h3 className="text-2xl font-bold text-amber-600 mt-1.5 font-heading tracking-tight">
+            <div className="mt-3">
+              <div className="text-xl font-extrabold text-amber-700 font-heading tracking-tight cell-nowrap">
                 {formatMZN(kpis.pending_amount)}
-              </h3>
-            </div>
-            <div className="w-10 h-10 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0">
-              <Clock size={20} />
+              </div>
+              <div className="text-[11px] text-neutral-500 mt-1 flex items-center justify-between">
+                <span>Faturas Pendentes</span>
+                <span className="font-bold text-amber-700">{kpis.invoices_pending_count} faturas</span>
+              </div>
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-[#EDEDEA] flex items-center justify-between text-xs">
-            <span className="text-[#737370]">Fluxo pendente:</span>
-            <span className="font-semibold text-[#101010]">
-              {kpis.pending_amount > 0 ? 'Cobranças ativas' : 'Sem pendências'}
-            </span>
+
+          {/* 4. Pipeline Comercial / Propostas */}
+          <div className="card-erp p-5 hover:border-[#FF8000]/40 transition-all flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-[#737370]">Propostas & Pipeline</span>
+              <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+                <FileText size={16} />
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="text-xl font-extrabold text-purple-800 font-heading tracking-tight cell-nowrap">
+                {formatMZN(kpis.proposals_total_amount)}
+              </div>
+              <div className="text-[11px] text-neutral-500 mt-1 flex items-center justify-between">
+                <span>{kpis.open_proposals_count} em negociação</span>
+                <span className="text-purple-700 font-semibold">{kpis.accepted_proposals_count} aprovadas</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* 
-        TABELAS DE DADOS CORPORATIVAS (Padrão 48px–52px row height, 16px px cells)
+        SEÇÃO 2: PULSO OPERACIONAL, ENGENHARIA & RECURSOS (4 Cards Departamentos)
+      */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-[#737370] font-heading flex items-center gap-1.5">
+            <Briefcase size={15} className="text-[#FF8000]" />
+            Operações, Engenharia, Fornecedores & Recursos Humanos
+          </h2>
+          <span className="text-[11px] text-neutral-500 font-medium">Capacidade Operacional</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* 1. Projetos Ativos */}
+          <div className="card-erp p-5 hover:border-[#FF8000]/40 transition-all flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-[#737370]">Projetos & Obras</span>
+              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                <Briefcase size={16} />
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="flex items-baseline space-x-2">
+                <span className="text-2xl font-extrabold text-[#101010] font-heading">
+                  {kpis.active_projects_count}
+                </span>
+                <span className="text-xs text-neutral-500 font-medium">em execução</span>
+              </div>
+              <div className="mt-2">
+                <div className="flex justify-between text-[11px] text-neutral-500 mb-1">
+                  <span>Progresso Médio</span>
+                  <span className="font-bold text-[#101010]">{kpis.average_project_progress}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-neutral-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-[#FF8000] rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, Math.max(0, kpis.average_project_progress))}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Equipe Técnica & Tarefas */}
+          <div className="card-erp p-5 hover:border-[#FF8000]/40 transition-all flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-[#737370]">Equipa & Intervenções</span>
+              <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                <HardHat size={16} />
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="flex items-baseline space-x-2">
+                <span className="text-2xl font-extrabold text-[#101010] font-heading">
+                  {kpis.technicians_count}
+                </span>
+                <span className="text-xs text-neutral-500 font-medium">técnicos ativos</span>
+              </div>
+              <div className="mt-2">
+                <div className="flex justify-between text-[11px] text-neutral-500 mb-1">
+                  <span>Conclusão de Tarefas</span>
+                  <span className="font-bold text-neutral-800">{taskCompletionRate}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-neutral-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                    style={{ width: `${taskCompletionRate}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Fornecedores & Compras */}
+          <div className="card-erp p-5 hover:border-[#FF8000]/40 transition-all flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-[#737370]">Compras & Suprimentos</span>
+              <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+                <Truck size={16} />
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="flex items-baseline space-x-2">
+                <span className="text-2xl font-extrabold text-[#101010] font-heading">
+                  {kpis.purchase_orders_count}
+                </span>
+                <span className="text-xs text-neutral-500 font-medium">ordens emitidas</span>
+              </div>
+              <div className="text-[11px] text-neutral-500 mt-2 flex items-center justify-between">
+                <span>Total em Compras</span>
+                <span className="font-bold text-neutral-800 cell-nowrap">{formatMZN(kpis.total_purchases_amount)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 4. Recursos Humanos & GED */}
+          <div className="card-erp p-5 hover:border-[#FF8000]/40 transition-all flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-[#737370]">Pessoal & Documentos</span>
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <UserCheck size={16} />
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="flex items-baseline space-x-2">
+                <span className="text-2xl font-extrabold text-[#101010] font-heading">
+                  {kpis.active_employees_count}
+                </span>
+                <span className="text-xs text-neutral-500 font-medium">colaboradores ({kpis.documents_count} docs GED)</span>
+              </div>
+              <div className="text-[11px] text-neutral-500 mt-2 flex items-center justify-between">
+                <span>Folha Salarial Base</span>
+                <span className="font-bold text-neutral-800 cell-nowrap">{formatMZN(kpis.total_payroll_monthly)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 
+        SEÇÃO 3: TABELAS DE DADOS DE ALTA DENSIDADE (Projetos Recentes & Faturas)
       */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
-        {/* TABELA 1: PROJETOS EM ANDAMENTO */}
-        <div className="table-container-erp flex flex-col">
-          <div className="p-4 border-b border-[#E2E2DE] flex items-center justify-between bg-[#FAFAF9]">
-            <div className="flex items-center space-x-2">
-              <Briefcase size={16} className="text-[#FF8000]" />
-              <h2 className="text-sm font-bold text-[#101010] font-heading">Projetos em Andamento</h2>
-            </div>
-            <button
-              onClick={() => onNavigate('projetos')}
-              className="text-xs font-semibold text-[#FF8000] hover:text-[#E67300] flex items-center gap-1 transition"
-            >
-              Ver todos ({data?.recent_projects?.length || 0})
-              <ChevronRight size={14} />
-            </button>
-          </div>
-
-          <div className="table-scroll-container">
-            {!data?.recent_projects || data.recent_projects.length === 0 ? (
-              <div className="p-8 text-center">
-                <Briefcase size={32} className="mx-auto text-neutral-300 mb-2" />
-                <p className="text-xs font-semibold text-neutral-700 font-heading">Nenhum projeto cadastrado</p>
-                <p className="text-xs text-neutral-500 mt-1 mb-4">
-                  Converta propostas aprovadas ou crie um projeto operacional.
-                </p>
-                <button
-                  onClick={() => onNavigate('projetos')}
-                  className="btn-primary btn-sm"
-                >
-                  Abrir Módulo de Projetos
-                </button>
+        {/* PROJETOS EM ANDAMENTO */}
+        <div className="card-erp p-5 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between pb-4 border-b border-[#E2E2DE]">
+              <div className="flex items-center space-x-2">
+                <Briefcase size={16} className="text-[#FF8000]" />
+                <h3 className="font-heading font-bold text-sm text-[#101010]">
+                  Projetos Recentes & Status
+                </h3>
               </div>
-            ) : (
+              <button 
+                onClick={() => onNavigate('projetos')}
+                className="text-xs font-semibold text-[#FF8000] hover:text-[#E67300] flex items-center gap-1 group"
+              >
+                <span>Ver Todos ({kpis.total_projects_count})</span>
+                <ChevronRight size={14} className="group-hover:translate-x-0.5 transition" />
+              </button>
+            </div>
+
+            <div className="table-scroll-container mt-2">
               <table className="table-erp">
                 <thead>
                   <tr className="table-header-erp">
-                    <th className="px-4">Projeto & Código</th>
-                    <th className="px-4">Cliente</th>
-                    <th className="px-4 w-36">Progresso</th>
-                    <th className="px-4">Status</th>
-                    <th className="px-4 text-right">Ação</th>
+                    <th>Código</th>
+                    <th>Projeto / Obra</th>
+                    <th>Progresso</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#EDEDEA]">
-                  {data.recent_projects.map((proj) => (
-                    <tr key={proj.id} className="table-row-erp">
-                      <td className="px-4 min-w-[200px]">
-                        <div className="font-semibold text-[#101010] font-heading">
-                          {proj.name}
-                        </div>
-                        <span className="font-mono text-[10px] text-neutral-500 bg-[#EDEDEA] px-1.5 py-0.5 rounded mt-0.5 inline-block cell-nowrap">
-                          {proj.code || 'PRJ-S/N'}
-                        </span>
-                      </td>
-                      <td className="px-4 min-w-[140px] text-neutral-700">
-                        {proj.client_name || 'Geral'}
-                      </td>
-                      <td className="px-4 w-36 min-w-[130px]">
-                        <div className="flex items-center justify-between text-[11px] mb-1 cell-nowrap">
-                          <span className="text-neutral-500">{proj.completed_tasks}/{proj.total_tasks}</span>
-                          <span className="font-bold text-neutral-700 font-heading ml-2">{proj.progress_percent}%</span>
-                        </div>
-                        <div className="w-full bg-[#EDEDEA] rounded-full h-1.5 overflow-hidden">
-                          <div
-                            className={`h-1.5 rounded-full ${
-                              proj.progress_percent === 100 ? 'bg-emerald-500' : 'bg-[#FF8000]'
-                            }`}
-                            style={{ width: `${proj.progress_percent}%` }}
-                          />
-                        </div>
-                      </td>
-                      <td className="px-4 cell-nowrap">
-                        {getStatusBadge(proj.status)}
-                      </td>
-                      <td className="px-4 td-actions cell-nowrap">
-                        <button
-                          onClick={() => onNavigate('projetos')}
-                          className="btn-ghost btn-sm text-[#FF8000] hover:text-[#E67300]"
-                          title="Ver detalhes"
-                        >
-                          Detalhes
-                          <ChevronRight size={14} />
-                        </button>
+                  {(!data?.recent_projects || data.recent_projects.length === 0) ? (
+                    <tr>
+                      <td colSpan={4} className="py-8 text-center text-xs text-neutral-500">
+                        Nenhum projeto registado. Clique em Atalhos para criar.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    data.recent_projects.map((proj) => (
+                      <tr key={proj.id} className="table-row-erp">
+                        <td className="cell-nowrap">
+                          <span className="font-mono text-[11px] font-bold bg-[#EDEDEA] px-2 py-0.5 rounded text-[#101010]">
+                            {proj.code || `PRJ-${proj.id}`}
+                          </span>
+                        </td>
+                        <td className="min-w-[180px]">
+                          <div className="font-heading font-semibold text-[#101010] text-xs">
+                            {proj.name}
+                          </div>
+                          <div className="text-[11px] text-[#737370]">
+                            {proj.client_name || 'Sem cliente associado'}
+                          </div>
+                        </td>
+                        <td className="cell-nowrap">
+                          <div className="w-24">
+                            <div className="flex justify-between text-[10px] text-neutral-600 mb-1">
+                              <span>{proj.completed_tasks}/{proj.total_tasks}</span>
+                              <span className="font-bold">{proj.progress_percent}%</span>
+                            </div>
+                            <div className="w-full h-1.5 bg-neutral-200 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-[#FF8000] rounded-full"
+                                style={{ width: `${proj.progress_percent}%` }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+                        <td className="cell-nowrap">
+                          {getStatusBadge(proj.status)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
-            )}
+            </div>
           </div>
         </div>
 
-        {/* TABELA 2: ÚLTIMAS FATURAS & COBRANÇAS */}
-        <div className="table-container-erp flex flex-col">
-          <div className="p-4 border-b border-[#E2E2DE] flex items-center justify-between bg-[#FAFAF9]">
-            <div className="flex items-center space-x-2">
-              <Wallet size={16} className="text-emerald-600" />
-              <h2 className="text-sm font-bold text-[#101010] font-heading">Últimas Faturas & Cobranças</h2>
-            </div>
-            <button
-              onClick={() => onNavigate('financeiro')}
-              className="text-xs font-semibold text-[#FF8000] hover:text-[#E67300] flex items-center gap-1 transition"
-            >
-              Ver finanças
-              <ChevronRight size={14} />
-            </button>
-          </div>
-
-          <div className="table-scroll-container">
-            {!data?.recent_invoices || data.recent_invoices.length === 0 ? (
-              <div className="p-8 text-center">
-                <Wallet size={32} className="mx-auto text-neutral-300 mb-2" />
-                <p className="text-xs font-semibold text-neutral-700 font-heading">Nenhuma fatura recente</p>
-                <p className="text-xs text-neutral-500 mt-1 mb-4">
-                  Emita faturas de serviços para acompanhar pagamentos.
-                </p>
-                <button
-                  onClick={() => onNavigate('financeiro')}
-                  className="btn-dark btn-sm"
-                >
-                  Abrir Módulo Financeiro
-                </button>
+        {/* FATURAS RECENTES & RECEBIMENTOS */}
+        <div className="card-erp p-5 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between pb-4 border-b border-[#E2E2DE]">
+              <div className="flex items-center space-x-2">
+                <Receipt size={16} className="text-[#FF8000]" />
+                <h3 className="font-heading font-bold text-sm text-[#101010]">
+                  Faturas Comerciais Recentes
+                </h3>
               </div>
-            ) : (
+              <button 
+                onClick={() => onNavigate('financeiro')}
+                className="text-xs font-semibold text-[#FF8000] hover:text-[#E67300] flex items-center gap-1 group"
+              >
+                <span>Gestão Financeira</span>
+                <ChevronRight size={14} className="group-hover:translate-x-0.5 transition" />
+              </button>
+            </div>
+
+            <div className="table-scroll-container mt-2">
               <table className="table-erp">
                 <thead>
                   <tr className="table-header-erp">
-                    <th className="px-4">Nº Fatura</th>
-                    <th className="px-4">Cliente</th>
-                    <th className="px-4">Valor (MZN)</th>
-                    <th className="px-4">Vencimento</th>
-                    <th className="px-4">Status</th>
+                    <th>Fatura</th>
+                    <th>Cliente</th>
+                    <th>Valor (MZN)</th>
+                    <th>Vencimento</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#EDEDEA]">
-                  {data.recent_invoices.map((inv) => (
-                    <tr key={inv.id} className="table-row-erp">
-                      <td className="px-4 font-mono font-semibold text-[#101010] cell-nowrap">
-                        {inv.invoice_number || `FAT-${inv.id}`}
-                      </td>
-                      <td className="px-4 min-w-[150px] text-neutral-700">
-                        {inv.client_name || 'Cliente'}
-                      </td>
-                      <td className="px-4 font-semibold text-[#101010] font-heading cell-nowrap">
-                        {formatMZN(inv.amount)}
-                      </td>
-                      <td className="px-4 text-neutral-500 text-xs cell-nowrap">
-                        {formatDate(inv.due_date)}
-                      </td>
-                      <td className="px-4 cell-nowrap">
-                        {getStatusBadge(inv.status)}
+                  {(!data?.recent_invoices || data.recent_invoices.length === 0) ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-xs text-neutral-500">
+                        Nenhuma fatura emitida recentemente.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    data.recent_invoices.map((inv) => (
+                      <tr key={inv.id} className="table-row-erp">
+                        <td className="cell-nowrap">
+                          <span className="font-mono text-[11px] font-bold text-neutral-800">
+                            {inv.invoice_number || `FT-${inv.id}`}
+                          </span>
+                        </td>
+                        <td className="min-w-[160px]">
+                          <span className="font-semibold text-xs text-[#101010]">
+                            {inv.client_name || 'Geral'}
+                          </span>
+                        </td>
+                        <td className="cell-nowrap font-bold text-xs text-[#101010] font-heading">
+                          {formatMZN(inv.amount)}
+                        </td>
+                        <td className="cell-nowrap text-neutral-500 text-[11px]">
+                          {formatDate(inv.due_date)}
+                        </td>
+                        <td className="cell-nowrap">
+                          {getStatusBadge(inv.status)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
-            )}
+            </div>
           </div>
         </div>
 
       </div>
 
       {/* 
-        SECÇÃO: TAREFAS TÉCNICAS PRIORITÁRIAS
+        SEÇÃO 4: RESUMO DE CATÁLOGO & INTERVENÇÕES TÉCNICAS PENDENTES
       */}
-      <div className="table-container-erp">
-        <div className="p-4 border-b border-[#E2E2DE] flex items-center justify-between bg-[#FAFAF9]">
-          <div className="flex items-center space-x-2">
-            <ListTodo size={16} className="text-[#FF8000]" />
-            <h2 className="text-sm font-bold text-[#101010] font-heading">
-              Fila de Tarefas Técnicas Prioritárias
-            </h2>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* INTERVENÇÕES TÉCNICAS PENDENTES (2 colunas) */}
+        <div className="card-erp p-5 lg:col-span-2">
+          <div className="flex items-center justify-between pb-4 border-b border-[#E2E2DE]">
+            <div className="flex items-center space-x-2">
+              <ListTodo size={16} className="text-[#FF8000]" />
+              <h3 className="font-heading font-bold text-sm text-[#101010]">
+                Tarefas & Intervenções em Aberto
+              </h3>
+            </div>
+            <button 
+              onClick={() => onNavigate('equipa')}
+              className="text-xs font-semibold text-[#FF8000] hover:text-[#E67300] flex items-center gap-1 group"
+            >
+              <span>Escala Técnica ({kpis.pending_tasks_count})</span>
+              <ChevronRight size={14} className="group-hover:translate-x-0.5 transition" />
+            </button>
           </div>
-          <button
-            onClick={() => onNavigate('projetos')}
-            className="text-xs font-semibold text-[#FF8000] hover:text-[#E67300] flex items-center gap-1 transition"
-          >
-            Quadro Geral de Tarefas
-            <ChevronRight size={14} />
-          </button>
+
+          <div className="table-scroll-container mt-2">
+            <table className="table-erp">
+              <thead>
+                <tr className="table-header-erp">
+                  <th>Intervenção</th>
+                  <th>Projeto</th>
+                  <th>Prazo</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#EDEDEA]">
+                {(!data?.pending_tasks || data.pending_tasks.length === 0) ? (
+                  <tr>
+                    <td colSpan={4} className="py-8 text-center text-xs text-neutral-500">
+                      Nenhuma intervenção pendente no momento. Todas as tarefas concluídas!
+                    </td>
+                  </tr>
+                ) : (
+                  data.pending_tasks.slice(0, 5).map((task) => (
+                    <tr key={task.id} className="table-row-erp">
+                      <td className="min-w-[200px]">
+                        <div className="font-semibold text-xs text-[#101010] font-heading">
+                          {task.title}
+                        </div>
+                        {task.description && (
+                          <div className="text-[11px] text-neutral-500 line-clamp-1">
+                            {task.description}
+                          </div>
+                        )}
+                      </td>
+                      <td className="min-w-[140px] text-neutral-600 text-xs">
+                        {task.project_name || 'Geral'}
+                      </td>
+                      <td className="cell-nowrap text-neutral-500 text-[11px]">
+                        {formatDate(task.due_date)}
+                      </td>
+                      <td className="cell-nowrap">
+                        {getStatusBadge(task.status)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div className="p-5">
-          {!data?.pending_tasks || data.pending_tasks.length === 0 ? (
-            <div className="py-6 text-center">
-              <CheckCircle2 size={28} className="mx-auto text-emerald-500 mb-2" />
-              <p className="text-xs font-semibold text-neutral-800 font-heading">Sem tarefas pendentes imediatas</p>
-              <p className="text-xs text-neutral-500 mt-1">
-                Todas as tarefas operacionais estão em dia ou concluídas.
-              </p>
+        {/* RESUMO GERAL DE MÓDULOS E RECURSOS (1 coluna) */}
+        <div className="card-erp p-5 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center space-x-2 pb-4 border-b border-[#E2E2DE]">
+              <Layers size={16} className="text-[#FF8000]" />
+              <h3 className="font-heading font-bold text-sm text-[#101010]">
+                Inventário & Repositórios
+              </h3>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {data.pending_tasks.slice(0, 6).map((task) => (
-                <div 
-                  key={task.id}
-                  className="p-4 rounded-xl border border-[#E2E2DE] bg-white hover:border-[#D4D4D0] transition flex flex-col justify-between shadow-2xs"
-                >
-                  <div>
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <span className="font-mono text-[10px] text-neutral-600 bg-[#F5F5F3] px-2 py-0.5 rounded border border-[#E2E2DE] truncate max-w-[120px]">
-                        {task.project_code || 'PRJ'}
-                      </span>
-                      {getStatusBadge(task.status)}
-                    </div>
-                    <h4 className="text-xs font-semibold text-[#101010] line-clamp-2 font-heading" title={task.title}>
-                      {task.title}
-                    </h4>
-                    {task.description && (
-                      <p className="text-xs text-neutral-500 line-clamp-1 mt-1">
-                        {task.description}
-                      </p>
-                    )}
+
+            <div className="mt-4 space-y-3">
+              {/* Catálogo de Serviços */}
+              <div 
+                onClick={() => onNavigate('servicos')}
+                className="p-3 bg-[#FAFAF9] hover:bg-[#FFF2E5] border border-[#EDEDEA] hover:border-[#FF8000]/40 rounded-lg flex items-center justify-between cursor-pointer transition"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="w-7 h-7 rounded bg-white text-[#FF8000] border border-[#E2E2DE] flex items-center justify-center font-bold text-xs">
+                    <Wrench size={14} />
                   </div>
-                  <div className="mt-3 pt-2.5 border-t border-[#EDEDEA] flex items-center justify-between text-xs text-neutral-500">
-                    <span className="flex items-center gap-1">
-                      <Clock size={12} className="text-neutral-400" />
-                      {formatDate(task.due_date)}
-                    </span>
-                    <button
-                      onClick={() => onNavigate('projetos')}
-                      className="text-[#FF8000] font-semibold hover:underline text-xs"
-                    >
-                      Abrir
-                    </button>
+                  <div>
+                    <p className="text-xs font-bold text-[#101010] font-heading">Serviços Cadastrados</p>
+                    <p className="text-[11px] text-[#737370]">{kpis.active_services_count} ativos no catálogo</p>
                   </div>
                 </div>
-              ))}
+                <span className="font-bold text-sm text-[#101010] font-heading">{kpis.total_services_count}</span>
+              </div>
+
+              {/* Fornecedores */}
+              <div 
+                onClick={() => onNavigate('fornecedores')}
+                className="p-3 bg-[#FAFAF9] hover:bg-[#FFF2E5] border border-[#EDEDEA] hover:border-[#FF8000]/40 rounded-lg flex items-center justify-between cursor-pointer transition"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="w-7 h-7 rounded bg-white text-rose-600 border border-[#E2E2DE] flex items-center justify-center font-bold text-xs">
+                    <Truck size={14} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-[#101010] font-heading">Fornecedores Homologados</p>
+                    <p className="text-[11px] text-[#737370]">{kpis.pending_purchase_orders_count} ordens de compra pendentes</p>
+                  </div>
+                </div>
+                <span className="font-bold text-sm text-[#101010] font-heading">{kpis.suppliers_count}</span>
+              </div>
+
+              {/* GED Documentos */}
+              <div 
+                onClick={() => onNavigate('ged')}
+                className="p-3 bg-[#FAFAF9] hover:bg-[#FFF2E5] border border-[#EDEDEA] hover:border-[#FF8000]/40 rounded-lg flex items-center justify-between cursor-pointer transition"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="w-7 h-7 rounded bg-white text-indigo-600 border border-[#E2E2DE] flex items-center justify-center font-bold text-xs">
+                    <FolderArchive size={14} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-[#101010] font-heading">Documentos GED</p>
+                    <p className="text-[11px] text-[#737370]">Faturas, contratos, plantas e relatórios</p>
+                  </div>
+                </div>
+                <span className="font-bold text-sm text-[#101010] font-heading">{kpis.documents_count}</span>
+              </div>
+
+              {/* Utilizadores e Segurança */}
+              <div 
+                onClick={() => onNavigate('definicoes')}
+                className="p-3 bg-[#FAFAF9] hover:bg-[#FFF2E5] border border-[#EDEDEA] hover:border-[#FF8000]/40 rounded-lg flex items-center justify-between cursor-pointer transition"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="w-7 h-7 rounded bg-white text-emerald-600 border border-[#E2E2DE] flex items-center justify-center font-bold text-xs">
+                    <Users size={14} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-[#101010] font-heading">Utilizadores do Sistema</p>
+                    <p className="text-[11px] text-[#737370]">Controlo de acessos RBAC</p>
+                  </div>
+                </div>
+                <span className="font-bold text-sm text-[#101010] font-heading">{kpis.system_users_count}</span>
+              </div>
             </div>
-          )}
+          </div>
         </div>
+
       </div>
 
-      {/* TOAST NOTIFICATIONS */}
-      <Toast toasts={toasts} onDismiss={removeToast} />
     </div>
   );
 };

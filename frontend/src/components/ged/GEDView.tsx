@@ -629,7 +629,7 @@ export const GEDView: React.FC = () => {
 
       {/* Modal: + Novo Documento / Upload */}
       {isUploadModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+        <div className="modal-overlay-erp animate-in fade-in duration-200">
           <div className="bg-white border border-slate-200 rounded-lg w-full max-w-lg overflow-hidden shadow-xl">
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">

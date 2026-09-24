@@ -218,13 +218,54 @@ class InvoiceResponse(BaseModel):
 
 # ================= DASHBOARD =================
 class DashboardKPIs(BaseModel):
-    active_clients_count: int
-    active_projects_count: int
+    # Clients & Commercial
+    active_clients_count: int = 0
+    total_proposals_count: int = 0
     open_proposals_count: int = 0
-    total_invoiced: float
-    total_received: float
-    pending_amount: float
-    average_project_progress: float
+    accepted_proposals_count: int = 0
+    proposals_total_amount: float = 0.0
+
+    # Projects & Technical Operations
+    total_projects_count: int = 0
+    active_projects_count: int = 0
+    completed_projects_count: int = 0
+    average_project_progress: float = 0.0
+    total_tasks_count: int = 0
+    pending_tasks_count: int = 0
+    completed_tasks_count: int = 0
+    technicians_count: int = 0
+
+    # Financial Performance
+    total_invoiced: float = 0.0
+    total_received: float = 0.0
+    pending_amount: float = 0.0
+    invoices_paid_count: int = 0
+    invoices_pending_count: int = 0
+
+    # Services Catalog
+    total_services_count: int = 0
+    active_services_count: int = 0
+
+    # Suppliers & Procurement
+    suppliers_count: int = 0
+    purchase_orders_count: int = 0
+    pending_purchase_orders_count: int = 0
+    total_purchases_amount: float = 0.0
+    pending_purchases_amount: float = 0.0
+
+    # Human Resources (RH)
+    employees_count: int = 0
+    active_employees_count: int = 0
+    total_payroll_monthly: float = 0.0
+    active_leaves_count: int = 0
+
+    # GED & Repositories
+    documents_count: int = 0
+
+    # System & Users
+    system_users_count: int = 0
+    active_users_count: int = 0
+
 
 class DashboardRecentProject(BaseModel):
     id: int

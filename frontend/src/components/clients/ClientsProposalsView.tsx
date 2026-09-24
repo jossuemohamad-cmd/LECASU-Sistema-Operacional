@@ -18,6 +18,7 @@ import { ClientModal } from './ClientModal';
 import { ProposalModal } from './ProposalModal';
 import { ClientDetailsModal } from './ClientDetailsModal';
 import { Toast } from '../common/Toast';
+import { formatMZN } from '../../utils/formatters';
 
 interface ClientsProposalsViewProps {
   onOpenNewClientModal?: boolean;
@@ -164,11 +165,7 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
   }, [clients]);
 
   const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('pt-MZ', {
-      style: 'currency',
-      currency: 'MZN',
-      minimumFractionDigits: 2
-    }).format(val || 0);
+    return formatMZN(val);
   };
 
   return (

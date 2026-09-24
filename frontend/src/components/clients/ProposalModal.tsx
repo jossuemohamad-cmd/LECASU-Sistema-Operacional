@@ -84,7 +84,7 @@ export const ProposalModal: React.FC<ProposalModalProps> = ({
   const selectedClient = clients.find(c => c.id === Number(currentClientId));
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-[2px] flex items-center justify-center p-4">
+    <div className="modal-overlay-erp animate-in fade-in">
       <div className="bg-white rounded-lg border border-slate-200 shadow-xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
