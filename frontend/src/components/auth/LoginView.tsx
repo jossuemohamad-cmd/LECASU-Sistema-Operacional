@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Lock, 
   Mail, 
@@ -24,10 +24,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(() => Boolean(localStorage.getItem('lecasu_remember_email')));
   
-  // Loading & Progress States
+  // Loading State
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingStep, setLoadingStep] = useState(1);
-  const [progressPercent, setProgressPercent] = useState(15);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Forgot Password Modal State
@@ -43,20 +41,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [forgotSuccess, setForgotSuccess] = useState<string | null>(null);
   const [tempCodeNotice, setTempCodeNotice] = useState<string | null>(null);
 
-  // Progress animation when loading
-  useEffect(() => {
-    let interval: any;
-    if (isLoading) {
-      interval = setInterval(() => {
-        setProgressPercent(prev => {
-          if (prev >= 95) return prev;
-          return prev + Math.floor(Math.random() * 8) + 4;
-        });
-      }, 250);
-    }
-    return () => clearInterval(interval);
-  }, [isLoading]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -66,20 +50,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
     try {
       setIsLoading(true);
-      setLoadingStep(1);
-      setProgressPercent(20);
       setErrorMessage(null);
-
-      // Timers for high-tech progression feedback
-      const timer1 = setTimeout(() => {
-        setLoadingStep(2);
-        setProgressPercent(50);
-      }, 900);
-
-      const timer2 = setTimeout(() => {
-        setLoadingStep(3);
-        setProgressPercent(80);
-      }, 1900);
 
       if (rememberMe) {
         localStorage.setItem('lecasu_remember_email', email.trim());
@@ -89,21 +60,15 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
       const res = await loginUser({ email, password });
       
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      setLoadingStep(4);
-      setProgressPercent(100);
-
-      // Smooth brief pause at 100% before opening ERP
+      // Transição suave para o painel ERP
       setTimeout(() => {
         onLoginSuccess(res.user);
-      }, 600);
+      }, 400);
 
     } catch (err: any) {
       console.error('Erro ao iniciar sessão:', err);
       setErrorMessage(err.message || 'Falha na autenticação. Verifique o seu e-mail e palavra-passe.');
       setIsLoading(false);
-      setProgressPercent(15);
     }
   };
 
@@ -194,102 +159,47 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   };
 
   // =========================================================================
-  // 1. LOADER EM TELA CHEIA (Imersivo, Ultra-Profissional & Dinâmico)
-  // O formulário fecha e dá lugar a esta tela de processamento até entrar
+  // 1. LOADER EM TELA CHEIA (Minimalista, Moderno & Fluído - Linear Style)
   // =========================================================================
   if (isLoading) {
     return (
-      <div className="fixed inset-0 z-[99999] bg-[#101010] flex flex-col items-center justify-center p-6 text-white font-sans overflow-hidden animate-in fade-in duration-300">
-        {/* Glow de fundo */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#FF8000]/15 rounded-full blur-3xl pointer-events-none" />
-        
-        <div className="relative z-10 max-w-md w-full flex flex-col items-center text-center">
-          {/* Logo animado com pulso de alta tecnologia */}
-          <div className="relative mb-8">
-            <div className="w-20 h-20 rounded-2xl bg-[#FF8000] flex items-center justify-center font-heading font-black text-white text-4xl tracking-wider shadow-2xl shadow-[#FF8000]/40 ring-4 ring-[#FF8000]/30 animate-pulse">
-              L
+      <div className="fixed inset-0 z-[99999] bg-[#101010] flex flex-col items-center justify-center p-6 text-white font-sans select-none animate-in fade-in duration-200">
+        <div className="flex flex-col items-center text-center max-w-sm w-full">
+          
+          {/* Logo Minimalista com Anel de Carregamento Fluído */}
+          <div className="relative mb-6 flex items-center justify-center">
+            {/* Anel giratório sutil */}
+            <div className="w-16 h-16 rounded-full border-2 border-neutral-800 border-t-[#FF8000] animate-spin" style={{ animationDuration: '0.85s' }} />
+            
+            {/* Ícone Central */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FF8000] to-[#E67300] text-white font-heading font-black text-lg flex items-center justify-center shadow-lg shadow-[#FF8000]/25">
+                L
+              </div>
             </div>
-            {/* Anéis orbitais */}
-            <div className="absolute -inset-4 rounded-3xl border border-[#FF8000]/30 animate-spin" style={{ animationDuration: '6s' }} />
-            <div className="absolute -inset-8 rounded-full border border-dashed border-[#FF8000]/20 animate-spin" style={{ animationDuration: '12s', animationDirection: 'reverse' }} />
           </div>
 
-          <h2 className="text-2xl font-bold font-heading text-white tracking-tight">
-            LECASU <span className="text-[#FF8000] text-sm font-semibold uppercase">ERP</span>
+          {/* Nome Corporativo */}
+          <h2 className="text-xl font-bold font-heading text-white tracking-tight flex items-center gap-1.5">
+            <span>LECASU</span>
+            <span className="text-[#FF8000] text-xs font-semibold px-1.5 py-0.5 rounded bg-[#FF8000]/10 border border-[#FF8000]/20">ERP</span>
           </h2>
-          <p className="text-xs text-neutral-400 mt-1 font-medium">
-            A inicializar sessão corporativa segura
+          
+          <p className="text-xs text-neutral-400 mt-2 font-medium">
+            A autenticar e inicializar espaço de trabalho...
           </p>
 
-          {/* Barra de Progresso com Percentagem */}
-          <div className="w-full mt-8 bg-neutral-900 border border-neutral-800 rounded-full p-1 shadow-inner">
-            <div className="flex items-center justify-between text-[11px] px-3 pb-1 text-neutral-400 font-mono">
-              <span>Carregamento do Sistema</span>
-              <span className="font-bold text-[#FF8000]">{Math.min(100, progressPercent)}%</span>
-            </div>
-            <div className="w-full h-2 bg-neutral-800 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-[#FF8000] to-[#FFA347] rounded-full transition-all duration-300 shadow-sm shadow-[#FF8000]/50"
-                style={{ width: `${Math.min(100, progressPercent)}%` }}
-              />
-            </div>
+          {/* Micro Linha de Pulso */}
+          <div className="w-44 h-1 bg-neutral-900 rounded-full overflow-hidden mt-6">
+            <div className="h-full bg-gradient-to-r from-transparent via-[#FF8000] to-transparent w-full animate-pulse" />
           </div>
 
-          {/* Stepper de Etapas do Loader */}
-          <div className="w-full mt-6 space-y-2.5 text-left bg-[#181818] border border-neutral-800 rounded-xl p-4 shadow-xl">
-            <div className="flex items-center space-x-3 text-xs">
-              {loadingStep > 1 ? (
-                <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0" />
-              ) : (
-                <div className="w-4 h-4 rounded-full border-2 border-[#FF8000] border-t-transparent animate-spin flex-shrink-0" />
-              )}
-              <span className={loadingStep >= 1 ? 'text-white font-medium' : 'text-neutral-500'}>
-                Validação de credenciais e segurança JWT
-              </span>
-            </div>
-
-            <div className="flex items-center space-x-3 text-xs">
-              {loadingStep > 2 ? (
-                <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0" />
-              ) : loadingStep === 2 ? (
-                <div className="w-4 h-4 rounded-full border-2 border-[#FF8000] border-t-transparent animate-spin flex-shrink-0" />
-              ) : (
-                <div className="w-4 h-4 rounded-full border border-neutral-700 flex-shrink-0" />
-              )}
-              <span className={loadingStep >= 2 ? 'text-white font-medium' : 'text-neutral-500'}>
-                Conexão com PostgreSQL Neon Cloud
-              </span>
-            </div>
-
-            <div className="flex items-center space-x-3 text-xs">
-              {loadingStep > 3 ? (
-                <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0" />
-              ) : loadingStep === 3 ? (
-                <div className="w-4 h-4 rounded-full border-2 border-[#FF8000] border-t-transparent animate-spin flex-shrink-0" />
-              ) : (
-                <div className="w-4 h-4 rounded-full border border-neutral-700 flex-shrink-0" />
-              )}
-              <span className={loadingStep >= 3 ? 'text-white font-medium' : 'text-neutral-500'}>
-                Sincronização de módulos e permissões de acesso
-              </span>
-            </div>
-
-            <div className="flex items-center space-x-3 text-xs">
-              {loadingStep === 4 ? (
-                <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0" />
-              ) : (
-                <div className="w-4 h-4 rounded-full border border-neutral-700 flex-shrink-0" />
-              )}
-              <span className={loadingStep === 4 ? 'text-emerald-400 font-bold' : 'text-neutral-500'}>
-                Acesso autorizado! A entrar no painel...
-              </span>
-            </div>
+          {/* Tag de Segurança */}
+          <div className="mt-8 flex items-center gap-1.5 text-[11px] text-neutral-500 font-mono">
+            <ShieldCheck size={13} className="text-emerald-500" />
+            <span>Sessão Encriptada TLS 1.3</span>
           </div>
 
-          <div className="mt-6 flex items-center justify-center space-x-2 text-[11px] text-neutral-500 font-mono">
-            <ShieldCheck size={14} className="text-emerald-500" />
-            <span>Sessão Encriptada TLS 1.3 / AES-256</span>
-          </div>
         </div>
       </div>
     );
