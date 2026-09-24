@@ -19,10 +19,10 @@ import asyncio
 import sqlalchemy
 
 async def neon_keepalive_worker():
-    """Mantém o compute pool do Neon aquecido para eliminar atrasos de cold start"""
+    """Mantém o compute pool do Neon permanentemente ativo para eliminar cold starts"""
     while True:
         try:
-            await asyncio.sleep(120)  # Ping a cada 2 minutos
+            await asyncio.sleep(45)  # Ping a cada 45 segundos
             with SessionLocal() as db_session:
                 db_session.execute(sqlalchemy.text("SELECT 1"))
         except Exception:
