@@ -282,6 +282,54 @@ def download_document(
     )
 
 
+@router.put('/ged/documents/{document_id}', response_model=DocumentResponse, summary='Atualizar dados/renomear documento')
+def update_document(
+    document_id: int,
+    doc_in: DocumentUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Documento não encontrado.")
+
+    if doc_in.title is not None:
+        doc.title = doc_in.title.strip()
+    if doc_in.category is not None:
+        doc.category = doc_in.category.strip()
+    if doc_in.description is not None:
+        doc.description = doc_in.description.strip()
+    if doc_in.version is not None:
+        doc.version = doc_in.version.strip()
+    doc.updated_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(doc)
+
+    return DocumentResponse(
+        id=doc.id,
+        title=doc.title,
+        category=doc.category or 'Geral',
+        file_name=doc.file_name,
+        file_path=doc.file_path,
+        file_size_bytes=doc.file_size_bytes or 0,
+        file_size_formatted=format_file_size(doc.file_size_bytes or 0),
+        mime_type=doc.mime_type,
+        version=doc.version or 'v1.0',
+        description=doc.description,
+        project_id=doc.project_id,
+        client_id=doc.client_id,
+        uploaded_by_id=doc.uploaded_by_id,
+        created_at=doc.created_at,
+        updated_at=doc.updated_at,
+        project_name=doc.project.name if doc.project else None,
+        project_code=doc.project.code if doc.project else None,
+        client_name=doc.client.name if doc.client else None,
+        uploaded_by_name=doc.uploaded_by.name if doc.uploaded_by else None,
+        download_url=f"/api/v1/ged/documents/{doc.id}/download"
+    )
+
+
 @router.delete('/ged/documents/{document_id}', response_model=GenericMessageResponse, summary='Excluir documento do repositório')
 def delete_document(
     document_id: int,

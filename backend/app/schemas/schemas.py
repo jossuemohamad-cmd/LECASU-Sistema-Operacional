@@ -737,6 +737,12 @@ class HROverviewKPIs(BaseModel):
 
 
 # ================= GED - GESTÃO ELETRÓNICA DE DOCUMENTOS =================
+class DocumentUpdate(BaseModel):
+    title: Optional[str] = None
+    category: Optional[str] = None
+    description: Optional[str] = None
+    version: Optional[str] = None
+
 class DocumentResponse(BaseModel):
     id: int
     title: str

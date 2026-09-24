@@ -794,6 +794,25 @@ export async function deleteDocument(documentId: number): Promise<{ message: str
   return data;
 }
 
+export async function updateDocument(documentId: number, data: {
+  title?: string;
+  category?: string;
+  description?: string;
+  version?: string;
+}): Promise<GEDDocument> {
+  const res = await fetch(`${API_BASE_URL}/ged/documents/${documentId}`, {
+    method: 'PUT',
+    headers: {
+      ...getAuthHeaders(),
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data)
+  });
+  const updated = await handleResponse<GEDDocument>(res);
+  clearApiCache('ged');
+  return updated;
+}
+
 export async function fetchGEDOverviewKPIs(): Promise<GEDOverviewKPIs> {
   return cachedFetch<GEDOverviewKPIs>(`${API_BASE_URL}/ged/overview`, getAuthHeaders(), 15 * 1000);
 }
