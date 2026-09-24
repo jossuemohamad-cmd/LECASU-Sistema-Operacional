@@ -48,7 +48,7 @@ import {
 } from '../../services/api';
 import { Toast } from '../common/Toast';
 import { ConfirmationModal } from '../common/ConfirmationModal';
-import { GoogleDriveExplorerModal } from './GoogleDriveExplorerModal';
+import { GoogleDriveExplorerModal, getStoredGoogleToken } from './GoogleDriveExplorerModal';
 
 const CATEGORIES = [
   'Contratos',
@@ -1004,22 +1004,29 @@ export const GEDView: React.FC = () => {
                 {/* Card 1: Google Drive */}
                 <div className="border border-[#E2E2DE] rounded-2xl p-5 bg-[#FAFAF9] hover:bg-white hover:border-[#4285F4]/40 hover:shadow-md transition-all flex flex-col justify-between group">
                   <div>
-                    {/* Header with Official Icon */}
-                    <div className="flex items-center space-x-3 mb-3">
-                      <div className="w-11 h-11 rounded-xl bg-white border border-[#E2E2DE] shadow-2xs flex items-center justify-center p-2 flex-shrink-0 group-hover:scale-105 transition-transform">
-                        <svg className="w-7 h-7" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
-                          <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
-                          <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/>
-                          <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/>
-                          <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>
-                          <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
-                          <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
-                        </svg>
+                    {/* Header with Official Icon & Connection Status */}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-11 h-11 rounded-xl bg-white border border-[#E2E2DE] shadow-2xs flex items-center justify-center p-2 flex-shrink-0 group-hover:scale-105 transition-transform">
+                          <svg className="w-7 h-7" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
+                            <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
+                            <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/>
+                            <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/>
+                            <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>
+                            <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
+                            <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
+                          </svg>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-[#101010] font-heading">Google Drive</h4>
+                          <p className="text-[11px] text-[#737370]">Workspace & Gmail</p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="text-sm font-bold text-[#101010] font-heading">Google Drive</h4>
-                        <p className="text-[11px] text-[#737370]">Workspace & Gmail</p>
-                      </div>
+                      {getStoredGoogleToken() && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          ● Conectado
+                        </span>
+                      )}
                     </div>
 
                     <p className="text-xs text-[#525250] leading-relaxed mb-5">
@@ -1035,7 +1042,7 @@ export const GEDView: React.FC = () => {
                     }}
                     className="w-full py-2.5 px-3 rounded-xl text-xs font-bold font-heading flex items-center justify-center gap-2 bg-[#1A73E8] hover:bg-[#1557B0] text-white shadow-sm transition cursor-pointer"
                   >
-                    <span>Aceder ao Google Drive</span>
+                    <span>{getStoredGoogleToken() ? 'Abrir Google Drive' : 'Aceder ao Google Drive'}</span>
                     <ExternalLink size={13} />
                   </button>
                 </div>

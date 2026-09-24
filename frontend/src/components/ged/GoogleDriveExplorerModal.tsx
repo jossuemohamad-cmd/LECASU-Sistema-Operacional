@@ -36,12 +36,44 @@ interface GoogleDriveExplorerModalProps {
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '317708028649-gl3gp5ejeft9gq9gn7piqsmole32v1p4.apps.googleusercontent.com';
 const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
 
+export const getStoredGoogleToken = (): string | null => {
+  try {
+    const token = localStorage.getItem('lecasu_gdrive_access_token');
+    const expiresAt = localStorage.getItem('lecasu_gdrive_token_expires_at');
+    if (token && expiresAt && Date.now() < parseInt(expiresAt, 10)) {
+      return token;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+export const setStoredGoogleToken = (token: string, expiresIn?: number) => {
+  try {
+    localStorage.setItem('lecasu_gdrive_access_token', token);
+    const duration = (expiresIn || 3590) * 1000;
+    localStorage.setItem('lecasu_gdrive_token_expires_at', (Date.now() + duration).toString());
+  } catch (err) {
+    console.error('Erro ao guardar token do Google:', err);
+  }
+};
+
+export const removeStoredGoogleToken = () => {
+  try {
+    localStorage.removeItem('lecasu_gdrive_access_token');
+    localStorage.removeItem('lecasu_gdrive_token_expires_at');
+  } catch (err) {
+    console.error('Erro ao remover token do Google:', err);
+  }
+};
+
 export const GoogleDriveExplorerModal: React.FC<GoogleDriveExplorerModalProps> = ({
   isOpen,
   onClose,
   onSuccess
 }) => {
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(() => getStoredGoogleToken());
   const [files, setFiles] = useState<GoogleDriveFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -70,6 +102,7 @@ export const GoogleDriveExplorerModal: React.FC<GoogleDriveExplorerModalProps> =
             return;
           }
           if (resp.access_token) {
+            setStoredGoogleToken(resp.access_token, resp.expires_in);
             setAccessToken(resp.access_token);
             await fetchDriveFiles(resp.access_token);
           }
@@ -81,11 +114,18 @@ export const GoogleDriveExplorerModal: React.FC<GoogleDriveExplorerModalProps> =
         }
       });
 
-      tokenClient.requestAccessToken({ prompt: 'consent' });
+      tokenClient.requestAccessToken({ prompt: '' });
     } catch (err: any) {
       setIsAuthenticating(false);
       setErrorMessage(err.message || 'Erro ao inicializar o cliente Google.');
     }
+  };
+
+  const handleDisconnect = () => {
+    removeStoredGoogleToken();
+    setAccessToken(null);
+    setFiles([]);
+    setErrorMessage(null);
   };
 
   // Fetch user's Google Drive files
@@ -107,6 +147,7 @@ export const GoogleDriveExplorerModal: React.FC<GoogleDriveExplorerModalProps> =
 
       if (!res.ok) {
         if (res.status === 401) {
+          removeStoredGoogleToken();
           setAccessToken(null);
           setErrorMessage('A sua sessão Google expirou. Por favor, ligue novamente.');
           return;
@@ -125,8 +166,14 @@ export const GoogleDriveExplorerModal: React.FC<GoogleDriveExplorerModalProps> =
   };
 
   useEffect(() => {
-    if (isOpen && !accessToken) {
-      handleConnectGoogle();
+    if (isOpen) {
+      const stored = getStoredGoogleToken();
+      if (stored) {
+        setAccessToken(stored);
+        fetchDriveFiles(stored);
+      } else {
+        handleConnectGoogle();
+      }
     }
   }, [isOpen]);
 
@@ -280,15 +327,24 @@ export const GoogleDriveExplorerModal: React.FC<GoogleDriveExplorerModalProps> =
           </div>
 
           {accessToken ? (
-            <button
-              onClick={() => fetchDriveFiles(accessToken, searchQuery)}
-              disabled={isLoading}
-              className="btn-secondary btn-md flex items-center gap-1.5"
-              title="Atualizar lista"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-              <span>Atualizar</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => fetchDriveFiles(accessToken, searchQuery)}
+                disabled={isLoading}
+                className="btn-secondary btn-md flex items-center gap-1.5"
+                title="Atualizar lista"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                <span>Atualizar</span>
+              </button>
+              <button
+                onClick={handleDisconnect}
+                className="btn-ghost btn-sm text-neutral-500 hover:text-rose-600 text-xs cursor-pointer"
+                title="Desconectar conta Google"
+              >
+                Desconectar
+              </button>
+            </div>
           ) : (
             <button
               onClick={handleConnectGoogle}
