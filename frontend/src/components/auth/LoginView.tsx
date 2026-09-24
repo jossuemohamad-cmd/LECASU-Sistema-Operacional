@@ -224,11 +224,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 <input
                   type="email"
                   required
+                  autoComplete="username"
                   placeholder="utilizador@lecasu.co.mz"
                   value={email}
                   disabled={isLoading}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-9 pr-3 py-2.5 text-xs bg-slate-950/80 border border-slate-700/80 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition disabled:opacity-60"
+                  className="block w-full pl-9 pr-3 py-2.5 text-xs bg-[#10121A] border border-[#2E3342] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[#FF8000] focus:border-[#FF8000] transition disabled:opacity-60"
                 />
               </div>
             </div>
@@ -243,7 +244,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   type="button"
                   onClick={handleOpenForgotModal}
                   disabled={isLoading}
-                  className="text-[11px] text-orange-400 hover:text-orange-300 hover:underline transition font-medium cursor-pointer disabled:opacity-50"
+                  className="text-[11px] text-[#FF8000] hover:text-[#FFA347] hover:underline transition font-medium cursor-pointer disabled:opacity-50"
                 >
                   Esqueceu-se da palavra-passe?
                 </button>
@@ -255,11 +256,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
+                  autoComplete="current-password"
                   placeholder="••••••••••••"
                   value={password}
                   disabled={isLoading}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-9 pr-10 py-2.5 text-xs bg-slate-950/80 border border-slate-700/80 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition disabled:opacity-60"
+                  className="block w-full pl-9 pr-10 py-2.5 text-xs bg-[#10121A] border border-[#2E3342] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[#FF8000] focus:border-[#FF8000] transition disabled:opacity-60"
                 />
                 <button
                   type="button"
@@ -374,7 +376,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
       {/* MODAL DE RECUPERAÇÃO DE PALAVRA-PASSE */}
       {isForgotModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-in fade-in">
+        <div className="modal-overlay-erp animate-in fade-in">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
             <button
               onClick={handleCloseForgotModal}
