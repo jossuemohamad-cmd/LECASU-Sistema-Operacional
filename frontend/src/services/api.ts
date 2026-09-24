@@ -43,24 +43,63 @@ import type {
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
 
-// In-Memory Fast Cache for Instant Navigation
+// Multi-Tier Persistent SWR Cache for Instant (0ms) UI Navigation
 interface CacheEntry<T> {
   data: T;
   timestamp: number;
 }
+
 const memoryCache = new Map<string, CacheEntry<any>>();
-const DEFAULT_CACHE_TTL = 30 * 1000; // 30 seconds
+const DEFAULT_CACHE_TTL = 45 * 1000; // 45 seconds fresh window
+
+function getStoredCache<T>(key: string): CacheEntry<T> | null {
+  try {
+    const raw = localStorage.getItem(`lecasu_cache_${key}`);
+    if (raw) {
+      return JSON.parse(raw);
+    }
+  } catch {
+    // Ignore parse error
+  }
+  return null;
+}
+
+function setStoredCache<T>(key: string, data: T, timestamp: number): void {
+  try {
+    localStorage.setItem(`lecasu_cache_${key}`, JSON.stringify({ data, timestamp }));
+  } catch {
+    // Ignore quota errors
+  }
+}
 
 export function clearApiCache(prefix?: string): void {
   if (!prefix) {
     memoryCache.clear();
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('lecasu_cache_')) {
+        keysToRemove.push(k);
+      }
+    }
+    keysToRemove.forEach(k => localStorage.removeItem(k));
     return;
   }
+
   for (const key of Array.from(memoryCache.keys())) {
-    if (key.startsWith(prefix) || key.includes(prefix)) {
+    if (key.includes(prefix)) {
       memoryCache.delete(key);
     }
   }
+
+  const keysToRemove: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith('lecasu_cache_') && k.includes(prefix)) {
+      keysToRemove.push(k);
+    }
+  }
+  keysToRemove.forEach(k => localStorage.removeItem(k));
 }
 
 export function getAuthToken(): string | null {
@@ -112,21 +151,64 @@ async function handleResponse<T>(response: Response): Promise<T> {
 async function cachedFetch<T>(url: string, headers: Record<string, string>, ttl = DEFAULT_CACHE_TTL): Promise<T> {
   const cacheKey = `GET:${url}`;
   const now = Date.now();
-  const cached = memoryCache.get(cacheKey);
 
-  if (cached && (now - cached.timestamp) < ttl) {
-    return cached.data as T;
+  // 1. Memória RAM (0ms)
+  const memCached = memoryCache.get(cacheKey);
+  if (memCached && (now - memCached.timestamp) < ttl) {
+    return memCached.data as T;
   }
 
-  const res = await fetch(url, { headers });
-  const data = await handleResponse<T>(res);
-  memoryCache.set(cacheKey, { data, timestamp: now });
-  return data;
+  // 2. LocalStorage Persistente (0ms)
+  const storedCached = getStoredCache<T>(cacheKey);
+  if (storedCached && (now - storedCached.timestamp) < ttl) {
+    memoryCache.set(cacheKey, storedCached);
+    return storedCached.data;
+  }
+
+  const staleData = memCached?.data ?? storedCached?.data;
+
+  // 3. Network Fetch com atualização de cache SWR
+  const networkPromise = (async () => {
+    const res = await fetch(url, { headers });
+    const data = await handleResponse<T>(res);
+    memoryCache.set(cacheKey, { data, timestamp: Date.now() });
+    setStoredCache(cacheKey, data, Date.now());
+    return data;
+  })();
+
+  // Se já temos dados cacheados (mesmo que comecem a ficar antigos), devolvemos instantaneamente
+  if (staleData !== undefined && staleData !== null) {
+    networkPromise.catch(err => console.warn(`Revalidação em segundo plano falhou para ${url}:`, err));
+    return staleData;
+  }
+
+  return networkPromise;
+}
+
+/** Pré-carrega todos os dados essenciais dos 10 módulos em segundo plano */
+export function prefetchAllCoreData(): void {
+  const token = getAuthToken();
+  if (!token) return;
+
+  Promise.allSettled([
+    fetchDashboardOverview(),
+    fetchClients(),
+    fetchProposals(),
+    fetchProjects(),
+    fetchServices(),
+    fetchTechnicians(),
+    fetchTeamKPIs(),
+    fetchFinanceOverviewKPIs(),
+    fetchInvoices(),
+    fetchSuppliers(),
+    fetchEmployees(),
+    fetchDocuments()
+  ]).catch(() => {});
 }
 
 // ================= DASHBOARD =================
 export async function fetchDashboardOverview(): Promise<DashboardOverview> {
-  return cachedFetch<DashboardOverview>(`${API_BASE_URL}/dashboard/overview`, getAuthHeaders(), 10 * 1000);
+  return cachedFetch<DashboardOverview>(`${API_BASE_URL}/dashboard/overview`, getAuthHeaders(), 15 * 1000);
 }
 
 // ================= CLIENTS =================

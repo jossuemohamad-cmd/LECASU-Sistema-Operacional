@@ -15,6 +15,19 @@ from app.api.hr import router as hr_router
 from app.api.ged import router as ged_router
 from app.api.finance import router as finance_router
 
+import asyncio
+import sqlalchemy
+
+async def neon_keepalive_worker():
+    """Mantém o compute pool do Neon aquecido para eliminar atrasos de cold start"""
+    while True:
+        try:
+            await asyncio.sleep(120)  # Ping a cada 2 minutos
+            with SessionLocal() as db_session:
+                db_session.execute(sqlalchemy.text("SELECT 1"))
+        except Exception:
+            pass
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Inicialização resiliente de tabelas e utilizador Admin
@@ -25,7 +38,14 @@ async def lifespan(app: FastAPI):
         print("[LECASU ERP] Base de dados e Administrador inicializados com sucesso.")
     except Exception as e:
         print(f"[LECASU ERP] Aviso na inicialização: {e}")
+    
+    # Iniciar worker de warm connection em background
+    keepalive_task = asyncio.create_task(neon_keepalive_worker())
+    
     yield
+    
+    keepalive_task.cancel()
+
 
 app = FastAPI(
     title='LECASU Sistema Operacional API',

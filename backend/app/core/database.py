@@ -13,14 +13,21 @@ DATABASE_URL = os.getenv('DATABASE_URL')
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL não configurada no ambiente ou no ficheiro .env")
 
-# Configuração robusta de pooling para PostgreSQL / Neon DB
+# Configuração robusta de pooling e keepalive para PostgreSQL / Neon DB
 engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20,
-    pool_recycle=300,
-    pool_timeout=30
+    pool_size=15,
+    max_overflow=25,
+    pool_recycle=240,
+    pool_timeout=20,
+    connect_args={
+        "connect_timeout": 10,
+        "keepalives": 1,
+        "keepalives_idle": 30,
+        "keepalives_interval": 10,
+        "keepalives_count": 5
+    }
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()

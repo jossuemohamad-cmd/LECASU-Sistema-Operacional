@@ -26,7 +26,7 @@ import { HRView } from './components/hr/HRView';
 import { GEDView } from './components/ged/GEDView';
 import { FinanceView } from './components/finance/FinanceView';
 import { LoginView } from './components/auth/LoginView';
-import { getAuthToken, removeAuthToken, fetchCurrentUser } from './services/api';
+import { getAuthToken, removeAuthToken, fetchCurrentUser, prefetchAllCoreData } from './services/api';
 import type { User } from './types';
 
 const TABS = [
@@ -62,17 +62,20 @@ export default function App() {
 
   useEffect(() => {
     const token = getAuthToken();
-    if (token && !currentUser) {
-      fetchCurrentUser()
-        .then(user => {
-          setCurrentUser(user);
-          setIsAuthenticated(true);
-        })
-        .catch(() => {
-          removeAuthToken();
-          setIsAuthenticated(false);
-          setCurrentUser(null);
-        });
+    if (token) {
+      prefetchAllCoreData();
+      if (!currentUser) {
+        fetchCurrentUser()
+          .then(user => {
+            setCurrentUser(user);
+            setIsAuthenticated(true);
+          })
+          .catch(() => {
+            removeAuthToken();
+            setIsAuthenticated(false);
+            setCurrentUser(null);
+          });
+      }
     }
   }, []);
 
@@ -86,6 +89,7 @@ export default function App() {
     setCurrentUser(user);
     setIsAuthenticated(true);
     setActiveTab('dashboard');
+    prefetchAllCoreData();
   };
 
   if (!isAuthenticated) {
