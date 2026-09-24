@@ -27,7 +27,6 @@ import {
   FolderOpen,
   Cloud,
   CloudUpload,
-  Link2,
   ExternalLink,
   ShieldCheck,
   Check
@@ -98,11 +97,6 @@ export const GEDView: React.FC = () => {
   const [isCloudIntegrationsOpen, setIsCloudIntegrationsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-
-  // Cloud Connections State
-  const [isGoogleDriveConnected, setIsGoogleDriveConnected] = useState(false);
-  const [isOneDriveConnected, setIsOneDriveConnected] = useState(false);
-  const [connectingCloud, setConnectingCloud] = useState<'google' | 'onedrive' | null>(null);
 
   // Form State
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -385,19 +379,6 @@ export const GEDView: React.FC = () => {
     });
   }, [documents, selectedFolder, searchTerm, categoryFilter]);
 
-  const handleConnectCloud = (provider: 'google' | 'onedrive') => {
-    setConnectingCloud(provider);
-    setTimeout(() => {
-      if (provider === 'google') {
-        setIsGoogleDriveConnected(true);
-        showToast('success', 'Google Drive Conectado!', 'Repositório vinculado com Google Workspace da LECASU.');
-      } else {
-        setIsOneDriveConnected(true);
-        showToast('success', 'OneDrive Conectado!', 'Repositório vinculado com Microsoft 365 / SharePoint.');
-      }
-      setConnectingCloud(null);
-    }, 1200);
-  };
 
   return (
     <div className="space-y-6">
@@ -1018,30 +999,6 @@ export const GEDView: React.FC = () => {
             {/* Modal Content */}
             <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
               
-              {/* Storage Principal S3 Status */}
-              <div className="bg-[#101010] text-white p-4 rounded-xl border border-neutral-800 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-[#FF8000]/20 border border-[#FF8000]/40 flex items-center justify-center text-[#FF8000]">
-                    <HardDrive size={18} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-xs font-bold font-heading text-white">Neon S3 Object Storage</h4>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                        Primário • Ativo
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-neutral-400 font-mono mt-0.5">
-                      Bucket: assets • us-east-2 (Pastas: /pdf, /png, /jpg, /logos, /planilhas)
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <span className="text-xs font-bold text-[#FF8000] font-mono">{kpis.total_storage_formatted}</span>
-                  <p className="text-[10px] text-neutral-400">Total Sincronizado</p>
-                </div>
-              </div>
-
               {/* 2 Cloud Providers Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 
@@ -1055,50 +1012,33 @@ export const GEDView: React.FC = () => {
                         </div>
                         <div>
                           <h4 className="text-xs font-bold text-slate-900 font-heading">Google Drive</h4>
-                          <p className="text-[11px] text-slate-500">Google Workspace</p>
+                          <p className="text-[11px] text-slate-500">Google Workspace / Drive API</p>
                         </div>
                       </div>
-                      {isGoogleDriveConnected ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                          <Check size={10} /> Conectado
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                          Desconectado
-                        </span>
-                      )}
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                        OAuth 2.0 Requerido
+                      </span>
                     </div>
-                    <p className="text-xs text-slate-600 leading-relaxed mb-4">
-                      Aceda a plantas, PDFs e relatórios guardados no seu Google Drive corporativo e sincronize-os com 1 clique para o repositório da LECASU.
+                    <p className="text-xs text-slate-600 leading-relaxed mb-3">
+                      Permite aos engenheiros e gestores acederem diretamente às pastas de projetos do Google Drive e sincronizar documentos para o repositório da LECASU.
                     </p>
+                    <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-[11px] text-slate-600 mb-4 space-y-1 font-mono">
+                      <p className="text-slate-800 font-semibold font-sans">Requisitos de Produção:</p>
+                      <p>• Google Cloud Console Project</p>
+                      <p>• Google Drive API ativada</p>
+                      <p>• OAuth 2.0 Client ID & Secret</p>
+                    </div>
                   </div>
 
-                  <button
-                    onClick={() => handleConnectCloud('google')}
-                    disabled={connectingCloud === 'google'}
-                    className={`w-full py-2 px-3 rounded-lg text-xs font-bold font-heading flex items-center justify-center gap-2 transition cursor-pointer ${
-                      isGoogleDriveConnected 
-                        ? 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100' 
-                        : 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm'
-                    }`}
+                  <a
+                    href="https://console.cloud.google.com/apis/credentials"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-2 px-3 rounded-lg text-xs font-bold font-heading flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition cursor-pointer"
                   >
-                    {connectingCloud === 'google' ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>A autenticar Google OAuth...</span>
-                      </>
-                    ) : isGoogleDriveConnected ? (
-                      <>
-                        <ExternalLink size={13} />
-                        <span>Importar Arquivos do Drive</span>
-                      </>
-                    ) : (
-                      <>
-                        <Link2 size={13} />
-                        <span>Conectar Google Drive</span>
-                      </>
-                    )}
-                  </button>
+                    <ExternalLink size={13} />
+                    <span>Configurar no Google Cloud</span>
+                  </a>
                 </div>
 
                 {/* 2. Microsoft OneDrive / SharePoint */}
@@ -1111,50 +1051,33 @@ export const GEDView: React.FC = () => {
                         </div>
                         <div>
                           <h4 className="text-xs font-bold text-slate-900 font-heading">Microsoft OneDrive</h4>
-                          <p className="text-[11px] text-slate-500">Microsoft 365 / SharePoint</p>
+                          <p className="text-[11px] text-slate-500">Microsoft 365 / Graph API</p>
                         </div>
                       </div>
-                      {isOneDriveConnected ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                          <Check size={10} /> Conectado
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                          Desconectado
-                        </span>
-                      )}
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                        OAuth 2.0 Requerido
+                      </span>
                     </div>
-                    <p className="text-xs text-slate-600 leading-relaxed mb-4">
-                      Vincule diretórios de projetos do SharePoint e contas pessoais do OneDrive para importação instantânea de orçamentos e contratos.
+                    <p className="text-xs text-slate-600 leading-relaxed mb-3">
+                      Conexão com o SharePoint e OneDrive corporativo da LECASU para importação e centralização de orçamentos e relatórios técnicos.
                     </p>
+                    <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-[11px] text-slate-600 mb-4 space-y-1 font-mono">
+                      <p className="text-slate-800 font-semibold font-sans">Requisitos de Produção:</p>
+                      <p>• Microsoft Entra ID (Azure Portal)</p>
+                      <p>• Microsoft Graph API (Files.Read)</p>
+                      <p>• Application (Client) ID</p>
+                    </div>
                   </div>
 
-                  <button
-                    onClick={() => handleConnectCloud('onedrive')}
-                    disabled={connectingCloud === 'onedrive'}
-                    className={`w-full py-2 px-3 rounded-lg text-xs font-bold font-heading flex items-center justify-center gap-2 transition cursor-pointer ${
-                      isOneDriveConnected 
-                        ? 'bg-cyan-50 text-cyan-700 border border-cyan-200 hover:bg-cyan-100' 
-                        : 'bg-cyan-600 hover:bg-cyan-700 text-white shadow-sm'
-                    }`}
+                  <a
+                    href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-2 px-3 rounded-lg text-xs font-bold font-heading flex items-center justify-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white shadow-sm transition cursor-pointer"
                   >
-                    {connectingCloud === 'onedrive' ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>A autenticar Microsoft Graph...</span>
-                      </>
-                    ) : isOneDriveConnected ? (
-                      <>
-                        <ExternalLink size={13} />
-                        <span>Importar Arquivos do OneDrive</span>
-                      </>
-                    ) : (
-                      <>
-                        <Link2 size={13} />
-                        <span>Conectar OneDrive</span>
-                      </>
-                    )}
-                  </button>
+                    <ExternalLink size={13} />
+                    <span>Configurar no Azure Portal</span>
+                  </a>
                 </div>
 
               </div>
@@ -1163,16 +1086,10 @@ export const GEDView: React.FC = () => {
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs space-y-2">
                 <h5 className="font-bold text-slate-900 font-heading flex items-center gap-1.5">
                   <ShieldCheck size={15} className="text-emerald-600" />
-                  <span>Como funciona a sincronização no LECASU ERP?</span>
+                  <span>Sincronização Real e Segura com o Repositório</span>
                 </h5>
                 <p className="text-slate-600 leading-relaxed">
-                  1. <strong>Segurança OAuth 2.0:</strong> A conexão é estabelecida de ponta-a-ponta via tokens seguros da Google ou Microsoft.
-                </p>
-                <p className="text-slate-600 leading-relaxed">
-                  2. <strong>Auto-Organização no Neon S3:</strong> Ao importar qualquer arquivo remoto do Google Drive ou OneDrive, o sistema identifica automaticamente a extensão e move o arquivo para a pasta correta (<code>/pdf</code>, <code>/png</code>, <code>/jpg</code>, <code>/logos</code>, <code>/planilhas</code>) no bucket Neon S3.
-                </p>
-                <p className="text-slate-600 leading-relaxed">
-                  3. <strong>Disponibilidade Global:</strong> Toda a equipa com permissões no ERP tem acesso imediato aos arquivos com visualização e download via URLs pré-assinadas.
+                  Para que o utilizador autentique a sua conta pessoal/corporativa de e-mail e liste os arquivos em tempo real, as credenciais de API do Google Workspace e Microsoft 365 devem ser inseridas no ficheiro <code>.env</code> do servidor. O fluxo oficial utiliza autenticação por consentimento seguro (OAuth 2.0).
                 </p>
               </div>
 

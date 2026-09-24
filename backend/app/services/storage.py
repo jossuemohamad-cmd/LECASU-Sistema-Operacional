@@ -67,6 +67,28 @@ def generate_presigned_url(
     return url
 
 
+def list_s3_objects(prefix: str = "ged/", bucket: Optional[str] = None) -> list:
+    """
+    Lista ficheiros existentes no bucket Neon S3 sob um determinado prefixo.
+    """
+    target_bucket = bucket or S3_BUCKET_NAME
+    client = get_s3_client()
+    try:
+        response = client.list_objects_v2(Bucket=target_bucket, Prefix=prefix)
+        contents = response.get("Contents", [])
+        return [
+            {
+                "key": obj["Key"],
+                "size": obj["Size"],
+                "last_modified": obj["LastModified"].isoformat() if "LastModified" in obj else None
+            }
+            for obj in contents
+        ]
+    except Exception as e:
+        print(f"Erro ao listar objetos no Neon S3: {e}")
+        return []
+
+
 def delete_file_from_s3(key: str, bucket: Optional[str] = None) -> bool:
     """
     Remove ficheiro do bucket S3.
@@ -76,7 +98,11 @@ def delete_file_from_s3(key: str, bucket: Optional[str] = None) -> bool:
     try:
         client.delete_object(Bucket=target_bucket, Key=key)
         return True
-    except ClientError:
+    except ClientError as e:
+        print(f"Erro ao deletar objeto {key} do Neon S3: {e}")
+        return False
+    except Exception as e:
+        print(f"Erro inesperado ao deletar do S3: {e}")
         return False
 
 
