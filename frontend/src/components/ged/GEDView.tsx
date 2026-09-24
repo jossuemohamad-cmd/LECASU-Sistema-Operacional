@@ -26,7 +26,6 @@ import {
   Folder,
   FolderOpen,
   Cloud,
-  CloudUpload,
   ExternalLink,
   ShieldCheck,
   Check
@@ -969,139 +968,125 @@ export const GEDView: React.FC = () => {
         </div>
       )}
 
-      {/* Modal: Integrações Cloud (Google Drive & Microsoft OneDrive) */}
+      {/* Modal: Repositórios em Nuvem (Google Drive & OneDrive) - Simples & Elegante */}
       {isCloudIntegrationsOpen && (
         <div className="modal-overlay-erp animate-in fade-in duration-200">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95">
+          <div className="bg-white border border-[#E2E2DE] rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl animate-in zoom-in-95">
             {/* Modal Header */}
-            <div className="px-6 py-5 border-b border-slate-100 bg-[#FAFAF9] flex items-center justify-between">
+            <div className="px-6 py-5 border-b border-[#EDEDEA] flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 rounded-xl bg-[#FFF2E5] text-[#FF8000] border border-[#FFD9B3] flex items-center justify-center">
                   <Cloud className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 font-heading">
-                    Integrações Cloud & Repositórios Externos
+                  <h3 className="text-base font-bold text-[#101010] font-heading">
+                    Repositórios em Nuvem
                   </h3>
-                  <p className="text-xs text-slate-500">
-                    Sincronize arquivos do Google Drive e OneDrive diretamente para o Storage Neon S3
+                  <p className="text-xs text-[#737370]">
+                    Aceda e importe documentos das suas contas diretamente para o sistema
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsCloudIntegrationsOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                className="text-neutral-400 hover:text-neutral-700 p-1.5 rounded-lg hover:bg-neutral-100 transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Modal Content */}
-            <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
-              
-              {/* 2 Cloud Providers Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Modal Body: 2 Clean Cards */}
+            <div className="p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 
-                {/* 1. Google Drive */}
-                <div className="border border-slate-200 rounded-xl p-4 bg-white hover:border-blue-300 transition-all shadow-2xs flex flex-col justify-between">
+                {/* Card 1: Google Drive */}
+                <div className="border border-[#E2E2DE] rounded-2xl p-5 bg-[#FAFAF9] hover:bg-white hover:border-[#4285F4]/40 hover:shadow-md transition-all flex flex-col justify-between group">
                   <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
-                          <CloudUpload className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h4 className="text-xs font-bold text-slate-900 font-heading">Google Drive</h4>
-                          <p className="text-[11px] text-slate-500">Google Workspace / Drive API</p>
-                        </div>
+                    {/* Header with Official Icon */}
+                    <div className="flex items-center space-x-3 mb-3">
+                      <div className="w-11 h-11 rounded-xl bg-white border border-[#E2E2DE] shadow-2xs flex items-center justify-center p-2 flex-shrink-0 group-hover:scale-105 transition-transform">
+                        <svg className="w-7 h-7" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
+                          <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
+                          <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/>
+                          <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/>
+                          <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>
+                          <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
+                          <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
+                        </svg>
                       </div>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                        OAuth 2.0 Requerido
-                      </span>
+                      <div>
+                        <h4 className="text-sm font-bold text-[#101010] font-heading">Google Drive</h4>
+                        <p className="text-[11px] text-[#737370]">Workspace & Gmail</p>
+                      </div>
                     </div>
-                    <p className="text-xs text-slate-600 leading-relaxed mb-3">
-                      Permite aos engenheiros e gestores acederem diretamente às pastas de projetos do Google Drive e sincronizar documentos para o repositório da LECASU.
+
+                    <p className="text-xs text-[#525250] leading-relaxed mb-5">
+                      Aceda a projetos, plantas e orçamentos guardados na sua conta Google.
                     </p>
-                    <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-[11px] text-slate-600 mb-4 space-y-1 font-mono">
-                      <p className="text-slate-800 font-semibold font-sans">Requisitos de Produção:</p>
-                      <p>• Google Cloud Console Project</p>
-                      <p>• Google Drive API ativada</p>
-                      <p>• OAuth 2.0 Client ID & Secret</p>
-                    </div>
                   </div>
 
-                  <a
-                    href="https://console.cloud.google.com/apis/credentials"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full py-2 px-3 rounded-lg text-xs font-bold font-heading flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition cursor-pointer"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.open('https://drive.google.com', '_blank', 'noopener,noreferrer');
+                    }}
+                    className="w-full py-2.5 px-3 rounded-xl text-xs font-bold font-heading flex items-center justify-center gap-2 bg-[#1A73E8] hover:bg-[#1557B0] text-white shadow-sm transition cursor-pointer"
                   >
+                    <span>Aceder ao Google Drive</span>
                     <ExternalLink size={13} />
-                    <span>Configurar no Google Cloud</span>
-                  </a>
+                  </button>
                 </div>
 
-                {/* 2. Microsoft OneDrive / SharePoint */}
-                <div className="border border-slate-200 rounded-xl p-4 bg-white hover:border-cyan-300 transition-all shadow-2xs flex flex-col justify-between">
+                {/* Card 2: Microsoft OneDrive */}
+                <div className="border border-[#E2E2DE] rounded-2xl p-5 bg-[#FAFAF9] hover:bg-white hover:border-[#0078D4]/40 hover:shadow-md transition-all flex flex-col justify-between group">
                   <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-lg bg-cyan-50 border border-cyan-200 flex items-center justify-center text-cyan-600">
-                          <CloudUpload className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h4 className="text-xs font-bold text-slate-900 font-heading">Microsoft OneDrive</h4>
-                          <p className="text-[11px] text-slate-500">Microsoft 365 / Graph API</p>
-                        </div>
+                    {/* Header with Official Icon */}
+                    <div className="flex items-center space-x-3 mb-3">
+                      <div className="w-11 h-11 rounded-xl bg-white border border-[#E2E2DE] shadow-2xs flex items-center justify-center p-2 flex-shrink-0 group-hover:scale-105 transition-transform">
+                        <svg className="w-7 h-7" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                          <defs>
+                            <linearGradient id="od_blue_grad" x1="5" y1="25" x2="27" y2="10" gradientUnits="userSpaceOnUse">
+                              <stop stopColor="#0078D4"/>
+                              <stop offset="1" stopColor="#28A8EA"/>
+                            </linearGradient>
+                          </defs>
+                          <path d="M19.4 12.5a6.5 6.5 0 0 0-11.8 2.3A5.7 5.7 0 0 0 3.5 20.3C3.5 23.5 6.1 26 9.3 26h14.9a5.8 5.8 0 0 0 5.8-5.8c0-2.8-2-5.2-4.7-5.7a6.5 6.5 0 0 0-5.9-2z" fill="url(#od_blue_grad)"/>
+                        </svg>
                       </div>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                        OAuth 2.0 Requerido
-                      </span>
+                      <div>
+                        <h4 className="text-sm font-bold text-[#101010] font-heading">OneDrive</h4>
+                        <p className="text-[11px] text-[#737370]">Microsoft 365 & SharePoint</p>
+                      </div>
                     </div>
-                    <p className="text-xs text-slate-600 leading-relaxed mb-3">
-                      Conexão com o SharePoint e OneDrive corporativo da LECASU para importação e centralização de orçamentos e relatórios técnicos.
+
+                    <p className="text-xs text-[#525250] leading-relaxed mb-5">
+                      Aceda a pastas partilhadas, relatórios e medições da sua conta Microsoft.
                     </p>
-                    <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-[11px] text-slate-600 mb-4 space-y-1 font-mono">
-                      <p className="text-slate-800 font-semibold font-sans">Requisitos de Produção:</p>
-                      <p>• Microsoft Entra ID (Azure Portal)</p>
-                      <p>• Microsoft Graph API (Files.Read)</p>
-                      <p>• Application (Client) ID</p>
-                    </div>
                   </div>
 
-                  <a
-                    href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full py-2 px-3 rounded-lg text-xs font-bold font-heading flex items-center justify-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white shadow-sm transition cursor-pointer"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.open('https://onedrive.live.com', '_blank', 'noopener,noreferrer');
+                    }}
+                    className="w-full py-2.5 px-3 rounded-xl text-xs font-bold font-heading flex items-center justify-center gap-2 bg-[#0078D4] hover:bg-[#005A9E] text-white shadow-sm transition cursor-pointer"
                   >
+                    <span>Aceder ao OneDrive</span>
                     <ExternalLink size={13} />
-                    <span>Configurar no Azure Portal</span>
-                  </a>
+                  </button>
                 </div>
 
               </div>
-
-              {/* Guia Arquitetural / Como Funciona */}
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs space-y-2">
-                <h5 className="font-bold text-slate-900 font-heading flex items-center gap-1.5">
-                  <ShieldCheck size={15} className="text-emerald-600" />
-                  <span>Sincronização Real e Segura com o Repositório</span>
-                </h5>
-                <p className="text-slate-600 leading-relaxed">
-                  Para que o utilizador autentique a sua conta pessoal/corporativa de e-mail e liste os arquivos em tempo real, as credenciais de API do Google Workspace e Microsoft 365 devem ser inseridas no ficheiro <code>.env</code> do servidor. O fluxo oficial utiliza autenticação por consentimento seguro (OAuth 2.0).
-                </p>
-              </div>
-
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end">
+            <div className="px-6 py-4 bg-[#FAFAF9] border-t border-[#EDEDEA] flex items-center justify-end">
               <button
+                type="button"
                 onClick={() => setIsCloudIntegrationsOpen(false)}
-                className="btn-primary btn-md"
+                className="btn-secondary btn-md"
               >
-                Concluído
+                Fechar
               </button>
             </div>
 
