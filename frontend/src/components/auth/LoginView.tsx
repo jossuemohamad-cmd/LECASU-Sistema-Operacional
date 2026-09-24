@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Lock, 
   Mail, 
@@ -9,7 +9,10 @@ import {
   CheckCircle2, 
   X, 
   Eye,
-  EyeOff
+  EyeOff,
+  Layers,
+  Sparkles,
+  Database
 } from 'lucide-react';
 import type { User } from '../../types';
 import { loginUser, forgotPassword, resetPassword } from '../../services/api';
@@ -23,8 +26,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(() => Boolean(localStorage.getItem('lecasu_remember_email')));
+  
+  // Loading & Progress States
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(1);
+  const [progressPercent, setProgressPercent] = useState(15);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Forgot Password Modal State
@@ -40,22 +46,44 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [forgotSuccess, setForgotSuccess] = useState<string | null>(null);
   const [tempCodeNotice, setTempCodeNotice] = useState<string | null>(null);
 
+  // Progress animation when loading
+  useEffect(() => {
+    let interval: any;
+    if (isLoading) {
+      interval = setInterval(() => {
+        setProgressPercent(prev => {
+          if (prev >= 95) return prev;
+          return prev + Math.floor(Math.random() * 8) + 4;
+        });
+      }, 250);
+    }
+    return () => clearInterval(interval);
+  }, [isLoading]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      setErrorMessage('Por favor, preencha o e-mail e a senha.');
+      setErrorMessage('Por favor, preencha o e-mail e a palavra-passe.');
       return;
     }
 
     try {
       setIsLoading(true);
       setLoadingStep(1);
+      setProgressPercent(20);
       setErrorMessage(null);
 
-      // Dynamic loading step indicators for real-time user feedback
-      const stepTimer1 = setTimeout(() => setLoadingStep(2), 1200);
-      const stepTimer2 = setTimeout(() => setLoadingStep(3), 2600);
-      
+      // Timers for high-tech progression feedback
+      const timer1 = setTimeout(() => {
+        setLoadingStep(2);
+        setProgressPercent(50);
+      }, 900);
+
+      const timer2 = setTimeout(() => {
+        setLoadingStep(3);
+        setProgressPercent(80);
+      }, 1900);
+
       if (rememberMe) {
         localStorage.setItem('lecasu_remember_email', email.trim());
       } else {
@@ -63,13 +91,22 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       }
 
       const res = await loginUser({ email, password });
-      clearTimeout(stepTimer1);
-      clearTimeout(stepTimer2);
-      onLoginSuccess(res.user);
+      
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      setLoadingStep(4);
+      setProgressPercent(100);
+
+      // Smooth brief pause at 100% before opening ERP
+      setTimeout(() => {
+        onLoginSuccess(res.user);
+      }, 600);
+
     } catch (err: any) {
       console.error('Erro ao iniciar sessão:', err);
-      setErrorMessage(err.message || 'Falha na autenticação. Verifique as credenciais.');
+      setErrorMessage(err.message || 'Falha na autenticação. Verifique o seu e-mail e palavra-passe.');
       setIsLoading(false);
+      setProgressPercent(15);
     }
   };
 
@@ -96,7 +133,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const handleRequestRecoveryCode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!forgotEmail.trim()) {
-      setForgotError('Por favor, informe o seu endereço de e-mail.');
+      setForgotError('Por favor, informe o seu endereço de e-mail corporativo.');
       return;
     }
 
@@ -111,7 +148,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         setTempCodeNotice(`Código de verificação gerado: ${res.temp_code}`);
         setForgotToken(res.temp_code);
       }
-      setForgotSuccess(res.message || 'Código de verificação gerado.');
+      setForgotSuccess(res.message || 'Código de verificação enviado.');
       setForgotStep(2);
     } catch (err: any) {
       setForgotError(err.message || 'Erro ao processar a solicitação de recuperação.');
@@ -159,99 +196,279 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     }
   };
 
-  return (
-    <div 
-      className="min-h-screen w-full flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8 font-sans relative overflow-hidden bg-[#101010] bg-cover bg-center bg-no-repeat selection:bg-[#FF8000] selection:text-white"
-    >
-      {/* LUXURY DARK GRADIENT & GLASS OVERLAY */}
-      <div className="absolute inset-0 bg-gradient-to-tr from-[#101010] via-[#141414] to-[#1a1a1a] pointer-events-none" />
-      
-      {/* AMBIENT GLOW EFFECTS */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#FF8000]/15 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-24 -right-24 w-80 h-80 bg-[#FF8000]/10 rounded-full blur-3xl pointer-events-none" />
-
-      {/* LOGIN CARD CONTAINER */}
-      <div className="w-full max-w-md z-10 relative">
-        <div className="bg-[#181818]/90 backdrop-blur-xl py-8 px-6 sm:px-10 shadow-2xl rounded-2xl border border-[#2E2E2E] transition-all duration-300 relative overflow-hidden">
-          
-          {/* TOP ACCENT LINE WITH LOADING PULSE */}
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#FF8000] via-[#FFA347] to-[#FF8000] overflow-hidden">
-            {isLoading && (
-              <div className="w-full h-full bg-white/40 animate-pulse" />
-            )}
+  // =========================================================================
+  // 1. LOADER EM TELA CHEIA (Imersivo, Ultra-Profissional & Dinâmico)
+  // O formulário fecha e dá lugar a esta tela de processamento até entrar
+  // =========================================================================
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 z-[99999] bg-[#101010] flex flex-col items-center justify-center p-6 text-white font-sans overflow-hidden animate-in fade-in duration-300">
+        {/* Glow de fundo */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#FF8000]/15 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="relative z-10 max-w-md w-full flex flex-col items-center text-center">
+          {/* Logo animado com pulso de alta tecnologia */}
+          <div className="relative mb-8">
+            <div className="w-20 h-20 rounded-2xl bg-[#FF8000] flex items-center justify-center font-heading font-black text-white text-4xl tracking-wider shadow-2xl shadow-[#FF8000]/40 ring-4 ring-[#FF8000]/30 animate-pulse">
+              L
+            </div>
+            {/* Anéis orbitais */}
+            <div className="absolute -inset-4 rounded-3xl border border-[#FF8000]/30 animate-spin" style={{ animationDuration: '6s' }} />
+            <div className="absolute -inset-8 rounded-full border border-dashed border-[#FF8000]/20 animate-spin" style={{ animationDuration: '12s', animationDirection: 'reverse' }} />
           </div>
 
-          {/* INTEGRATED BRANDING & HEADER */}
-          <div className="mb-6 pb-5 border-b border-[#282828] text-center">
-            <div className="inline-flex items-center justify-center space-x-3 mb-3">
-              <div className="w-11 h-11 rounded-xl bg-[#FF8000] flex items-center justify-center font-heading font-black text-white text-2xl tracking-wider shadow-lg shadow-[#FF8000]/30 ring-1 ring-[#FF8000]/50">
-                L
-              </div>
-              <div className="text-left">
-                <span className="font-heading font-extrabold text-2xl tracking-tight text-white block leading-none">
-                  LECASU <span className="text-[#FF8000] text-xs font-bold tracking-wider uppercase ml-0.5">ERP</span>
-                </span>
-                <span className="text-[11px] text-neutral-400 font-sans font-medium tracking-wide">
-                  Sistema Operacional
-                </span>
-              </div>
+          <h2 className="text-2xl font-bold font-heading text-white tracking-tight">
+            LECASU <span className="text-[#FF8000] text-sm font-semibold uppercase">ERP</span>
+          </h2>
+          <p className="text-xs text-neutral-400 mt-1 font-medium">
+            A inicializar sessão corporativa segura
+          </p>
+
+          {/* Barra de Progresso com Percentagem */}
+          <div className="w-full mt-8 bg-neutral-900 border border-neutral-800 rounded-full p-1 shadow-inner">
+            <div className="flex items-center justify-between text-[11px] px-3 pb-1 text-neutral-400 font-mono">
+              <span>Carregamento do Sistema</span>
+              <span className="font-bold text-[#FF8000]">{Math.min(100, progressPercent)}%</span>
             </div>
-            
-            <p className="text-xs text-neutral-400 max-w-xs mx-auto font-sans">
-              Introduza as suas credenciais corporativas para entrar no sistema.
+            <div className="w-full h-2 bg-neutral-800 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-[#FF8000] to-[#FFA347] rounded-full transition-all duration-300 shadow-sm shadow-[#FF8000]/50"
+                style={{ width: `${Math.min(100, progressPercent)}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Stepper de Etapas do Loader */}
+          <div className="w-full mt-6 space-y-2.5 text-left bg-[#181818] border border-neutral-800 rounded-xl p-4 shadow-xl">
+            <div className="flex items-center space-x-3 text-xs">
+              {loadingStep > 1 ? (
+                <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0" />
+              ) : (
+                <div className="w-4 h-4 rounded-full border-2 border-[#FF8000] border-t-transparent animate-spin flex-shrink-0" />
+              )}
+              <span className={loadingStep >= 1 ? 'text-white font-medium' : 'text-neutral-500'}>
+                Validação de credenciais e segurança JWT
+              </span>
+            </div>
+
+            <div className="flex items-center space-x-3 text-xs">
+              {loadingStep > 2 ? (
+                <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0" />
+              ) : loadingStep === 2 ? (
+                <div className="w-4 h-4 rounded-full border-2 border-[#FF8000] border-t-transparent animate-spin flex-shrink-0" />
+              ) : (
+                <div className="w-4 h-4 rounded-full border border-neutral-700 flex-shrink-0" />
+              )}
+              <span className={loadingStep >= 2 ? 'text-white font-medium' : 'text-neutral-500'}>
+                Conexão com PostgreSQL Neon Cloud
+              </span>
+            </div>
+
+            <div className="flex items-center space-x-3 text-xs">
+              {loadingStep > 3 ? (
+                <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0" />
+              ) : loadingStep === 3 ? (
+                <div className="w-4 h-4 rounded-full border-2 border-[#FF8000] border-t-transparent animate-spin flex-shrink-0" />
+              ) : (
+                <div className="w-4 h-4 rounded-full border border-neutral-700 flex-shrink-0" />
+              )}
+              <span className={loadingStep >= 3 ? 'text-white font-medium' : 'text-neutral-500'}>
+                Sincronização de módulos e permissões de acesso
+              </span>
+            </div>
+
+            <div className="flex items-center space-x-3 text-xs">
+              {loadingStep === 4 ? (
+                <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0" />
+              ) : (
+                <div className="w-4 h-4 rounded-full border border-neutral-700 flex-shrink-0" />
+              )}
+              <span className={loadingStep === 4 ? 'text-emerald-400 font-bold' : 'text-neutral-500'}>
+                Acesso autorizado! A entrar no painel...
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-6 flex items-center justify-center space-x-2 text-[11px] text-neutral-500 font-mono">
+            <ShieldCheck size={14} className="text-emerald-500" />
+            <span>Sessão Encriptada TLS 1.3 / AES-256</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // 2. TELA DE LOGIN PROFISSIONAL (Dual-Panel Split-Screen Enterprise)
+  // =========================================================================
+  return (
+    <div className="min-h-screen w-full flex bg-[#F5F5F3] font-sans selection:bg-[#FF8000] selection:text-white">
+      
+      {/* 
+        PAINEL ESQUERDO: BRANDING CORPORATIVO & HIGHLIGHTS DO SISTEMA 
+        (Visível em telas grandes para demonstrar autoridade e elegância)
+      */}
+      <div className="hidden lg:flex lg:w-5/12 bg-[#101010] text-white flex-col justify-between p-12 relative overflow-hidden border-r border-[#222222]">
+        {/* Glow ambiente sutil */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-[#FF8000]/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#FF8000]/10 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Top Header do Painel Esquerdo */}
+        <div className="relative z-10">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-xl bg-[#FF8000] flex items-center justify-center font-heading font-black text-white text-xl shadow-lg shadow-[#FF8000]/30">
+              L
+            </div>
+            <div>
+              <span className="font-heading font-extrabold text-xl tracking-tight text-white block">
+                LECASU <span className="text-[#FF8000] text-xs font-bold tracking-wider uppercase">ERP</span>
+              </span>
+              <span className="text-[11px] text-neutral-400 font-medium">
+                Sistema Operacional Corporativo
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Centro: Mensagem & Destaques de Alto Nível */}
+        <div className="relative z-10 my-auto py-12 space-y-8">
+          <div>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#1F1F1F] text-[#FF8000] border border-[#2E2E2E] mb-4">
+              <Sparkles size={13} />
+              LECASU OS v2.0 Enterprise
+            </span>
+            <h2 className="text-3xl xl:text-4xl font-black font-heading tracking-tight text-white leading-tight">
+              Gestão Integrada para Engenharia & Climatização.
+            </h2>
+            <p className="text-sm text-neutral-400 mt-3 leading-relaxed">
+              Plataforma centralizada para orçamentos, faturação em Meticais (MZN), controle de obras, equipa técnica e conformidade fiscal.
             </p>
           </div>
 
-          {/* ERROR ALERT */}
+          {/* Grid de Recursos do Sistema */}
+          <div className="space-y-3.5">
+            <div className="flex items-start space-x-3 p-3.5 rounded-xl bg-[#181818] border border-[#262626]">
+              <div className="p-2 rounded-lg bg-[#222222] text-[#FF8000] flex-shrink-0 mt-0.5">
+                <Database size={16} />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-white font-heading">PostgreSQL Neon Cloud</h4>
+                <p className="text-[11px] text-neutral-400 mt-0.5">Sincronização em tempo real com alta disponibilidade.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start space-x-3 p-3.5 rounded-xl bg-[#181818] border border-[#262626]">
+              <div className="p-2 rounded-lg bg-[#222222] text-[#FF8000] flex-shrink-0 mt-0.5">
+                <Layers size={16} />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-white font-heading">10 Módulos Integrados</h4>
+                <p className="text-[11px] text-neutral-400 mt-0.5">Financeiro, Obras, Propostas, RH, GED, Suprimentos e Equipa.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start space-x-3 p-3.5 rounded-xl bg-[#181818] border border-[#262626]">
+              <div className="p-2 rounded-lg bg-[#222222] text-[#FF8000] flex-shrink-0 mt-0.5">
+                <ShieldCheck size={16} />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-white font-heading">Segurança e Auditoria</h4>
+                <p className="text-[11px] text-neutral-400 mt-0.5">Controle de acessos baseado em perfis (RBAC) e logs.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Rodapé do Painel Esquerdo */}
+        <div className="relative z-10 pt-6 border-t border-[#222222] text-xs text-neutral-500 flex items-center justify-between">
+          <span>LECASU, Lda • Moçambique</span>
+          <span className="flex items-center gap-1.5 text-emerald-500 font-medium">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            Serviços Operacionais
+          </span>
+        </div>
+      </div>
+
+      {/* 
+        PAINEL DIREITO: FORMULÁRIO DE LOGIN LIMPO, CLARO E PROFISSIONAL
+      */}
+      <div className="w-full lg:w-7/12 flex items-center justify-center p-6 sm:p-12 md:p-16 bg-[#F5F5F3]">
+        <div className="w-full max-w-md bg-white rounded-2xl border border-[#E2E2DE] shadow-xl p-8 sm:p-10 animate-in fade-in zoom-in-95 duration-200">
+          
+          {/* Logo visível em Mobile */}
+          <div className="lg:hidden mb-6 text-center">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[#FF8000] text-white font-heading font-black text-2xl shadow-md mb-2">
+              L
+            </div>
+            <h1 className="text-xl font-bold font-heading text-[#101010]">
+              LECASU <span className="text-[#FF8000] text-xs font-semibold">ERP</span>
+            </h1>
+          </div>
+
+          {/* Cabeçalho do Formulário */}
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold font-heading text-[#101010] tracking-tight">
+              Aceder ao Sistema
+            </h2>
+            <p className="text-xs text-[#737370] mt-1.5">
+              Introduza as suas credenciais corporativas para iniciar sessão.
+            </p>
+          </div>
+
+          {/* ALERTA DE ERRO */}
           {errorMessage && (
-            <div className="mb-5 bg-rose-500/15 border border-rose-500/30 text-rose-300 p-3 rounded-lg flex items-start space-x-2.5 text-xs animate-in fade-in zoom-in-95 font-sans">
-              <AlertCircle size={16} className="flex-shrink-0 mt-0.5 text-rose-400" />
-              <span className="leading-relaxed">{errorMessage}</span>
+            <div className="mb-5 bg-rose-50 border border-rose-200 text-rose-800 p-3.5 rounded-xl flex items-start space-x-2.5 text-xs animate-in fade-in">
+              <AlertCircle size={16} className="flex-shrink-0 mt-0.5 text-rose-600" />
+              <div className="flex-1">
+                <p className="font-semibold text-rose-900 font-heading">Erro de Autenticação</p>
+                <p className="mt-0.5">{errorMessage}</p>
+              </div>
             </div>
           )}
 
-          {/* LOGIN FORM */}
+          {/* FORMULÁRIO DE LOGIN */}
           <form className="space-y-4" onSubmit={handleSubmit}>
-            {/* EMAIL */}
+            
+            {/* ENDEREÇO DE E-MAIL */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Endereço de E-mail
+              <label className="block text-xs font-semibold text-[#101010] mb-1.5 font-heading">
+                Endereço de E-mail Corporativo *
               </label>
-              <div className="relative rounded-lg shadow-xs">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                  <Mail size={15} />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-400">
+                  <Mail size={16} />
                 </div>
                 <input
                   type="email"
                   required
                   autoComplete="username"
-                  placeholder="utilizador@lecasu.co.mz"
+                  placeholder="admin@lecasu.co.mz"
                   value={email}
                   disabled={isLoading}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-9 pr-3 py-2.5 text-xs bg-[#10121A] border border-[#2E3342] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[#FF8000] focus:border-[#FF8000] transition disabled:opacity-60"
+                  className="block w-full pl-10 pr-3.5 py-2.5 text-xs bg-[#FAFAF9] border border-[#E2E2DE] rounded-xl text-[#101010] placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#FF8000]/20 focus:border-[#FF8000] focus:bg-white transition"
                 />
               </div>
             </div>
 
-            {/* SENHA */}
+            {/* PALAVRA-PASSE */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-semibold text-slate-300">
-                  Palavra-passe
+                <label className="block text-xs font-semibold text-[#101010] font-heading">
+                  Palavra-passe *
                 </label>
                 <button
                   type="button"
                   onClick={handleOpenForgotModal}
                   disabled={isLoading}
-                  className="text-[11px] text-[#FF8000] hover:text-[#FFA347] hover:underline transition font-medium cursor-pointer disabled:opacity-50"
+                  className="text-[11px] text-[#FF8000] hover:text-[#E67300] hover:underline transition font-semibold cursor-pointer"
                 >
                   Esqueceu-se da palavra-passe?
                 </button>
               </div>
-              <div className="relative rounded-lg shadow-xs">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                  <Lock size={15} />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-400">
+                  <Lock size={16} />
                 </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -261,302 +478,193 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   value={password}
                   disabled={isLoading}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-9 pr-10 py-2.5 text-xs bg-[#10121A] border border-[#2E3342] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-[#FF8000] focus:border-[#FF8000] transition disabled:opacity-60"
+                  className="block w-full pl-10 pr-10 py-2.5 text-xs bg-[#FAFAF9] border border-[#E2E2DE] rounded-xl text-[#101010] placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#FF8000]/20 focus:border-[#FF8000] focus:bg-white transition"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  disabled={isLoading}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 transition cursor-pointer disabled:opacity-50"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-neutral-400 hover:text-neutral-700 transition cursor-pointer"
                   title={showPassword ? 'Ocultar palavra-passe' : 'Ver palavra-passe'}
                 >
-                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
 
             {/* CHECKBOX LEMBRAR-ME */}
-            <div className="flex items-center justify-between pt-0.5">
+            <div className="flex items-center justify-between pt-1">
               <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={rememberMe}
                   disabled={isLoading}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-3.5 h-3.5 rounded border-slate-700 bg-slate-950 text-orange-600 focus:ring-orange-500 focus:ring-offset-slate-900 cursor-pointer accent-orange-600"
+                  className="w-4 h-4 rounded border-[#E2E2DE] text-[#FF8000] focus:ring-[#FF8000] cursor-pointer accent-[#FF8000]"
                 />
-                <span className="text-xs text-slate-300 font-medium">Lembrar o meu e-mail</span>
+                <span className="text-xs text-[#737370] font-medium">Lembrar o meu e-mail</span>
               </label>
             </div>
 
-            {/* SUBMIT BUTTON COM EFEITO DE LOAD BONITO */}
+            {/* BOTÃO ENTRAR NO SISTEMA */}
             <div className="pt-2">
               <button
                 type="submit"
                 disabled={isLoading}
-                className={`w-full relative overflow-hidden py-3 px-4 border border-transparent rounded-lg shadow-lg text-xs font-bold text-white transition-all duration-300 cursor-pointer ${
-                  isLoading 
-                    ? 'bg-orange-700 cursor-wait shadow-orange-600/20' 
-                    : 'bg-orange-600 hover:bg-orange-500 shadow-orange-600/30 hover:shadow-orange-600/40 active:scale-[0.99]'
-                }`}
+                className="w-full py-3 px-4 bg-[#FF8000] hover:bg-[#E67300] active:bg-[#CC6600] text-white rounded-xl shadow-md shadow-[#FF8000]/25 text-xs font-bold font-heading flex items-center justify-center space-x-2 transition-all cursor-pointer"
               >
-                {isLoading ? (
-                  <div className="flex items-center justify-center space-x-2.5">
-                    {/* CUSTOM ROTATING DUAL-RING SPINNER */}
-                    <div className="relative w-4 h-4 flex-shrink-0">
-                      <div className="absolute inset-0 rounded-full border-2 border-white/20" />
-                      <div className="absolute inset-0 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                    </div>
-                    <span className="font-semibold tracking-wide">
-                      {loadingStep === 1 && 'A verificar credenciais...'}
-                      {loadingStep === 2 && 'A autenticar perfil e permissões...'}
-                      {loadingStep >= 3 && 'A sincronizar dados do sistema...'}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center space-x-2">
-                    <span>Entrar no Sistema</span>
-                    <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
-                  </div>
-                )}
+                <span>Entrar no Sistema</span>
+                <ArrowRight size={15} />
               </button>
             </div>
           </form>
 
-          {/* ELEGANT FULL-CARD LOADING OVERLAY DURING AUTHENTICATION */}
-          {isLoading && (
-            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-200">
-              {/* GLOWING LOGO */}
-              <div className="relative mb-4">
-                <div className="absolute -inset-2 bg-orange-600/40 rounded-2xl blur-md animate-pulse" />
-                <div className="relative w-14 h-14 rounded-2xl bg-orange-600 flex items-center justify-center text-white font-black text-2xl shadow-xl">
-                  L
-                </div>
-              </div>
-
-              {/* DUAL SPINNER */}
-              <div className="relative w-8 h-8 my-2">
-                <div className="absolute inset-0 rounded-full border-2 border-orange-500/20" />
-                <div className="absolute inset-0 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" />
-              </div>
-
-              {/* STEP TEXT */}
-              <h4 className="text-sm font-bold text-white mt-2">
-                LECASU Sistema Operacional
-              </h4>
-              <p className="text-xs text-orange-400 font-medium mt-1 animate-pulse">
-                {loadingStep === 1 && 'A validar credenciais de segurança...'}
-                {loadingStep === 2 && 'A carregar perfil de utilizador e acessos...'}
-                {loadingStep >= 3 && 'A sincronizar dados operacionais...'}
-              </p>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                Por favor aguarde um instante
-              </p>
-
-              {/* PROGRESS BAR */}
-              <div className="w-48 h-1 bg-slate-800 rounded-full overflow-hidden mt-4">
-                <div className="h-full bg-gradient-to-r from-orange-600 via-amber-400 to-orange-600 w-full animate-[shimmer_1.5s_infinite_linear]" />
-              </div>
-            </div>
-          )}
-
-        </div>
-
-        {/* FOOTER */}
-        <div className="text-center mt-6">
-          <p className="text-[11px] text-slate-400 font-medium">
-            LECASU, Lda • Moçambique • Todos os direitos reservados 2026
-          </p>
-          <p className="text-[10px] text-slate-500 mt-1 flex items-center justify-center gap-1">
-            <ShieldCheck size={12} className="text-orange-500" />
-            Ambiente Seguro & Criptografado (TLS/AES-256)
-          </p>
+          {/* Dica de Utilização / Footer */}
+          <div className="mt-8 pt-6 border-t border-[#EDEDEA] text-center">
+            <p className="text-[11px] text-[#737370] flex items-center justify-center gap-1.5">
+              <ShieldCheck size={14} className="text-emerald-600" />
+              Ambiente Corporativo Protegido • LECASU Moçambique
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* MODAL DE RECUPERAÇÃO DE PALAVRA-PASSE */}
+      {/* =========================================================================
+          MODAL DE RECUPERAÇÃO DE PALAVRA-PASSE
+         ========================================================================= */}
       {isForgotModalOpen && (
         <div className="modal-overlay-erp animate-in fade-in">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+          <div className="bg-white border border-[#E2E2DE] rounded-2xl w-full max-w-md p-6 sm:p-8 shadow-2xl relative animate-in zoom-in-95">
             <button
               onClick={handleCloseForgotModal}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer"
+              className="absolute top-5 right-5 text-neutral-400 hover:text-neutral-700 p-1 rounded-lg hover:bg-neutral-100 transition cursor-pointer"
             >
               <X size={18} />
             </button>
 
-            <div className="flex items-center gap-2.5 mb-4">
-              <div className="p-2 bg-orange-500/10 rounded-lg text-orange-500">
-                <KeyRound size={20} />
+            <div className="flex items-center gap-3 mb-5">
+              <div className="p-2.5 bg-[#FFF2E5] text-[#FF8000] rounded-xl">
+                <KeyRound size={22} />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">Recuperação de Palavra-passe</h3>
-                <p className="text-xs text-slate-400">
-                  {forgotStep === 1 
-                    ? 'Etapa 1 de 2: Confirmação do e-mail corporativo' 
-                    : 'Etapa 2 de 2: Inserção do código e nova palavra-passe'}
-                </p>
+                <h3 className="text-base font-bold text-[#101010] font-heading">Recuperar Palavra-passe</h3>
+                <p className="text-xs text-[#737370]">Redefinição de credencial corporativa</p>
               </div>
             </div>
 
             {forgotError && (
-              <div className="mb-4 bg-red-500/10 border border-red-500/30 text-red-400 p-3 rounded-lg flex items-start space-x-2 text-xs">
-                <AlertCircle size={15} className="flex-shrink-0 mt-0.5" />
+              <div className="mb-4 bg-rose-50 border border-rose-200 text-rose-800 p-3 rounded-xl flex items-start space-x-2 text-xs">
+                <AlertCircle size={15} className="flex-shrink-0 mt-0.5 text-rose-600" />
                 <span>{forgotError}</span>
               </div>
             )}
 
             {forgotSuccess && (
-              <div className="mb-4 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 p-3 rounded-lg flex items-start space-x-2 text-xs">
-                <CheckCircle2 size={15} className="flex-shrink-0 mt-0.5" />
+              <div className="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-xl flex items-start space-x-2 text-xs">
+                <CheckCircle2 size={15} className="flex-shrink-0 mt-0.5 text-emerald-600" />
                 <span>{forgotSuccess}</span>
               </div>
             )}
 
             {tempCodeNotice && (
-              <div className="mb-4 bg-amber-500/10 border border-amber-500/30 text-amber-300 p-3 rounded-lg flex items-center justify-between text-xs font-mono">
-                <span>{tempCodeNotice}</span>
+              <div className="mb-4 bg-amber-50 border border-amber-200 text-amber-900 p-3 rounded-xl text-xs">
+                <p className="font-semibold">{tempCodeNotice}</p>
+                <p className="text-[11px] text-amber-700 mt-0.5">Utilize este código para redefinir a palavra-passe abaixo.</p>
               </div>
             )}
 
             {forgotStep === 1 ? (
               <form onSubmit={handleRequestRecoveryCode} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    E-mail Institucional
+                  <label className="block text-xs font-semibold text-[#101010] mb-1.5 font-heading">
+                    E-mail Corporativo Cadastrado
                   </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                      <Mail size={15} />
-                    </div>
-                    <input
-                      type="email"
-                      required
-                      placeholder="utilizador@lecasu.co.mz"
-                      value={forgotEmail}
-                      onChange={(e) => setForgotEmail(e.target.value)}
-                      className="block w-full pl-9 pr-3 py-2 text-xs bg-slate-950/80 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition"
-                    />
-                  </div>
-                  <p className="text-[11px] text-slate-500 mt-1.5">
-                    Um código seguro de 6 dígitos será gerado e associado à sua conta com validade de 15 minutos.
-                  </p>
+                  <input
+                    type="email"
+                    required
+                    placeholder="utilizador@lecasu.co.mz"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    className="w-full text-xs bg-[#FAFAF9] border border-[#E2E2DE] rounded-xl p-2.5 text-[#101010] focus:outline-none focus:ring-2 focus:ring-[#FF8000]/20 focus:border-[#FF8000]"
+                  />
                 </div>
 
-                <div className="flex items-center justify-end gap-2 pt-2">
+                <div className="flex justify-end space-x-2 pt-3">
                   <button
                     type="button"
                     onClick={handleCloseForgotModal}
-                    className="px-4 py-2 text-xs font-medium text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition cursor-pointer"
+                    className="btn-secondary btn-md"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={forgotLoading}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold rounded-lg shadow-sm transition disabled:opacity-50 cursor-pointer"
+                    className="btn-primary btn-md"
                   >
-                    {forgotLoading ? (
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                        <span>A processar...</span>
-                      </div>
-                    ) : (
-                      <>
-                        <span>Solicitar Código</span>
-                        <ArrowRight size={13} />
-                      </>
-                    )}
+                    {forgotLoading ? 'A processar...' : 'Gerar Código de Verificação'}
                   </button>
                 </div>
               </form>
             ) : (
               <form onSubmit={handleResetPassword} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    Código de 6 Dígitos
+                  <label className="block text-xs font-semibold text-[#101010] mb-1.5 font-heading">
+                    Código de Verificação Recebido
                   </label>
                   <input
                     type="text"
                     required
-                    maxLength={6}
-                    placeholder="Ex: 482910"
+                    placeholder="Ex: 839201"
                     value={forgotToken}
                     onChange={(e) => setForgotToken(e.target.value)}
-                    className="block w-full px-3 py-2 text-center tracking-widest font-mono text-base font-bold bg-slate-950/80 border border-slate-700 rounded-lg text-orange-400 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition"
+                    className="w-full text-xs bg-[#FAFAF9] border border-[#E2E2DE] rounded-xl p-2.5 text-[#101010] font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-[#FF8000]/20 focus:border-[#FF8000]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  <label className="block text-xs font-semibold text-[#101010] mb-1.5 font-heading">
                     Nova Palavra-passe
                   </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                      <Lock size={15} />
-                    </div>
-                    <input
-                      type={showNewPassword ? 'text' : 'password'}
-                      required
-                      placeholder="Mínimo 6 caracteres"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      className="block w-full pl-9 pr-10 py-2 text-xs bg-slate-950/80 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 transition cursor-pointer"
-                      title={showNewPassword ? 'Ocultar palavra-passe' : 'Ver palavra-passe'}
-                    >
-                      {showNewPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                    </button>
-                  </div>
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    placeholder="Mínimo 6 caracteres"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full text-xs bg-[#FAFAF9] border border-[#E2E2DE] rounded-xl p-2.5 text-[#101010] focus:outline-none focus:ring-2 focus:ring-[#FF8000]/20 focus:border-[#FF8000]"
+                  />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  <label className="block text-xs font-semibold text-[#101010] mb-1.5 font-heading">
                     Confirmar Nova Palavra-passe
                   </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                      <Lock size={15} />
-                    </div>
-                    <input
-                      type={showNewPassword ? 'text' : 'password'}
-                      required
-                      placeholder="Confirme a nova palavra-passe"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="block w-full pl-9 pr-10 py-2 text-xs bg-slate-950/80 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition"
-                    />
-                  </div>
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    placeholder="Repita a palavra-passe"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full text-xs bg-[#FAFAF9] border border-[#E2E2DE] rounded-xl p-2.5 text-[#101010] focus:outline-none focus:ring-2 focus:ring-[#FF8000]/20 focus:border-[#FF8000]"
+                  />
                 </div>
 
-                <div className="flex items-center justify-between pt-2">
+                <div className="flex justify-between items-center pt-3">
                   <button
                     type="button"
                     onClick={() => setForgotStep(1)}
-                    className="text-xs font-medium text-orange-400 hover:text-orange-300 hover:underline transition cursor-pointer"
+                    className="text-xs text-neutral-500 hover:text-neutral-800 underline"
                   >
-                    ← Voltar ao e-mail
+                    Voltar etapa
                   </button>
                   <button
                     type="submit"
                     disabled={forgotLoading}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold rounded-lg shadow-sm transition disabled:opacity-50 cursor-pointer"
+                    className="btn-primary btn-md"
                   >
-                    {forgotLoading ? (
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                        <span>A redefinir...</span>
-                      </div>
-                    ) : (
-                      <>
-                        <span>Redefinir Palavra-passe</span>
-                        <CheckCircle2 size={13} />
-                      </>
-                    )}
+                    {forgotLoading ? 'A redefinir...' : 'Atualizar Palavra-passe'}
                   </button>
                 </div>
               </form>
