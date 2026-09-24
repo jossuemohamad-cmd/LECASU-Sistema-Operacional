@@ -24,6 +24,7 @@ import { SettingsView } from './components/settings/SettingsView';
 import { SuppliersView } from './components/suppliers/SuppliersView';
 import { HRView } from './components/hr/HRView';
 import { GEDView } from './components/ged/GEDView';
+import { FinanceView } from './components/finance/FinanceView';
 import { LoginView } from './components/auth/LoginView';
 import { getAuthToken, removeAuthToken, fetchCurrentUser } from './services/api';
 import type { User } from './types';
@@ -215,6 +216,8 @@ export default function App() {
               <ProjectsView />
             ) : activeTab === 'equipa' ? (
               <TechnicalTeamView />
+            ) : activeTab === 'financeiro' ? (
+              <FinanceView />
             ) : activeTab === 'fornecedores' ? (
               <SuppliersView />
             ) : activeTab === 'rh' ? (

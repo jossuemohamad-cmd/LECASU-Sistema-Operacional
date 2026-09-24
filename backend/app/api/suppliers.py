@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func, case
 from typing import List, Optional
 from datetime import datetime
 
@@ -36,13 +36,25 @@ def list_suppliers(
         
     suppliers = query.order_by(Supplier.name.asc()).all()
 
-    # Calculate purchases aggregates for each supplier
+    # Single Aggregated Query for all suppliers' purchases (Eliminating N+1 queries)
+    purchases_stats = (
+        db.query(
+            PurchaseOrder.supplier_id,
+            func.count(PurchaseOrder.id).label('purchases_count'),
+            func.coalesce(func.sum(case((PurchaseOrder.status == 'PAID', PurchaseOrder.total_amount), else_=0)), 0).label('total_spent')
+        )
+        .group_by(PurchaseOrder.supplier_id)
+        .all()
+    )
+
+    stats_map = {
+        row.supplier_id: (int(row.purchases_count), float(row.total_spent))
+        for row in purchases_stats
+    }
+
     results = []
     for s in suppliers:
-        purchases = db.query(PurchaseOrder).filter(PurchaseOrder.supplier_id == s.id).all()
-        purchases_count = len(purchases)
-        total_spent = sum(float(p.total_amount or 0) for p in purchases if p.status == 'PAID')
-
+        purchases_count, total_spent = stats_map.get(s.id, (0, 0.0))
         results.append(
             SupplierResponse(
                 id=s.id,
@@ -125,8 +137,17 @@ def toggle_supplier_status(
     db.commit()
     db.refresh(supplier)
 
-    purchases = db.query(PurchaseOrder).filter(PurchaseOrder.supplier_id == supplier.id).all()
-    total_spent = sum(float(p.total_amount or 0) for p in purchases if p.status == 'PAID')
+    purchases_stats = (
+        db.query(
+            func.count(PurchaseOrder.id).label('purchases_count'),
+            func.coalesce(func.sum(case((PurchaseOrder.status == 'PAID', PurchaseOrder.total_amount), else_=0)), 0).label('total_spent')
+        )
+        .filter(PurchaseOrder.supplier_id == supplier.id)
+        .first()
+    )
+
+    purchases_count = int(purchases_stats.purchases_count if purchases_stats else 0)
+    total_spent = float(purchases_stats.total_spent if purchases_stats else 0.0)
 
     return SupplierResponse(
         id=supplier.id,
@@ -139,7 +160,7 @@ def toggle_supplier_status(
         address=supplier.address,
         is_active=supplier.is_active,
         created_at=supplier.created_at,
-        purchases_count=len(purchases),
+        purchases_count=purchases_count,
         total_spent=total_spent
     )
 
@@ -149,24 +170,26 @@ def get_suppliers_overview(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    total_suppliers = db.query(Supplier).count()
-    active_suppliers = db.query(Supplier).filter(Supplier.is_active == True).count()
+    total_suppliers = db.query(func.count(Supplier.id)).scalar() or 0
+    active_suppliers = db.query(func.count(Supplier.id)).filter(Supplier.is_active == True).scalar() or 0
 
-    all_orders = db.query(PurchaseOrder).all()
-    total_purchases_count = len(all_orders)
-    pending_orders = [p for p in all_orders if p.status == 'PENDING']
-    paid_orders = [p for p in all_orders if p.status == 'PAID']
-
-    pending_amount_mzn = sum(float(p.total_amount or 0) for p in pending_orders)
-    paid_amount_mzn = sum(float(p.total_amount or 0) for p in paid_orders)
+    order_stats = (
+        db.query(
+            func.count(PurchaseOrder.id).label('total_count'),
+            func.coalesce(func.sum(case((PurchaseOrder.status == 'PENDING', 1), else_=0)), 0).label('pending_count'),
+            func.coalesce(func.sum(case((PurchaseOrder.status == 'PENDING', PurchaseOrder.total_amount), else_=0)), 0).label('pending_amount'),
+            func.coalesce(func.sum(case((PurchaseOrder.status == 'PAID', PurchaseOrder.total_amount), else_=0)), 0).label('paid_amount')
+        )
+        .first()
+    )
 
     return SupplierOverviewKPIs(
         total_suppliers=total_suppliers,
         active_suppliers_count=active_suppliers,
-        pending_amount_mzn=pending_amount_mzn,
-        paid_amount_mzn=paid_amount_mzn,
-        total_purchases_count=total_purchases_count,
-        pending_orders_count=len(pending_orders)
+        pending_amount_mzn=float(order_stats.pending_amount if order_stats else 0.0),
+        paid_amount_mzn=float(order_stats.paid_amount if order_stats else 0.0),
+        total_purchases_count=int(order_stats.total_count if order_stats else 0),
+        pending_orders_count=int(order_stats.pending_count if order_stats else 0)
     )
 
 
@@ -180,46 +203,43 @@ def list_purchases(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    query = db.query(PurchaseOrder)
+    query = (
+        db.query(PurchaseOrder)
+        .options(joinedload(PurchaseOrder.supplier), joinedload(PurchaseOrder.project))
+        .order_by(PurchaseOrder.created_at.desc())
+    )
+
     if supplier_id:
         query = query.filter(PurchaseOrder.supplier_id == supplier_id)
     if project_id:
         query = query.filter(PurchaseOrder.project_id == project_id)
-    if status_filter:
-        query = query.filter(PurchaseOrder.status == status_filter)
+    if status_filter and status_filter.upper() != 'ALL':
+        query = query.filter(PurchaseOrder.status == status_filter.upper())
 
-    orders = query.order_by(PurchaseOrder.id.desc()).all()
+    orders = query.all()
 
-    results = []
-    for o in orders:
-        supplier_name = o.supplier.name if o.supplier else None
-        supplier_category = o.supplier.category if o.supplier else None
-        project_name = o.project.name if o.project else None
-        project_code = o.project.code if o.project else None
-
-        results.append(
-            PurchaseOrderResponse(
-                id=o.id,
-                supplier_id=o.supplier_id,
-                project_id=o.project_id,
-                order_number=o.order_number,
-                description=o.description,
-                total_amount=float(o.total_amount or 0),
-                status=o.status,
-                due_date=o.due_date,
-                created_at=o.created_at,
-                paid_at=o.paid_at,
-                supplier_name=supplier_name,
-                supplier_category=supplier_category,
-                project_name=project_name,
-                project_code=project_code
-            )
+    return [
+        PurchaseOrderResponse(
+            id=p.id,
+            supplier_id=p.supplier_id,
+            project_id=p.project_id,
+            order_number=p.order_number,
+            description=p.description,
+            total_amount=float(p.total_amount or 0),
+            status=p.status,
+            due_date=p.due_date,
+            created_at=p.created_at,
+            paid_at=p.paid_at,
+            supplier_name=p.supplier.name if p.supplier else None,
+            project_name=p.project.name if p.project else None,
+            project_code=p.project.code if p.project else None
         )
-    return results
+        for p in orders
+    ]
 
 
 @router.post('/purchases', response_model=PurchaseOrderResponse, status_code=status.HTTP_201_CREATED, summary='Emitir nova ordem de compra')
-def create_purchase(
+def create_purchase_order(
     payload: PurchaseOrderCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -231,24 +251,20 @@ def create_purchase(
             detail="Fornecedor selecionado não encontrado."
         )
 
-    project = None
     if payload.project_id:
-        project = db.query(Project).filter(Project.id == payload.project_id).first()
-        if not project:
+        proj = db.query(Project).filter(Project.id == payload.project_id).first()
+        if not proj:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Projeto selecionado não encontrado."
+                detail="Projeto associado não encontrado."
             )
 
-    # Generate sequential unique order_number: PED-2026-001
-    current_year = datetime.utcnow().year
-    count_this_year = db.query(PurchaseOrder).count()
-    order_number = f"PED-{current_year}-{count_this_year + 1:03d}"
-
-    # Ensure uniqueness in case of race condition or gaps
+    year = datetime.utcnow().year
+    count = db.query(func.count(PurchaseOrder.id)).scalar() or 0
+    order_number = f"OC-{year}-{(count + 1):04d}"
     while db.query(PurchaseOrder).filter(PurchaseOrder.order_number == order_number).first():
-        count_this_year += 1
-        order_number = f"PED-{current_year}-{count_this_year + 1:03d}"
+        count += 1
+        order_number = f"OC-{year}-{(count + 1):04d}"
 
     new_order = PurchaseOrder(
         supplier_id=payload.supplier_id,
@@ -270,35 +286,33 @@ def create_purchase(
         project_id=new_order.project_id,
         order_number=new_order.order_number,
         description=new_order.description,
-        total_amount=float(new_order.total_amount or 0),
+        total_amount=float(new_order.total_amount),
         status=new_order.status,
         due_date=new_order.due_date,
         created_at=new_order.created_at,
         paid_at=new_order.paid_at,
         supplier_name=supplier.name,
-        supplier_category=supplier.category,
-        project_name=project.name if project else None,
-        project_code=project.code if project else None
+        project_name=None,
+        project_code=None
     )
 
 
-@router.patch('/purchases/{purchase_id}/pay', response_model=PurchaseOrderResponse, summary='Registar liquidação do pagamento de uma ordem de compra')
+@router.patch('/purchases/{purchase_id}/pay', response_model=PurchaseOrderResponse, summary='Registar pagamento da ordem de compra')
 def pay_purchase_order(
     purchase_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    order = db.query(PurchaseOrder).filter(PurchaseOrder.id == purchase_id).first()
+    order = (
+        db.query(PurchaseOrder)
+        .options(joinedload(PurchaseOrder.supplier), joinedload(PurchaseOrder.project))
+        .filter(PurchaseOrder.id == purchase_id)
+        .first()
+    )
     if not order:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Ordem de compra não encontrada."
-        )
-
-    if order.status == 'PAID':
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Esta ordem de compra já foi liquidada anteriormente."
         )
 
     order.status = 'PAID'
@@ -306,24 +320,18 @@ def pay_purchase_order(
     db.commit()
     db.refresh(order)
 
-    supplier_name = order.supplier.name if order.supplier else None
-    supplier_category = order.supplier.category if order.supplier else None
-    project_name = order.project.name if order.project else None
-    project_code = order.project.code if order.project else None
-
     return PurchaseOrderResponse(
         id=order.id,
         supplier_id=order.supplier_id,
         project_id=order.project_id,
         order_number=order.order_number,
         description=order.description,
-        total_amount=float(order.total_amount or 0),
+        total_amount=float(order.total_amount),
         status=order.status,
         due_date=order.due_date,
         created_at=order.created_at,
         paid_at=order.paid_at,
-        supplier_name=supplier_name,
-        supplier_category=supplier_category,
-        project_name=project_name,
-        project_code=project_code
+        supplier_name=order.supplier.name if order.supplier else None,
+        project_name=order.project.name if order.project else None,
+        project_code=order.project.code if order.project else None
     )

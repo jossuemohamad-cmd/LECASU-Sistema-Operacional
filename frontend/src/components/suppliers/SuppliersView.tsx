@@ -14,11 +14,7 @@ import {
   Building2, 
   Phone, 
   Mail, 
-  Coins, 
-  Briefcase,
-  FileText,
-  DollarSign,
-  Tag
+  Briefcase
 } from 'lucide-react';
 import type { 
   Supplier, 

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Settings, 
   Users, 
   Building2, 
   Plus, 

@@ -6,8 +6,8 @@ from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
 from fastapi.responses import FileResponse
-from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func, extract
 
 from app.core.database import get_db
 from app.models.models import Document, Project, Client, User
@@ -38,7 +38,14 @@ def list_documents(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    query = db.query(Document)
+    query = (
+        db.query(Document)
+        .options(
+            joinedload(Document.project),
+            joinedload(Document.client),
+            joinedload(Document.uploaded_by)
+        )
+    )
 
     if category:
         query = query.filter(Document.category == category)
@@ -56,33 +63,31 @@ def list_documents(
 
     documents = query.order_by(Document.id.desc()).all()
 
-    results = []
-    for doc in documents:
-        results.append(
-            DocumentResponse(
-                id=doc.id,
-                title=doc.title,
-                category=doc.category or 'Geral',
-                file_name=doc.file_name,
-                file_path=doc.file_path,
-                file_size_bytes=doc.file_size_bytes or 0,
-                file_size_formatted=format_file_size(doc.file_size_bytes or 0),
-                mime_type=doc.mime_type,
-                version=doc.version or 'v1.0',
-                description=doc.description,
-                project_id=doc.project_id,
-                client_id=doc.client_id,
-                uploaded_by_id=doc.uploaded_by_id,
-                created_at=doc.created_at,
-                updated_at=doc.updated_at,
-                project_name=doc.project.name if doc.project else None,
-                project_code=doc.project.code if doc.project else None,
-                client_name=doc.client.name if doc.client else None,
-                uploaded_by_name=doc.uploaded_by.name if doc.uploaded_by else None,
-                download_url=f"/api/v1/ged/documents/{doc.id}/download"
-            )
+    return [
+        DocumentResponse(
+            id=doc.id,
+            title=doc.title,
+            category=doc.category or 'Geral',
+            file_name=doc.file_name,
+            file_path=doc.file_path,
+            file_size_bytes=doc.file_size_bytes or 0,
+            file_size_formatted=format_file_size(doc.file_size_bytes or 0),
+            mime_type=doc.mime_type,
+            version=doc.version or 'v1.0',
+            description=doc.description,
+            project_id=doc.project_id,
+            client_id=doc.client_id,
+            uploaded_by_id=doc.uploaded_by_id,
+            created_at=doc.created_at,
+            updated_at=doc.updated_at,
+            project_name=doc.project.name if doc.project else None,
+            project_code=doc.project.code if doc.project else None,
+            client_name=doc.client.name if doc.client else None,
+            uploaded_by_name=doc.uploaded_by.name if doc.uploaded_by else None,
+            download_url=f"/api/v1/ged/documents/{doc.id}/download"
         )
-    return results
+        for doc in documents
+    ]
 
 
 @router.post('/ged/upload', response_model=DocumentResponse, status_code=status.HTTP_201_CREATED, summary='Enviar e armazenar documento no repositório GED')
@@ -98,48 +103,48 @@ async def upload_document(
     current_user: User = Depends(get_current_user)
 ):
     if not title.strip():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="O título do documento é obrigatório."
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="O título do documento é obrigatório.")
 
     # Validate project / client if provided
-    if project_id and not db.query(Project).filter(Project.id == project_id).first():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Projeto selecionado não encontrado.")
+    proj_name, proj_code, cl_name = None, None, None
+    if project_id:
+        proj = db.query(Project).filter(Project.id == project_id).first()
+        if not proj:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Projeto associado não encontrado.")
+        proj_name = proj.name
+        proj_code = proj.code
 
-    if client_id and not db.query(Client).filter(Client.id == client_id).first():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cliente selecionado não encontrado.")
+    if client_id:
+        cl = db.query(Client).filter(Client.id == client_id).first()
+        if not cl:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cliente associado não encontrado.")
+        cl_name = cl.name
 
-    # Generate unique safe file name
-    original_filename = os.path.basename(file.filename or 'documento')
-    extension = os.path.splitext(original_filename)[1]
-    unique_filename = f"{uuid.uuid4().hex}_{original_filename}"
-    saved_file_path = os.path.join(UPLOAD_DIR, unique_filename)
+    # Generate unique storage filename
+    original_filename = file.filename or "documento"
+    _, ext = os.path.splitext(original_filename)
+    unique_name = f"{uuid.uuid4().hex}{ext}"
+    destination_path = os.path.join(UPLOAD_DIR, unique_name)
 
     try:
-        with open(saved_file_path, "wb") as buffer:
+        with open(destination_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-        
-        file_size_bytes = os.path.getsize(saved_file_path)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erro ao salvar o arquivo no servidor: {str(e)}"
+            detail=f"Falha ao gravar arquivo em disco: {str(e)}"
         )
 
-    # Guess mime type
-    mime_type = file.content_type
-    if not mime_type or mime_type == 'application/octet-stream':
-        guessed, _ = mimetypes.guess_type(original_filename)
-        mime_type = guessed or 'application/octet-stream'
+    file_size = os.path.getsize(destination_path)
+    mime_type, _ = mimetypes.guess_type(original_filename)
 
     new_doc = Document(
         title=title.strip(),
         category=category.strip() if category else 'Geral',
         file_name=original_filename,
-        file_path=saved_file_path,
-        file_size_bytes=file_size_bytes,
-        mime_type=mime_type,
+        file_path=unique_name,
+        file_size_bytes=file_size,
+        mime_type=mime_type or file.content_type,
         version=version.strip() if version else 'v1.0',
         description=description.strip() if description else None,
         project_id=project_id,
@@ -168,40 +173,35 @@ async def upload_document(
         uploaded_by_id=new_doc.uploaded_by_id,
         created_at=new_doc.created_at,
         updated_at=new_doc.updated_at,
-        project_name=new_doc.project.name if new_doc.project else None,
-        project_code=new_doc.project.code if new_doc.project else None,
-        client_name=new_doc.client.name if new_doc.client else None,
+        project_name=proj_name,
+        project_code=proj_code,
+        client_name=cl_name,
         uploaded_by_name=current_user.name,
         download_url=f"/api/v1/ged/documents/{new_doc.id}/download"
     )
 
 
-@router.get('/ged/documents/{document_id}/download', summary='Descarregar arquivo do repositório GED')
+@router.get('/ged/documents/{document_id}/download', summary='Descarregar arquivo do GED')
 def download_document(
     document_id: int,
     db: Session = Depends(get_db)
 ):
     doc = db.query(Document).filter(Document.id == document_id).first()
     if not doc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Documento não encontrado."
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Documento não encontrado.")
 
-    if not os.path.exists(doc.file_path):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="O arquivo físico não foi encontrado no servidor."
-        )
+    file_path = os.path.join(UPLOAD_DIR, doc.file_path)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Arquivo físico não encontrado no servidor.")
 
     return FileResponse(
-        path=doc.file_path,
+        path=file_path,
         filename=doc.file_name,
-        media_type=doc.mime_type or 'application/octet-stream'
+        media_type=doc.mime_type or "application/octet-stream"
     )
 
 
-@router.delete('/ged/documents/{document_id}', response_model=GenericMessageResponse, summary='Eliminar documento do repositório GED')
+@router.delete('/ged/documents/{document_id}', response_model=GenericMessageResponse, summary='Excluir documento do repositório')
 def delete_document(
     document_id: int,
     db: Session = Depends(get_db),
@@ -209,24 +209,22 @@ def delete_document(
 ):
     doc = db.query(Document).filter(Document.id == document_id).first()
     if not doc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Documento não encontrado."
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Documento não encontrado.")
 
     # Remove physical file if exists
-    if os.path.exists(doc.file_path):
+    file_path = os.path.join(UPLOAD_DIR, doc.file_path)
+    if os.path.exists(file_path):
         try:
-            os.remove(doc.file_path)
-        except Exception as e:
-            print(f"[GED Warning] Não foi possível remover o arquivo físico: {e}")
+            os.remove(file_path)
+        except Exception:
+            pass
 
     db.delete(doc)
     db.commit()
 
     return GenericMessageResponse(
-        message=f"Documento '{doc.title}' eliminado com sucesso do repositório.",
-        status="success"
+        message=f"Documento '{doc.title}' removido com sucesso.",
+        success=True
     )
 
 
@@ -235,24 +233,29 @@ def get_ged_overview(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    documents = db.query(Document).all()
-    total_documents = len(documents)
+    stats = (
+        db.query(
+            func.count(Document.id).label('total_docs'),
+            func.count(func.distinct(Document.category)).label('categories_count'),
+            func.coalesce(func.sum(Document.file_size_bytes), 0).label('total_bytes')
+        )
+        .first()
+    )
 
-    distinct_categories = set(d.category for d in documents if d.category)
-    active_categories_count = len(distinct_categories)
+    current_month = datetime.utcnow().month
+    current_year = datetime.utcnow().year
 
-    total_storage_bytes = sum(int(d.file_size_bytes or 0) for d in documents)
-    total_storage_formatted = format_file_size(total_storage_bytes)
+    monthly_uploads = db.query(func.count(Document.id)).filter(
+        extract('month', Document.created_at) == current_month,
+        extract('year', Document.created_at) == current_year
+    ).scalar() or 0
 
-    # Monthly uploads count
-    now = datetime.utcnow()
-    current_month_start = datetime(now.year, now.month, 1)
-    monthly_uploads_count = sum(1 for d in documents if d.created_at and d.created_at >= current_month_start)
+    total_bytes = int(stats.total_bytes if stats else 0)
 
     return GEDOverviewKPIs(
-        total_documents=total_documents,
-        active_categories_count=active_categories_count,
-        total_storage_bytes=total_storage_bytes,
-        total_storage_formatted=total_storage_formatted,
-        monthly_uploads_count=monthly_uploads_count
+        total_documents=int(stats.total_docs if stats else 0),
+        active_categories_count=int(stats.categories_count if stats else 0),
+        total_storage_bytes=total_bytes,
+        total_storage_formatted=format_file_size(total_bytes),
+        monthly_uploads_count=monthly_uploads
     )

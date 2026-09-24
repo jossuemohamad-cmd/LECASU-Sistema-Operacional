@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func, extract
+from sqlalchemy import func, case, extract
 from typing import List, Optional
 from datetime import datetime
 
@@ -16,7 +16,7 @@ from app.schemas.schemas import (
 router = APIRouter()
 
 def seed_default_technicians_if_empty(db: Session):
-    count = db.query(User).count()
+    count = db.query(func.count(User.id)).scalar()
     if count == 0:
         default_members = [
             User(
@@ -54,22 +54,31 @@ def seed_default_technicians_if_empty(db: Session):
 
 @router.get('/team/technicians', response_model=List[TechnicianResponse], summary='Listar técnicos e colaboradores operacionais')
 def list_technicians(db: Session = Depends(get_db)):
-    seed_default_technicians_if_empty(db)
-
     users = db.query(User).order_by(User.name.asc()).all()
+    if not users:
+        seed_default_technicians_if_empty(db)
+        users = db.query(User).order_by(User.name.asc()).all()
+
+    # Optimized Single Aggregation Query for all users' task counts (Eliminating N+1 queries)
+    task_counts_raw = (
+        db.query(
+            Task.assigned_to,
+            func.coalesce(func.sum(case((Task.status.in_(['TODO', 'IN_PROGRESS']), 1), else_=0)), 0).label('active_count'),
+            func.coalesce(func.sum(case((Task.status == 'DONE', 1), else_=0)), 0).label('completed_count')
+        )
+        .filter(Task.assigned_to.isnot(None))
+        .group_by(Task.assigned_to)
+        .all()
+    )
+
+    counts_map = {
+        row.assigned_to: (int(row.active_count), int(row.completed_count))
+        for row in task_counts_raw
+    }
+
     technicians: List[TechnicianResponse] = []
-
     for u in users:
-        active_count = db.query(Task).filter(
-            Task.assigned_to == u.id,
-            Task.status.in_(['TODO', 'IN_PROGRESS'])
-        ).count()
-
-        completed_count = db.query(Task).filter(
-            Task.assigned_to == u.id,
-            Task.status == 'DONE'
-        ).count()
-
+        active_count, completed_count = counts_map.get(u.id, (0, 0))
         technicians.append(
             TechnicianResponse(
                 id=u.id,
@@ -88,19 +97,17 @@ def list_technicians(db: Session = Depends(get_db)):
 
 @router.get('/team/overview', response_model=TeamOverviewKPIs, summary='KPIs do domínio de Equipa Técnica')
 def get_team_overview(db: Session = Depends(get_db)):
-    seed_default_technicians_if_empty(db)
-
-    total_technicians = db.query(User).filter(User.is_active == True).count()
-    in_progress_tasks = db.query(Task).filter(Task.status.in_(['TODO', 'IN_PROGRESS'])).count()
+    total_technicians = db.query(func.count(User.id)).filter(User.is_active == True).scalar() or 0
+    in_progress_tasks = db.query(func.count(Task.id)).filter(Task.status.in_(['TODO', 'IN_PROGRESS'])).scalar() or 0
 
     current_month = datetime.utcnow().month
     current_year = datetime.utcnow().year
 
-    completed_tasks_this_month = db.query(Task).filter(
+    completed_tasks_this_month = db.query(func.count(Task.id)).filter(
         Task.status == 'DONE',
         extract('month', Task.created_at) == current_month,
         extract('year', Task.created_at) == current_year
-    ).count()
+    ).scalar() or 0
 
     return TeamOverviewKPIs(
         total_technicians=total_technicians,

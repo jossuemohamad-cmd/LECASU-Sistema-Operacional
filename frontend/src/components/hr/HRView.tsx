@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Users, 
-  UserCheck, 
   Building2, 
-  Calendar, 
   Clock, 
   Plus, 
   RefreshCw, 
@@ -13,24 +11,17 @@ import {
   XCircle, 
   AlertCircle, 
   X, 
-  Briefcase, 
   Coins, 
-  Phone, 
-  Mail, 
-  FileText, 
   CalendarCheck, 
-  CalendarX,
-  ShieldCheck,
-  Check,
-  Ban
+  Check
 } from 'lucide-react';
 import type { 
   Employee, 
   EmployeeCreateInput, 
   EmployeeLeave, 
   LeaveCreateInput, 
-  HROverviewKPIs, 
-  ToastMessage 
+  HROverviewKPIs,
+  ToastMessage
 } from '../../types';
 import { 
   fetchEmployees, 

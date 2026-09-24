@@ -435,4 +435,24 @@ export interface GEDOverviewKPIs {
   monthly_uploads_count: number;
 }
 
+export interface InvoiceCreateInput {
+  client_id: number;
+  project_id?: number | null;
+  invoice_number?: string;
+  amount: number;
+  due_date?: string | null;
+  status?: string;
+}
+
+export interface FinanceOverviewKPIs {
+  total_invoiced: number;
+  total_received: number;
+  pending_receivables: number;
+  total_expenses: number;
+  net_cashflow: number;
+  issued_invoices_count: number;
+  paid_invoices_count: number;
+}
+
+
 

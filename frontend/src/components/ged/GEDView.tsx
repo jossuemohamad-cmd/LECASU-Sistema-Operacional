@@ -19,12 +19,8 @@ import {
   X, 
   CheckCircle2, 
   AlertCircle, 
-  ExternalLink,
   Briefcase,
-  UserCheck,
-  Calendar,
-  Check,
-  Eye
+  UserCheck
 } from 'lucide-react';
 import type { 
   GEDDocument, 
@@ -92,10 +88,14 @@ export const GEDView: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Toast
-  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  const showToast = (type: 'success' | 'error' | 'info', message: string) => {
-    setToast({ type, message });
+  const showToast = (type: 'success' | 'error' | 'info', title: string) => {
+    const id = Date.now().toString();
+    setToasts(prev => [...prev, { id, type, title }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4000);
   };
 
   const loadAllData = async () => {
@@ -306,13 +306,10 @@ export const GEDView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {toast && (
-        <Toast 
-          type={toast.type} 
-          message={toast.message} 
-          onClose={() => setToast(null)} 
-        />
-      )}
+      <Toast 
+        toasts={toasts} 
+        onDismiss={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} 
+      />
 
       {/* Header & Actions */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

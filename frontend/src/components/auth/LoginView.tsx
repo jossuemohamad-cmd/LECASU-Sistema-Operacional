@@ -9,8 +9,7 @@ import {
   CheckCircle2, 
   X, 
   Eye,
-  EyeOff,
-  Sparkles
+  EyeOff
 } from 'lucide-react';
 import type { User } from '../../types';
 import { loginUser, forgotPassword, resetPassword } from '../../services/api';

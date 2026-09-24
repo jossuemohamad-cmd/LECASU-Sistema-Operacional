@@ -42,15 +42,20 @@ def init_default_admin(db: Session):
 
 @router.post('/auth/login', response_model=TokenResponse, summary='Iniciar sessão e obter token JWT')
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
-    init_default_admin(db)
-
     user = db.query(User).filter(User.email == payload.email.strip().lower()).first()
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Credenciais inválidas. Verifique o e-mail e a senha informados.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        # If user table is empty, seed admin on demand once
+        if db.query(func.count(User.id)).scalar() == 0:
+            init_default_admin(db)
+            user = db.query(User).filter(User.email == payload.email.strip().lower()).first()
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Credenciais inválidas. Verifique o e-mail e a senha informados.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
 
     if not verify_password(payload.password, user.hashed_password or ""):
         # If user was seeded without hash, check and upgrade

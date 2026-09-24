@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.database import engine, Base
+from contextlib import asynccontextmanager
+from app.core.database import engine, Base, SessionLocal
 import app.models.models as models
 from app.api.clients import router as clients_router
 from app.api.projects import router as projects_router
@@ -12,22 +13,25 @@ from app.api.users import router as users_router
 from app.api.suppliers import router as suppliers_router
 from app.api.hr import router as hr_router
 from app.api.ged import router as ged_router
-from app.core.database import SessionLocal
+from app.api.finance import router as finance_router
 
-# Criar tabelas no banco de dados se não existirem
-Base.metadata.create_all(bind=engine)
-
-# Garantir existência do Administrador padrão
-try:
-    with SessionLocal() as db_session:
-        init_default_admin(db_session)
-except Exception as e:
-    print(f"[LECASU ERP] Aviso na inicialização do Admin: {e}")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Inicialização resiliente de tabelas e utilizador Admin
+    try:
+        Base.metadata.create_all(bind=engine)
+        with SessionLocal() as db_session:
+            init_default_admin(db_session)
+        print("[LECASU ERP] Base de dados e Administrador inicializados com sucesso.")
+    except Exception as e:
+        print(f"[LECASU ERP] Aviso na inicialização: {e}")
+    yield
 
 app = FastAPI(
     title='LECASU Sistema Operacional API',
     version='2.0',
-    description='API do ERP LECASU'
+    description='API do ERP LECASU',
+    lifespan=lifespan
 )
 
 app.add_middleware(
@@ -46,6 +50,7 @@ app.include_router(services_router, prefix='/api/v1')
 app.include_router(clients_router, prefix='/api/v1')
 app.include_router(projects_router, prefix='/api/v1')
 app.include_router(team_router, prefix='/api/v1')
+app.include_router(finance_router, prefix='/api/v1')
 app.include_router(suppliers_router, prefix='/api/v1')
 app.include_router(hr_router, prefix='/api/v1')
 app.include_router(ged_router, prefix='/api/v1')
@@ -53,7 +58,3 @@ app.include_router(ged_router, prefix='/api/v1')
 @app.get('/api/health')
 def health_check():
     return {'status': 'online', 'system': 'LECASU ERP v2.0'}
-
-
-
-

@@ -35,10 +35,33 @@ import type {
   LeaveCreateInput,
   HROverviewKPIs,
   GEDDocument,
-  GEDOverviewKPIs
+  GEDOverviewKPIs,
+  Invoice,
+  InvoiceCreateInput,
+  FinanceOverviewKPIs
 } from '../types';
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
+
+// In-Memory Fast Cache for Instant Navigation
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+const memoryCache = new Map<string, CacheEntry<any>>();
+const DEFAULT_CACHE_TTL = 30 * 1000; // 30 seconds
+
+export function clearApiCache(prefix?: string): void {
+  if (!prefix) {
+    memoryCache.clear();
+    return;
+  }
+  for (const key of Array.from(memoryCache.keys())) {
+    if (key.startsWith(prefix) || key.includes(prefix)) {
+      memoryCache.delete(key);
+    }
+  }
+}
 
 export function getAuthToken(): string | null {
   return localStorage.getItem('lecasu_auth_token');
@@ -51,6 +74,7 @@ export function setAuthToken(token: string): void {
 export function removeAuthToken(): void {
   localStorage.removeItem('lecasu_auth_token');
   localStorage.removeItem('lecasu_auth_user');
+  clearApiCache();
 }
 
 export function getAuthHeaders(customHeaders: Record<string, string> = {}): Record<string, string> {
@@ -64,16 +88,6 @@ export function getAuthHeaders(customHeaders: Record<string, string> = {}): Reco
   }
   return headers;
 }
-
-
-// ================= DASHBOARD =================
-export async function fetchDashboardOverview(): Promise<DashboardOverview> {
-  const res = await fetch(`${API_BASE_URL}/dashboard/overview`, {
-    headers: { 'Accept': 'application/json' }
-  });
-  return handleResponse<DashboardOverview>(res);
-}
-
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -95,137 +109,146 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json();
 }
 
+async function cachedFetch<T>(url: string, headers: Record<string, string>, ttl = DEFAULT_CACHE_TTL): Promise<T> {
+  const cacheKey = `GET:${url}`;
+  const now = Date.now();
+  const cached = memoryCache.get(cacheKey);
+
+  if (cached && (now - cached.timestamp) < ttl) {
+    return cached.data as T;
+  }
+
+  const res = await fetch(url, { headers });
+  const data = await handleResponse<T>(res);
+  memoryCache.set(cacheKey, { data, timestamp: now });
+  return data;
+}
+
+// ================= DASHBOARD =================
+export async function fetchDashboardOverview(): Promise<DashboardOverview> {
+  return cachedFetch<DashboardOverview>(`${API_BASE_URL}/dashboard/overview`, getAuthHeaders(), 10 * 1000);
+}
+
 // ================= CLIENTS =================
 export async function fetchClients(): Promise<Client[]> {
-  const res = await fetch(`${API_BASE_URL}/clients`, {
-    headers: { 'Accept': 'application/json' }
-  });
-  return handleResponse<Client[]>(res);
+  return cachedFetch<Client[]>(`${API_BASE_URL}/clients`, getAuthHeaders());
 }
 
 export async function fetchClientById(id: number): Promise<Client> {
-  const res = await fetch(`${API_BASE_URL}/clients/${id}`, {
-    headers: { 'Accept': 'application/json' }
-  });
-  return handleResponse<Client>(res);
+  return cachedFetch<Client>(`${API_BASE_URL}/clients/${id}`, getAuthHeaders());
 }
 
 export async function createClient(payload: ClientCreateInput): Promise<Client> {
   const res = await fetch(`${API_BASE_URL}/clients`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    },
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload)
   });
-  return handleResponse<Client>(res);
+  const data = await handleResponse<Client>(res);
+  clearApiCache('clients');
+  clearApiCache('dashboard');
+  return data;
 }
 
 // ================= PROPOSALS =================
 export async function fetchProposals(): Promise<Proposal[]> {
-  const res = await fetch(`${API_BASE_URL}/proposals`, {
-    headers: { 'Accept': 'application/json' }
-  });
-  return handleResponse<Proposal[]>(res);
+  return cachedFetch<Proposal[]>(`${API_BASE_URL}/proposals`, getAuthHeaders());
 }
 
 export async function createProposal(payload: ProposalCreateInput): Promise<Proposal> {
   const res = await fetch(`${API_BASE_URL}/proposals`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    },
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload)
   });
-  return handleResponse<Proposal>(res);
+  const data = await handleResponse<Proposal>(res);
+  clearApiCache('proposals');
+  clearApiCache('clients');
+  clearApiCache('dashboard');
+  return data;
 }
 
 export async function convertProposalToProject(proposalId: number): Promise<Project> {
   const res = await fetch(`${API_BASE_URL}/proposals/${proposalId}/convert-to-project`, {
     method: 'POST',
-    headers: {
-      'Accept': 'application/json'
-    }
+    headers: getAuthHeaders()
   });
-  return handleResponse<Project>(res);
+  const data = await handleResponse<Project>(res);
+  clearApiCache('proposals');
+  clearApiCache('projects');
+  clearApiCache('dashboard');
+  clearApiCache('team');
+  return data;
 }
 
 // ================= PROJECTS =================
 export async function fetchProjects(): Promise<Project[]> {
-  const res = await fetch(`${API_BASE_URL}/projects`, {
-    headers: { 'Accept': 'application/json' }
-  });
-  return handleResponse<Project[]>(res);
+  return cachedFetch<Project[]>(`${API_BASE_URL}/projects`, getAuthHeaders());
 }
 
 export async function fetchProjectById(id: number): Promise<Project> {
-  const res = await fetch(`${API_BASE_URL}/projects/${id}`, {
-    headers: { 'Accept': 'application/json' }
-  });
-  return handleResponse<Project>(res);
+  return cachedFetch<Project>(`${API_BASE_URL}/projects/${id}`, getAuthHeaders());
 }
 
 export async function createProject(payload: ProjectCreateInput): Promise<Project> {
   const res = await fetch(`${API_BASE_URL}/projects`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    },
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload)
   });
-  return handleResponse<Project>(res);
+  const data = await handleResponse<Project>(res);
+  clearApiCache('projects');
+  clearApiCache('dashboard');
+  return data;
 }
 
 // ================= TASKS =================
 export async function createProjectTask(projectId: number, payload: TaskCreateInput): Promise<Task> {
   const res = await fetch(`${API_BASE_URL}/projects/${projectId}/tasks`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    },
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload)
   });
-  return handleResponse<Task>(res);
+  const data = await handleResponse<Task>(res);
+  clearApiCache('projects');
+  clearApiCache('team');
+  clearApiCache('dashboard');
+  return data;
 }
 
 export async function updateTask(taskId: number, payload: TaskUpdateInput): Promise<Task> {
   const res = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    },
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload)
   });
-  return handleResponse<Task>(res);
+  const data = await handleResponse<Task>(res);
+  clearApiCache('projects');
+  clearApiCache('team');
+  clearApiCache('dashboard');
+  return data;
 }
 
 export async function deleteTask(taskId: number): Promise<void> {
   const res = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
-    method: 'DELETE'
+    method: 'DELETE',
+    headers: getAuthHeaders()
   });
   if (!res.ok && res.status !== 204) {
     throw new Error(`Falha ao remover tarefa (${res.status})`);
   }
+  clearApiCache('projects');
+  clearApiCache('team');
+  clearApiCache('dashboard');
 }
 
 // ================= TEAM & TECHNICIANS =================
 export async function fetchTechnicians(): Promise<Technician[]> {
-  const res = await fetch(`${API_BASE_URL}/team/technicians`, {
-    headers: { 'Accept': 'application/json' }
-  });
-  return handleResponse<Technician[]>(res);
+  return cachedFetch<Technician[]>(`${API_BASE_URL}/team/technicians`, getAuthHeaders());
 }
 
 export async function fetchTeamKPIs(): Promise<TeamKPIs> {
-  const res = await fetch(`${API_BASE_URL}/team/overview`, {
-    headers: { 'Accept': 'application/json' }
-  });
-  return handleResponse<TeamKPIs>(res);
+  return cachedFetch<TeamKPIs>(`${API_BASE_URL}/team/overview`, getAuthHeaders(), 15 * 1000);
 }
 
 export async function fetchTeamTasks(params?: {
@@ -246,22 +269,20 @@ export async function fetchTeamTasks(params?: {
 
   const query = searchParams.toString();
   const url = `${API_BASE_URL}/team/tasks${query ? `?${query}` : ''}`;
-  const res = await fetch(url, {
-    headers: { 'Accept': 'application/json' }
-  });
-  return handleResponse<TeamTask[]>(res);
+  return cachedFetch<TeamTask[]>(url, getAuthHeaders(), 10 * 1000);
 }
 
 export async function assignTask(taskId: number, assignedToUserId: number): Promise<TeamTask> {
   const res = await fetch(`${API_BASE_URL}/tasks/${taskId}/assign`, {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    },
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ assigned_to_user_id: assignedToUserId })
   });
-  return handleResponse<TeamTask>(res);
+  const data = await handleResponse<TeamTask>(res);
+  clearApiCache('team');
+  clearApiCache('projects');
+  clearApiCache('dashboard');
+  return data;
 }
 
 // ================= SERVICES =================
@@ -283,47 +304,37 @@ export async function fetchServices(params?: {
 
   const query = searchParams.toString();
   const url = `${API_BASE_URL}/services${query ? `?${query}` : ''}`;
-  const res = await fetch(url, {
-    headers: { 'Accept': 'application/json' }
-  });
-  return handleResponse<Service[]>(res);
+  return cachedFetch<Service[]>(url, getAuthHeaders());
 }
 
 export async function fetchServiceCategories(): Promise<string[]> {
-  const res = await fetch(`${API_BASE_URL}/services/categories`, {
-    headers: { 'Accept': 'application/json' }
-  });
-  return handleResponse<string[]>(res);
+  return cachedFetch<string[]>(`${API_BASE_URL}/services/categories`, getAuthHeaders(), 60 * 1000);
 }
 
 export async function fetchServiceKPIs(): Promise<ServiceKPIs> {
-  const res = await fetch(`${API_BASE_URL}/services/overview`, {
-    headers: { 'Accept': 'application/json' }
-  });
-  return handleResponse<ServiceKPIs>(res);
+  return cachedFetch<ServiceKPIs>(`${API_BASE_URL}/services/overview`, getAuthHeaders(), 15 * 1000);
 }
 
 export async function createService(payload: ServiceCreateInput): Promise<Service> {
   const res = await fetch(`${API_BASE_URL}/services`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    },
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload)
   });
-  return handleResponse<Service>(res);
+  const data = await handleResponse<Service>(res);
+  clearApiCache('services');
+  return data;
 }
 
 export async function updateService(serviceId: number, payload: ServiceUpdateInput): Promise<Service> {
   const res = await fetch(`${API_BASE_URL}/services/${serviceId}`, {
     method: 'PATCH',
-    headers: getAuthHeaders({
-      'Content-Type': 'application/json'
-    }),
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload)
   });
-  return handleResponse<Service>(res);
+  const data = await handleResponse<Service>(res);
+  clearApiCache('services');
+  return data;
 }
 
 // ================= AUTHENTICATION & USERS =================
@@ -340,6 +351,7 @@ export async function loginUser(credentials: LoginCredentials): Promise<AuthResp
   if (data.access_token) {
     setAuthToken(data.access_token);
     localStorage.setItem('lecasu_auth_user', JSON.stringify(data.user));
+    clearApiCache();
   }
   return data;
 }
@@ -352,32 +364,31 @@ export async function fetchCurrentUser(): Promise<User> {
 }
 
 export async function fetchUsers(): Promise<User[]> {
-  const res = await fetch(`${API_BASE_URL}/users`, {
-    headers: getAuthHeaders()
-  });
-  return handleResponse<User[]>(res);
+  return cachedFetch<User[]>(`${API_BASE_URL}/users`, getAuthHeaders());
 }
 
 export async function createUser(payload: UserCreateInput): Promise<User> {
   const res = await fetch(`${API_BASE_URL}/users`, {
     method: 'POST',
-    headers: getAuthHeaders({
-      'Content-Type': 'application/json'
-    }),
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload)
   });
-  return handleResponse<User>(res);
+  const data = await handleResponse<User>(res);
+  clearApiCache('users');
+  clearApiCache('team');
+  return data;
 }
 
 export async function toggleUserStatus(userId: number, isActive: boolean): Promise<User> {
   const res = await fetch(`${API_BASE_URL}/users/${userId}/status`, {
     method: 'PATCH',
-    headers: getAuthHeaders({
-      'Content-Type': 'application/json'
-    }),
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ is_active: isActive })
   });
-  return handleResponse<User>(res);
+  const data = await handleResponse<User>(res);
+  clearApiCache('users');
+  clearApiCache('team');
+  return data;
 }
 
 export async function forgotPassword(payload: ForgotPasswordInput): Promise<GenericMessageResponse> {
@@ -407,13 +418,72 @@ export async function resetPassword(payload: ResetPasswordInput): Promise<Generi
 export async function adminResetPassword(userId: number, payload: AdminResetPasswordInput): Promise<GenericMessageResponse> {
   const res = await fetch(`${API_BASE_URL}/users/${userId}/admin-reset-password`, {
     method: 'POST',
-    headers: getAuthHeaders({
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    }),
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload)
   });
   return handleResponse<GenericMessageResponse>(res);
+}
+
+// ================= GESTÃO FINANCEIRA (FINANCE & INVOICES) =================
+export async function fetchInvoices(params?: {
+  status?: string;
+  clientId?: number;
+  projectId?: number;
+  search?: string;
+}): Promise<Invoice[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.status && params.status !== 'ALL') {
+    searchParams.append('status', params.status);
+  }
+  if (params?.clientId) {
+    searchParams.append('client_id', params.clientId.toString());
+  }
+  if (params?.projectId) {
+    searchParams.append('project_id', params.projectId.toString());
+  }
+  if (params?.search && params.search.trim()) {
+    searchParams.append('search', params.search.trim());
+  }
+  const query = searchParams.toString();
+  return cachedFetch<Invoice[]>(`${API_BASE_URL}/finance/invoices${query ? `?${query}` : ''}`, getAuthHeaders());
+}
+
+export async function createInvoice(payload: InvoiceCreateInput): Promise<Invoice> {
+  const res = await fetch(`${API_BASE_URL}/finance/invoices`, {
+    method: 'POST',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(payload)
+  });
+  const data = await handleResponse<Invoice>(res);
+  clearApiCache('finance');
+  clearApiCache('dashboard');
+  return data;
+}
+
+export async function payInvoice(invoiceId: number): Promise<Invoice> {
+  const res = await fetch(`${API_BASE_URL}/finance/invoices/${invoiceId}/pay`, {
+    method: 'PATCH',
+    headers: getAuthHeaders()
+  });
+  const data = await handleResponse<Invoice>(res);
+  clearApiCache('finance');
+  clearApiCache('dashboard');
+  return data;
+}
+
+export async function cancelInvoice(invoiceId: number): Promise<Invoice> {
+  const res = await fetch(`${API_BASE_URL}/finance/invoices/${invoiceId}/cancel`, {
+    method: 'PATCH',
+    headers: getAuthHeaders()
+  });
+  const data = await handleResponse<Invoice>(res);
+  clearApiCache('finance');
+  clearApiCache('dashboard');
+  return data;
+}
+
+export async function fetchFinanceOverviewKPIs(): Promise<FinanceOverviewKPIs> {
+  return cachedFetch<FinanceOverviewKPIs>(`${API_BASE_URL}/finance/overview`, getAuthHeaders(), 15 * 1000);
 }
 
 // ================= SUPPLIERS & PURCHASES =================
@@ -426,21 +496,18 @@ export async function fetchSuppliers(params?: { category?: string; activeOnly?: 
     searchParams.append('active_only', 'true');
   }
   const query = searchParams.toString();
-  const res = await fetch(`${API_BASE_URL}/suppliers${query ? `?${query}` : ''}`, {
-    headers: getAuthHeaders()
-  });
-  return handleResponse<Supplier[]>(res);
+  return cachedFetch<Supplier[]>(`${API_BASE_URL}/suppliers${query ? `?${query}` : ''}`, getAuthHeaders());
 }
 
 export async function createSupplier(payload: SupplierCreateInput): Promise<Supplier> {
   const res = await fetch(`${API_BASE_URL}/suppliers`, {
     method: 'POST',
-    headers: getAuthHeaders({
-      'Content-Type': 'application/json'
-    }),
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload)
   });
-  return handleResponse<Supplier>(res);
+  const data = await handleResponse<Supplier>(res);
+  clearApiCache('suppliers');
+  return data;
 }
 
 export async function toggleSupplierStatus(supplierId: number, isActive: boolean): Promise<Supplier> {
@@ -448,14 +515,13 @@ export async function toggleSupplierStatus(supplierId: number, isActive: boolean
     method: 'PATCH',
     headers: getAuthHeaders()
   });
-  return handleResponse<Supplier>(res);
+  const data = await handleResponse<Supplier>(res);
+  clearApiCache('suppliers');
+  return data;
 }
 
 export async function fetchSupplierOverviewKPIs(): Promise<SupplierOverviewKPIs> {
-  const res = await fetch(`${API_BASE_URL}/suppliers/overview`, {
-    headers: getAuthHeaders()
-  });
-  return handleResponse<SupplierOverviewKPIs>(res);
+  return cachedFetch<SupplierOverviewKPIs>(`${API_BASE_URL}/suppliers/overview`, getAuthHeaders(), 15 * 1000);
 }
 
 export async function fetchPurchaseOrders(params?: {
@@ -474,21 +540,20 @@ export async function fetchPurchaseOrders(params?: {
     searchParams.append('status_filter', params.statusFilter);
   }
   const query = searchParams.toString();
-  const res = await fetch(`${API_BASE_URL}/purchases${query ? `?${query}` : ''}`, {
-    headers: getAuthHeaders()
-  });
-  return handleResponse<PurchaseOrder[]>(res);
+  return cachedFetch<PurchaseOrder[]>(`${API_BASE_URL}/purchases${query ? `?${query}` : ''}`, getAuthHeaders());
 }
 
 export async function createPurchaseOrder(payload: PurchaseOrderCreateInput): Promise<PurchaseOrder> {
   const res = await fetch(`${API_BASE_URL}/purchases`, {
     method: 'POST',
-    headers: getAuthHeaders({
-      'Content-Type': 'application/json'
-    }),
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload)
   });
-  return handleResponse<PurchaseOrder>(res);
+  const data = await handleResponse<PurchaseOrder>(res);
+  clearApiCache('purchases');
+  clearApiCache('suppliers');
+  clearApiCache('finance');
+  return data;
 }
 
 export async function payPurchaseOrder(purchaseId: number): Promise<PurchaseOrder> {
@@ -496,7 +561,11 @@ export async function payPurchaseOrder(purchaseId: number): Promise<PurchaseOrde
     method: 'PATCH',
     headers: getAuthHeaders()
   });
-  return handleResponse<PurchaseOrder>(res);
+  const data = await handleResponse<PurchaseOrder>(res);
+  clearApiCache('purchases');
+  clearApiCache('suppliers');
+  clearApiCache('finance');
+  return data;
 }
 
 // ================= RECURSOS HUMANOS (HR) =================
@@ -509,21 +578,18 @@ export async function fetchEmployees(params?: { department?: string; activeOnly?
     searchParams.append('active_only', 'true');
   }
   const query = searchParams.toString();
-  const res = await fetch(`${API_BASE_URL}/hr/employees${query ? `?${query}` : ''}`, {
-    headers: getAuthHeaders()
-  });
-  return handleResponse<Employee[]>(res);
+  return cachedFetch<Employee[]>(`${API_BASE_URL}/hr/employees${query ? `?${query}` : ''}`, getAuthHeaders());
 }
 
 export async function createEmployee(payload: EmployeeCreateInput): Promise<Employee> {
   const res = await fetch(`${API_BASE_URL}/hr/employees`, {
     method: 'POST',
-    headers: getAuthHeaders({
-      'Content-Type': 'application/json'
-    }),
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload)
   });
-  return handleResponse<Employee>(res);
+  const data = await handleResponse<Employee>(res);
+  clearApiCache('hr');
+  return data;
 }
 
 export async function toggleEmployeeStatus(employeeId: number, isActive: boolean): Promise<Employee> {
@@ -531,7 +597,9 @@ export async function toggleEmployeeStatus(employeeId: number, isActive: boolean
     method: 'PATCH',
     headers: getAuthHeaders()
   });
-  return handleResponse<Employee>(res);
+  const data = await handleResponse<Employee>(res);
+  clearApiCache('hr');
+  return data;
 }
 
 export async function fetchLeaves(params?: { employeeId?: number; statusFilter?: string }): Promise<EmployeeLeave[]> {
@@ -543,39 +611,33 @@ export async function fetchLeaves(params?: { employeeId?: number; statusFilter?:
     searchParams.append('status_filter', params.statusFilter);
   }
   const query = searchParams.toString();
-  const res = await fetch(`${API_BASE_URL}/hr/leaves${query ? `?${query}` : ''}`, {
-    headers: getAuthHeaders()
-  });
-  return handleResponse<EmployeeLeave[]>(res);
+  return cachedFetch<EmployeeLeave[]>(`${API_BASE_URL}/hr/leaves${query ? `?${query}` : ''}`, getAuthHeaders());
 }
 
 export async function createLeave(payload: LeaveCreateInput): Promise<EmployeeLeave> {
   const res = await fetch(`${API_BASE_URL}/hr/leaves`, {
     method: 'POST',
-    headers: getAuthHeaders({
-      'Content-Type': 'application/json'
-    }),
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload)
   });
-  return handleResponse<EmployeeLeave>(res);
+  const data = await handleResponse<EmployeeLeave>(res);
+  clearApiCache('hr');
+  return data;
 }
 
 export async function approveLeave(leaveId: number, status: 'APPROVED' | 'REJECTED'): Promise<EmployeeLeave> {
   const res = await fetch(`${API_BASE_URL}/hr/leaves/${leaveId}/approve`, {
     method: 'PATCH',
-    headers: getAuthHeaders({
-      'Content-Type': 'application/json'
-    }),
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ status })
   });
-  return handleResponse<EmployeeLeave>(res);
+  const data = await handleResponse<EmployeeLeave>(res);
+  clearApiCache('hr');
+  return data;
 }
 
 export async function fetchHROverviewKPIs(): Promise<HROverviewKPIs> {
-  const res = await fetch(`${API_BASE_URL}/hr/overview`, {
-    headers: getAuthHeaders()
-  });
-  return handleResponse<HROverviewKPIs>(res);
+  return cachedFetch<HROverviewKPIs>(`${API_BASE_URL}/hr/overview`, getAuthHeaders(), 15 * 1000);
 }
 
 // ================= GESTÃO ELETRÓNICA DE DOCUMENTOS (GED) =================
@@ -599,10 +661,7 @@ export async function fetchDocuments(params?: {
     searchParams.append('search', params.search);
   }
   const query = searchParams.toString();
-  const res = await fetch(`${API_BASE_URL}/ged/documents${query ? `?${query}` : ''}`, {
-    headers: getAuthHeaders()
-  });
-  return handleResponse<GEDDocument[]>(res);
+  return cachedFetch<GEDDocument[]>(`${API_BASE_URL}/ged/documents${query ? `?${query}` : ''}`, getAuthHeaders());
 }
 
 export async function uploadDocument(formData: FormData): Promise<GEDDocument> {
@@ -611,13 +670,14 @@ export async function uploadDocument(formData: FormData): Promise<GEDDocument> {
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  // Note: FormData sets its own multipart/form-data boundary, so we do not set Content-Type header manually
   const res = await fetch(`${API_BASE_URL}/ged/upload`, {
     method: 'POST',
     headers,
     body: formData
   });
-  return handleResponse<GEDDocument>(res);
+  const data = await handleResponse<GEDDocument>(res);
+  clearApiCache('ged');
+  return data;
 }
 
 export function getDocumentDownloadUrl(documentId: number): string {
@@ -647,13 +707,11 @@ export async function deleteDocument(documentId: number): Promise<{ message: str
     method: 'DELETE',
     headers: getAuthHeaders()
   });
-  return handleResponse<{ message: string }>(res);
+  const data = await handleResponse<{ message: string }>(res);
+  clearApiCache('ged');
+  return data;
 }
 
 export async function fetchGEDOverviewKPIs(): Promise<GEDOverviewKPIs> {
-  const res = await fetch(`${API_BASE_URL}/ged/overview`, {
-    headers: getAuthHeaders()
-  });
-  return handleResponse<GEDOverviewKPIs>(res);
+  return cachedFetch<GEDOverviewKPIs>(`${API_BASE_URL}/ged/overview`, getAuthHeaders(), 15 * 1000);
 }
-

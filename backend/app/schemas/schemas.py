@@ -727,3 +727,45 @@ class GEDOverviewKPIs(BaseModel):
     total_storage_formatted: str
     monthly_uploads_count: int
 
+
+# ================= GESTÃO FINANCEIRA (INVOICES & FINANCE) =================
+class InvoiceCreate(BaseModel):
+    client_id: int
+    project_id: Optional[int] = None
+    invoice_number: Optional[str] = None
+    amount: float
+    due_date: Optional[datetime] = None
+    status: Optional[str] = 'ISSUED'
+
+    @field_validator('amount')
+    @classmethod
+    def validate_amount(cls, v: float) -> float:
+        if v <= 0:
+            raise ValueError('O valor da fatura deve ser maior que zero.')
+        return round(v, 2)
+
+class InvoiceResponse(BaseModel):
+    id: int
+    client_id: int
+    project_id: Optional[int] = None
+    invoice_number: str
+    amount: float
+    status: str
+    due_date: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+    client_name: Optional[str] = None
+    project_code: Optional[str] = None
+    project_name: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class FinanceOverviewKPIs(BaseModel):
+    total_invoiced: float
+    total_received: float
+    pending_receivables: float
+    total_expenses: float
+    net_cashflow: float
+    issued_invoices_count: int
+    paid_invoices_count: int
+
+

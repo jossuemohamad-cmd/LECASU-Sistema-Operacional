@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func, case
 from typing import List, Optional
 from datetime import datetime
 
@@ -37,14 +37,25 @@ def list_employees(
     employees = query.order_by(Employee.name.asc()).all()
 
     now = datetime.utcnow()
-    results = []
-    for emp in employees:
-        active_leaves_count = db.query(EmployeeLeave).filter(
-            EmployeeLeave.employee_id == emp.id,
+    # Single Aggregated Query for active leaves of all employees (Eliminating N+1 queries)
+    leaves_stats = (
+        db.query(
+            EmployeeLeave.employee_id,
+            func.count(EmployeeLeave.id).label('active_leaves_count')
+        )
+        .filter(
             EmployeeLeave.status == 'APPROVED',
             EmployeeLeave.end_date >= now
-        ).count()
+        )
+        .group_by(EmployeeLeave.employee_id)
+        .all()
+    )
 
+    leaves_map = {row.employee_id: int(row.active_leaves_count) for row in leaves_stats}
+
+    results = []
+    for emp in employees:
+        active_leaves_count = leaves_map.get(emp.id, 0)
         results.append(
             EmployeeResponse(
                 id=emp.id,
@@ -138,11 +149,11 @@ def toggle_employee_status(
     db.refresh(emp)
 
     now = datetime.utcnow()
-    active_leaves_count = db.query(EmployeeLeave).filter(
+    active_leaves_count = db.query(func.count(EmployeeLeave.id)).filter(
         EmployeeLeave.employee_id == emp.id,
         EmployeeLeave.status == 'APPROVED',
         EmployeeLeave.end_date >= now
-    ).count()
+    ).scalar() or 0
 
     return EmployeeResponse(
         id=emp.id,
@@ -162,45 +173,44 @@ def toggle_employee_status(
     )
 
 
-# ================= PRESENÇAS E LICENÇAS (LEAVES) =================
+# ================= FÉRIAS E LICENÇAS (LEAVES) =================
 
-@router.get('/hr/leaves', response_model=List[LeaveResponse], summary='Listar pedidos de férias e ausências')
+@router.get('/hr/leaves', response_model=List[LeaveResponse], summary='Listar pedidos de férias e licenças')
 def list_leaves(
     employee_id: Optional[int] = None,
     status_filter: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    query = db.query(EmployeeLeave)
+    query = (
+        db.query(EmployeeLeave)
+        .options(joinedload(EmployeeLeave.employee))
+        .order_by(EmployeeLeave.id.desc())
+    )
+
     if employee_id:
         query = query.filter(EmployeeLeave.employee_id == employee_id)
-    if status_filter:
-        query = query.filter(EmployeeLeave.status == status_filter)
+    if status_filter and status_filter.upper() != 'ALL':
+        query = query.filter(EmployeeLeave.status == status_filter.upper())
 
-    leaves = query.order_by(EmployeeLeave.id.desc()).all()
+    leaves = query.all()
 
-    results = []
-    for l in leaves:
-        emp_name = l.employee.name if l.employee else None
-        emp_dept = l.employee.department if l.employee else None
-        emp_pos = l.employee.position if l.employee else None
-
-        results.append(
-            LeaveResponse(
-                id=l.id,
-                employee_id=l.employee_id,
-                leave_type=l.leave_type,
-                start_date=l.start_date,
-                end_date=l.end_date,
-                reason=l.reason,
-                status=l.status,
-                created_at=l.created_at,
-                employee_name=emp_name,
-                employee_department=emp_dept,
-                employee_position=emp_pos
-            )
+    return [
+        LeaveResponse(
+            id=l.id,
+            employee_id=l.employee_id,
+            leave_type=l.leave_type,
+            start_date=l.start_date,
+            end_date=l.end_date,
+            reason=l.reason,
+            status=l.status,
+            created_at=l.created_at,
+            employee_name=l.employee.name if l.employee else None,
+            employee_department=l.employee.department if l.employee else None,
+            employee_position=l.employee.position if l.employee else None
         )
-    return results
+        for l in leaves
+    ]
 
 
 @router.post('/hr/leaves', response_model=LeaveResponse, status_code=status.HTTP_201_CREATED, summary='Registar pedido de férias ou licença')
@@ -251,20 +261,21 @@ def approve_leave(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    leave = db.query(EmployeeLeave).filter(EmployeeLeave.id == leave_id).first()
+    leave = (
+        db.query(EmployeeLeave)
+        .options(joinedload(EmployeeLeave.employee))
+        .filter(EmployeeLeave.id == leave_id)
+        .first()
+    )
     if not leave:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Pedido de licença/ausência não encontrado."
+            detail="Pedido de ausência não encontrado."
         )
 
     leave.status = payload.status
     db.commit()
     db.refresh(leave)
-
-    emp_name = leave.employee.name if leave.employee else None
-    emp_dept = leave.employee.department if leave.employee else None
-    emp_pos = leave.employee.position if leave.employee else None
 
     return LeaveResponse(
         id=leave.id,
@@ -275,42 +286,38 @@ def approve_leave(
         reason=leave.reason,
         status=leave.status,
         created_at=leave.created_at,
-        employee_name=emp_name,
-        employee_department=emp_dept,
-        employee_position=emp_pos
+        employee_name=leave.employee.name if leave.employee else None,
+        employee_department=leave.employee.department if leave.employee else None,
+        employee_position=leave.employee.position if leave.employee else None
     )
 
-
-# ================= KPIS E OVERVIEW =================
 
 @router.get('/hr/overview', response_model=HROverviewKPIs, summary='KPIs consolidados de Recursos Humanos')
 def get_hr_overview(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    total_employees = db.query(Employee).count()
-    active_employees = db.query(Employee).filter(Employee.is_active == True).all()
-    active_count = len(active_employees)
+    emp_stats = (
+        db.query(
+            func.count(Employee.id).label('total_employees'),
+            func.coalesce(func.sum(case((Employee.is_active == True, 1), else_=0)), 0).label('active_count'),
+            func.count(func.distinct(Employee.department)).label('depts_count'),
+            func.coalesce(func.sum(case((Employee.is_active == True, Employee.base_salary), else_=0)), 0).label('monthly_payroll')
+        )
+        .first()
+    )
 
-    # Distinct active departments
-    distinct_depts = set(emp.department for emp in active_employees if emp.department)
-    active_departments_count = len(distinct_depts)
-
-    # Total monthly payroll (MZN)
-    monthly_payroll_mzn = sum(float(emp.base_salary or 0) for emp in active_employees)
-
-    # On leave / absent currently
     now = datetime.utcnow()
-    on_leave_count = db.query(EmployeeLeave).filter(
+    on_leave_count = db.query(func.count(func.distinct(EmployeeLeave.employee_id))).filter(
         EmployeeLeave.status == 'APPROVED',
         EmployeeLeave.start_date <= now,
         EmployeeLeave.end_date >= now
-    ).count()
+    ).scalar() or 0
 
     return HROverviewKPIs(
-        total_employees=total_employees,
-        active_employees_count=active_count,
-        active_departments_count=active_departments_count,
+        total_employees=int(emp_stats.total_employees if emp_stats else 0),
+        active_employees_count=int(emp_stats.active_count if emp_stats else 0),
+        active_departments_count=int(emp_stats.depts_count if emp_stats else 0),
         on_leave_count=on_leave_count,
-        monthly_payroll_mzn=monthly_payroll_mzn
+        monthly_payroll_mzn=float(emp_stats.monthly_payroll if emp_stats else 0.0)
     )

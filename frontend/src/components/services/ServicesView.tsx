@@ -14,7 +14,7 @@ import {
   AlertCircle,
   Tag
 } from 'lucide-react';
-import type { Service, ServiceCreateInput, ServiceUpdateInput, ServiceKPIs, ToastMessage } from '../../types';
+import type { Service, ServiceCreateInput, ServiceKPIs, ToastMessage } from '../../types';
 import { fetchServices, fetchServiceCategories, fetchServiceKPIs, createService, updateService } from '../../services/api';
 import { Toast } from '../common/Toast';
 
