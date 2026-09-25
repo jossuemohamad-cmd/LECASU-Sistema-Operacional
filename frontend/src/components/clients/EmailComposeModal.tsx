@@ -1,11 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
   Send, 
-  FileText, 
+  Paperclip, 
+  Save, 
+  PenTool, 
+  MessageSquare, 
+  Pencil, 
+  Users, 
+  Plus, 
+  Image as ImageIcon, 
+  ExternalLink, 
+  UploadCloud, 
   Trash2, 
+  FileText, 
   Loader2, 
-  Sparkles, 
+  Check, 
+  ChevronDown,
+  Maximize2,
+  Minimize2,
   AlertCircle
 } from 'lucide-react';
 import type { Client, Proposal } from '../../types';
@@ -18,6 +31,7 @@ export interface EmailMessage {
   from: string;
   to: string;
   cc?: string;
+  bcc?: string;
   subject: string;
   body: string;
   date: string;
@@ -26,6 +40,7 @@ export interface EmailMessage {
   attachedProposalId?: number;
   attachedProposalTitle?: string;
   attachedProposalAmount?: number;
+  attachments?: Array<{ filename: string; size_bytes?: number }>;
   folder: 'inbox' | 'sent' | 'drafts' | 'trash';
 }
 
@@ -48,21 +63,46 @@ export const EmailComposeModal: React.FC<EmailComposeModalProps> = ({
   onClose,
   onSend
 }) => {
-  const [selectedClientId, setSelectedClientId] = useState<number | ''>(initialClient?.id || '');
+  // Form fields
+  const [fromEmail, setFromEmail] = useState(senderEmail || 'info@lecasu.co.mz');
   const [recipientEmail, setRecipientEmail] = useState(initialClient?.email || '');
   const [ccEmail, setCcEmail] = useState('');
+  const [bccEmail, setBccEmail] = useState('');
   const [showCc, setShowCc] = useState(false);
+  const [showBcc, setShowBcc] = useState(false);
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
-  const [attachedProposal, setAttachedProposal] = useState<Proposal | null>(initialProposal || null);
-  const [selectedTemplate, setSelectedTemplate] = useState<string>('custom');
+  
+  // UI states
+  const [isEditingFrom, setIsEditingFrom] = useState(false);
+  const [isContactsDropdownOpen, setIsContactsDropdownOpen] = useState(false);
+  const [isTemplatesDropdownOpen, setIsTemplatesDropdownOpen] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successDraftMessage, setSuccessDraftMessage] = useState<string | null>(null);
 
-  // Sync when initialClient or initialProposal changes
+  // Right sidebar options
+  const [readReceipt, setReadReceipt] = useState(false);
+  const [deliveryReceipt, setDeliveryReceipt] = useState(false);
+  const [keepFormatting, setKeepFormatting] = useState(true);
+  const [priority, setPriority] = useState<'Normal' | 'Baixa' | 'Alta' | 'Muito Alta'>('Normal');
+  const [saveFolder, setSaveFolder] = useState('Enviados');
+
+  // Attachments
+  const [attachedProposal, setAttachedProposal] = useState<Proposal | null>(initialProposal || null);
+  const [attachedFiles, setAttachedFiles] = useState<Array<{ name: string; size: number }>>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Default signature
+  const defaultSignature = `\n\n--\nLECASU Engenharia & Serviços\nMaputo, Moçambique\nEmail: ${fromEmail}\nWeb: www.lecasu.co.mz`;
+
+  // Initialize data on open
   useEffect(() => {
+    if (senderEmail) {
+      setFromEmail(senderEmail);
+    }
     if (initialClient) {
-      setSelectedClientId(initialClient.id);
       setRecipientEmail(initialClient.email || '');
     }
     if (initialProposal) {
@@ -71,7 +111,7 @@ export const EmailComposeModal: React.FC<EmailComposeModalProps> = ({
       setBody(
 `Prezados,
 
-Segue em anexo a Proposta Comercial referente ao projeto "${initialProposal.title}".
+Segue em anexo a nossa Proposta Comercial referente ao projeto "${initialProposal.title}".
 
 Valor Total Proposto: ${formatMZN(Number(initialProposal.total_amount) || 0)}
 Escopo: ${initialProposal.scope || 'Conforme alinhamento técnico.'}
@@ -81,7 +121,7 @@ Ficamos à inteira disposição para qualquer esclarecimento técnico ou ajuste 
 Atenciosamente,
 LECASU Engenharia & Serviços
 Maputo, Moçambique
-Email: ${senderEmail}
+Email: ${senderEmail || 'info@lecasu.co.mz'}
 Web: www.lecasu.co.mz`
       );
     }
@@ -89,28 +129,22 @@ Web: www.lecasu.co.mz`
 
   if (!isOpen) return null;
 
-  // Handle client selection dropdown
-  const handleClientChange = (clientId: number) => {
-    setSelectedClientId(clientId);
-    const client = clients.find(c => c.id === clientId);
-    if (client) {
-      setRecipientEmail(client.email || '');
-      if (client.proposals && client.proposals.length > 0 && !attachedProposal) {
-        setAttachedProposal(client.proposals[0]);
-      }
+  // Insert signature
+  const handleToggleSignature = () => {
+    if (body.includes('--\nLECASU Engenharia')) {
+      setBody(prev => prev.replace(/\n\n--\nLECASU Engenharia[\s\S]*$/, ''));
+    } else {
+      setBody(prev => prev.trim() + defaultSignature);
     }
   };
 
-  // Handle email template selection
-  const handleTemplateChange = (templateKey: string) => {
-    setSelectedTemplate(templateKey);
-    const targetClient = clients.find(c => c.id === Number(selectedClientId));
-    const clientName = targetClient ? targetClient.name : 'Cliente';
-
-    if (templateKey === 'proposal') {
-      setSubject(`Proposta Comercial de Engenharia & Serviços | ${clientName} - LECASU`);
+  // Quick responses templates
+  const handleApplyTemplate = (type: 'proposta' | 'followup' | 'boasvindas' | 'recibo') => {
+    setIsTemplatesDropdownOpen(false);
+    if (type === 'proposta') {
+      setSubject('Proposta Comercial de Engenharia & Serviços | LECASU');
       setBody(
-`Exmo.(s) Senhor(es) da ${clientName},
+`Exmo.(s) Senhor(es),
 
 Temos a honra de apresentar a nossa proposta técnica e comercial para a execução dos serviços de engenharia solicitados.
 
@@ -122,10 +156,10 @@ Com os melhores cumprimentos,
 Departamento Comercial | LECASU
 Maputo - Moçambique`
       );
-    } else if (templateKey === 'followup') {
-      setSubject(`Acompanhamento de Proposta Comercial | LECASU - ${clientName}`);
+    } else if (type === 'followup') {
+      setSubject('Acompanhamento de Proposta Comercial | LECASU');
       setBody(
-`Olá ${targetClient?.contact_person || clientName},
+`Prezados,
 
 Esperamos que este e-mail o(a) encontre bem.
 
@@ -136,10 +170,10 @@ Estamos disponíveis para agendar uma reunião presencial ou virtual a vosso cri
 Atenciosamente,
 Equipa Comercial LECASU`
       );
-    } else if (templateKey === 'welcome') {
-      setSubject(`Bem-vindo à LECASU Engenharia | Abertura de Conta de Cliente`);
+    } else if (type === 'boasvindas') {
+      setSubject('Bem-vindo à LECASU Engenharia | Abertura de Conta de Cliente');
       setBody(
-`Prezado(a) ${targetClient?.contact_person || clientName},
+`Prezados Senhores,
 
 É com enorme satisfação que confirmamos o vosso registo na carteira de parceiros e clientes da LECASU.
 
@@ -150,43 +184,93 @@ Não hesite em contactar-nos para novas cotações e soluções.
 Cordialmente,
 Diretoria Executiva LECASU`
       );
+    } else if (type === 'recibo') {
+      setSubject('Confirmação de Recepção de Documentos | LECASU');
+      setBody(
+`Prezados,
+
+Acusamos a boa recepção da vossa comunicação e documentos anexos. Os mesmos foram reencaminhados para o departamento responsável para análise técnica.
+
+Entraremos em contacto brevemente.
+
+Melhores cumprimentos,
+LECASU Engenharia & Serviços`
+      );
     }
   };
 
-  const handleSend = async (e: React.FormEvent) => {
+  // File attachments handling
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const filesArray = Array.from(e.target.files).map(f => ({
+        name: f.name,
+        size: f.size
+      }));
+      setAttachedFiles(prev => [...prev, ...filesArray]);
+    }
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setAttachedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Save draft
+  const handleSaveDraft = () => {
+    setSuccessDraftMessage('Rascunho guardado com sucesso.');
+    setTimeout(() => setSuccessDraftMessage(null), 3000);
+  };
+
+  // Submit send
+  const handleSubmitSend = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
     if (!recipientEmail || !recipientEmail.includes('@')) {
-      setErrorMessage('Por favor informe um endereço de e-mail de destinatário válido.');
+      setErrorMessage('Por favor informe um endereço de destinatário válido no campo "Para".');
       return;
     }
 
     if (!subject.trim()) {
-      setErrorMessage('Por favor informe o assunto do e-mail.');
+      setErrorMessage('Por favor informe o assunto da mensagem.');
       return;
     }
 
     try {
       setIsSending(true);
 
-      const targetClient = clients.find(c => c.id === Number(selectedClientId));
+      const allAttachments = [];
+      if (attachedProposal) {
+        allAttachments.push({
+          filename: `Proposta_${attachedProposal.id}_${attachedProposal.title.replace(/\s+/g, '_')}.pdf`,
+          size_bytes: 124500
+        });
+      }
+      for (const f of attachedFiles) {
+        allAttachments.push({
+          filename: f.name,
+          size_bytes: f.size
+        });
+      }
+
+      const client = clients.find(c => c.email && c.email.toLowerCase() === recipientEmail.trim().toLowerCase());
 
       const newMsg: EmailMessage = {
-        id: `msg_${Date.now()}`,
-        clientId: targetClient?.id,
-        clientName: targetClient?.name || 'Cliente Direto',
-        from: senderEmail,
+        id: `sent_${Date.now()}`,
+        clientId: client?.id,
+        clientName: client?.name || recipientEmail,
+        from: fromEmail,
         to: recipientEmail.trim(),
         cc: ccEmail.trim() || undefined,
+        bcc: bccEmail.trim() || undefined,
         subject: subject.trim(),
         body: body.trim(),
         date: new Date().toISOString(),
         isRead: true,
-        hasAttachment: !!attachedProposal,
+        hasAttachment: allAttachments.length > 0,
         attachedProposalId: attachedProposal?.id,
         attachedProposalTitle: attachedProposal?.title,
         attachedProposalAmount: attachedProposal ? Number(attachedProposal.total_amount) : undefined,
+        attachments: allAttachments,
         folder: 'sent'
       };
 
@@ -201,221 +285,567 @@ Diretoria Executiva LECASU`
 
   return (
     <div className="modal-overlay-erp animate-in fade-in select-none">
-      <div className="bg-white text-slate-800 rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[92vh]">
+      <div 
+        className={`bg-white text-slate-800 rounded-xl border border-slate-200 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 flex flex-col transition-all ${
+          isMaximized 
+            ? 'w-[98vw] h-[96vh] max-w-none max-h-none' 
+            : 'max-w-5xl w-full h-[90vh] max-h-[780px]'
+        }`}
+      >
         
-        {/* Top Window Bar - Clean White & Professional */}
-        <div className="bg-slate-50/80 px-6 py-3.5 border-b border-slate-200 flex items-center justify-between shrink-0">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#0078D4]/10 text-[#0078D4] flex items-center justify-center font-bold text-sm shadow-2xs">
-              <Send size={16} />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 leading-tight">Novo E-mail / Envio de Proposta</h3>
-              <p className="text-xs text-slate-500">Composição corporativa via servidor SMTP</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* Compose Action Bar */}
-        <div className="bg-white px-6 py-2.5 border-b border-slate-200 flex items-center justify-between shrink-0 gap-3 text-xs">
-          <div className="flex items-center space-x-2.5">
-            
-            {/* Botão Enviar Azul */}
-            <button
-              type="button"
-              onClick={handleSend}
-              disabled={isSending}
-              className="px-4 py-2 bg-[#0078D4] hover:bg-[#106EBE] text-white font-semibold rounded-lg text-xs flex items-center gap-2 shadow-xs transition cursor-pointer disabled:opacity-50"
-            >
-              {isSending ? (
-                <Loader2 size={14} className="animate-spin text-white" />
-              ) : (
-                <Send size={14} />
-              )}
-              <span>{isSending ? 'A enviar...' : 'Enviar Mensagem'}</span>
-            </button>
-
-            {/* Modelos Rápidos */}
-            <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
-              <Sparkles size={14} className="text-amber-500" />
-              <select
-                value={selectedTemplate}
-                onChange={e => handleTemplateChange(e.target.value)}
-                className="bg-transparent text-slate-700 text-xs font-medium focus:outline-none cursor-pointer"
-              >
-                <option value="custom">Mensagem Personalizada</option>
-                <option value="proposal">Modelo: Envio de Proposta</option>
-                <option value="followup">Modelo: Acompanhamento</option>
-                <option value="welcome">Modelo: Boas-vindas</option>
-              </select>
-            </div>
-
-            {/* Vincular Proposta */}
-            <button
-              type="button"
-              onClick={() => {
-                const targetClient = clients.find(c => c.id === Number(selectedClientId));
-                if (targetClient && targetClient.proposals && targetClient.proposals.length > 0) {
-                  setAttachedProposal(targetClient.proposals[0]);
-                }
-              }}
-              className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg border border-slate-200 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
-              title="Vincular proposta cadastrada"
-            >
-              <FileText size={14} className="text-[#FF8000]" />
-              <span>Anexar Proposta</span>
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition"
-            title="Descartar rascunho"
-          >
-            <Trash2 size={16} />
-          </button>
-        </div>
-
-        {/* Compose Form Fields */}
-        <form onSubmit={handleSend} className="p-6 space-y-3 overflow-y-auto flex-1 text-xs">
+        {/* ================= TOP TOOLBAR (ROUNDCUBE STYLE) ================= */}
+        <div className="bg-slate-50/90 border-b border-slate-200 px-4 py-2.5 flex items-center justify-between shrink-0 select-none">
           
-          {/* De (From) */}
-          <div className="flex items-center gap-3 border-b border-slate-100 pb-2.5">
-            <span className="w-14 font-semibold text-slate-500 text-right shrink-0">De:</span>
-            <div className="flex items-center gap-2 text-slate-800 font-mono text-xs bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 flex-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span>{senderEmail}</span>
-              <span className="text-[11px] text-slate-400 ml-auto font-sans">(SMTP Seguro SSL)</span>
-            </div>
-          </div>
+          {/* Action buttons (Left) */}
+          <div className="flex items-center space-x-1 sm:space-x-3 text-xs font-medium text-slate-700">
+            
+            {/* Guardar Rascunho */}
+            <button
+              type="button"
+              onClick={handleSaveDraft}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-200/70 text-slate-700 hover:text-slate-900 transition cursor-pointer"
+              title="Guardar como rascunho"
+            >
+              <Save size={15} className="text-slate-600" />
+              <span>Guardar</span>
+            </button>
 
-          {/* Selecionar Cliente Registado */}
-          <div className="flex items-center gap-3 border-b border-slate-100 pb-2.5">
-            <span className="w-14 font-semibold text-slate-500 text-right shrink-0">Cliente:</span>
-            <div className="flex-1 flex items-center gap-2">
-              <select
-                value={selectedClientId}
-                onChange={e => handleClientChange(Number(e.target.value))}
-                className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:ring-1 focus:ring-[#0078D4] focus:bg-white transition"
-              >
-                <option value="">-- Selecionar Cliente da Base LECASU --</option>
-                {clients.map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} {c.email ? `(${c.email})` : ''}
-                  </option>
-                ))}
-              </select>
+            {/* Anexar ficheiro */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-200/70 text-slate-700 hover:text-slate-900 transition cursor-pointer"
+              title="Anexar ficheiro"
+            >
+              <Paperclip size={15} className="text-slate-600" />
+              <span>Anexar</span>
+            </button>
+
+            {/* Inserir Assinatura */}
+            <button
+              type="button"
+              onClick={handleToggleSignature}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-200/70 text-slate-700 hover:text-slate-900 transition cursor-pointer"
+              title="Inserir / Remover Assinatura LECASU"
+            >
+              <PenTool size={15} className="text-slate-600" />
+              <span>Assinatura</span>
+            </button>
+
+            {/* Respostas Pré-definidas */}
+            <div className="relative">
               <button
                 type="button"
-                onClick={() => setShowCc(!showCc)}
-                className="text-slate-500 hover:text-slate-900 px-2.5 py-1 text-xs font-semibold rounded-md hover:bg-slate-100 border border-slate-200"
+                onClick={() => setIsTemplatesDropdownOpen(!isTemplatesDropdownOpen)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-200/70 text-slate-700 hover:text-slate-900 transition cursor-pointer"
+                title="Modelos de respostas comerciais"
               >
-                Cc
+                <MessageSquare size={15} className="text-slate-600" />
+                <span>Respostas</span>
+                <ChevronDown size={13} className="text-slate-400" />
               </button>
-            </div>
-          </div>
 
-          {/* Para (To) */}
-          <div className="flex items-center gap-3 border-b border-slate-100 pb-2.5">
-            <span className="w-14 font-semibold text-slate-500 text-right shrink-0">Para:</span>
-            <input
-              type="email"
-              required
-              value={recipientEmail}
-              onChange={e => setRecipientEmail(e.target.value)}
-              placeholder="ex: contato@cliente.co.mz"
-              className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:ring-1 focus:ring-[#0078D4] focus:bg-white transition"
-            />
-          </div>
-
-          {/* Cc (Opcional) */}
-          {showCc && (
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-2.5 animate-in fade-in">
-              <span className="w-14 font-semibold text-slate-500 text-right shrink-0">Cc:</span>
-              <input
-                type="email"
-                value={ccEmail}
-                onChange={e => setCcEmail(e.target.value)}
-                placeholder="gerencia@lecasu.co.mz"
-                className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:ring-1 focus:ring-[#0078D4] focus:bg-white transition"
-              />
-            </div>
-          )}
-
-          {/* Assunto */}
-          <div className="flex items-center gap-3 border-b border-slate-100 pb-2.5">
-            <span className="w-14 font-semibold text-slate-500 text-right shrink-0">Assunto:</span>
-            <input
-              type="text"
-              required
-              value={subject}
-              onChange={e => setSubject(e.target.value)}
-              placeholder="Assunto da comunicação ou orçamento..."
-              className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#0078D4] focus:bg-white transition"
-            />
-          </div>
-
-          {/* Attached Proposal Preview Banner */}
-          {attachedProposal && (
-            <div className="p-3 bg-orange-50/70 border border-orange-200 rounded-xl flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-xs">
-                  PDF
+              {isTemplatesDropdownOpen && (
+                <div className="absolute left-0 mt-1 w-64 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-50 text-xs animate-in fade-in">
+                  <div className="px-3 py-1.5 font-bold text-[11px] text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                    Modelos Rápidos LECASU
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleApplyTemplate('proposta')}
+                    className="w-full text-left px-3 py-2 hover:bg-orange-50 hover:text-[#FF8000] font-medium transition cursor-pointer"
+                  >
+                    📄 Envio de Proposta Comercial
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleApplyTemplate('followup')}
+                    className="w-full text-left px-3 py-2 hover:bg-orange-50 hover:text-[#FF8000] font-medium transition cursor-pointer"
+                  >
+                    ⏰ Acompanhamento de Proposta
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleApplyTemplate('boasvindas')}
+                    className="w-full text-left px-3 py-2 hover:bg-orange-50 hover:text-[#FF8000] font-medium transition cursor-pointer"
+                  >
+                    🤝 Boas-vindas ao Cliente
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleApplyTemplate('recibo')}
+                    className="w-full text-left px-3 py-2 hover:bg-orange-50 hover:text-[#FF8000] font-medium transition cursor-pointer"
+                  >
+                    📬 Confirmação de Recepção
+                  </button>
                 </div>
-                <div>
-                  <p className="font-semibold text-slate-900 text-xs leading-tight">
-                    Proposta_{attachedProposal.id}_{attachedProposal.title.replace(/\s+/g, '_')}.pdf
-                  </p>
-                  <p className="text-[11px] text-orange-700 font-mono font-medium">
-                    Valor: {formatMZN(Number(attachedProposal.total_amount) || 0)} (Documento Timbrado LECASU)
-                  </p>
+              )}
+            </div>
+
+          </div>
+
+          {/* Right Section: Header Title + Modal Controls */}
+          <div className="flex items-center space-x-3">
+            <span className="hidden md:inline-block font-bold text-xs text-slate-700 tracking-tight pr-4 border-r border-slate-200">
+              Opções e anexos
+            </span>
+
+            <button
+              type="button"
+              onClick={() => setIsMaximized(!isMaximized)}
+              className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-200/60 transition cursor-pointer"
+              title={isMaximized ? 'Restaurar janela' : 'Maximizar'}
+            >
+              {isMaximized ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition cursor-pointer"
+              title="Fechar janela"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+        </div>
+
+        {/* Hidden File Input */}
+        <input 
+          type="file" 
+          ref={fileInputRef} 
+          onChange={handleFileUpload} 
+          multiple 
+          className="hidden" 
+        />
+
+        {/* ================= 2-COLUMN MAIN BODY ================= */}
+        <form onSubmit={handleSubmitSend} className="flex-1 flex flex-col md:flex-row overflow-hidden bg-white">
+          
+          {/* ================= LEFT COLUMN: MESSAGE COMPOSER ================= */}
+          <div className="flex-1 flex flex-col p-4 md:p-5 border-r border-slate-200 overflow-y-auto space-y-3">
+            
+            {/* Draft feedback notification */}
+            {successDraftMessage && (
+              <div className="p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-xs flex items-center gap-2 animate-in fade-in">
+                <Check size={15} className="text-emerald-600" />
+                <span>{successDraftMessage}</span>
+              </div>
+            )}
+
+            {/* Error Message */}
+            {errorMessage && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs flex items-center gap-2">
+                <AlertCircle size={16} className="text-rose-600 shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
+            {/* Field: De */}
+            <div className="flex items-center gap-3">
+              <label className="w-14 text-xs font-semibold text-slate-600 text-left shrink-0">
+                De
+              </label>
+              <div className="flex-1 relative flex items-center">
+                {isEditingFrom ? (
+                  <input
+                    type="email"
+                    value={fromEmail}
+                    onChange={e => setFromEmail(e.target.value)}
+                    onBlur={() => setIsEditingFrom(false)}
+                    autoFocus
+                    className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded text-xs font-mono text-slate-800 focus:outline-none focus:border-[#FF8000]"
+                  />
+                ) : (
+                  <div className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs font-mono text-slate-800 flex items-center justify-between">
+                    <span>{fromEmail}</span>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingFrom(true)}
+                      className="text-slate-400 hover:text-slate-700 p-1 rounded hover:bg-slate-200/50 transition cursor-pointer"
+                      title="Editar remetente"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Field: Para */}
+            <div className="flex items-center gap-3">
+              <label className="w-14 text-xs font-semibold text-slate-600 text-left shrink-0">
+                Para
+              </label>
+              <div className="flex-1 relative flex items-center">
+                <input
+                  type="email"
+                  required
+                  value={recipientEmail}
+                  onChange={e => setRecipientEmail(e.target.value)}
+                  placeholder="destinatario@cliente.co.mz"
+                  className="w-full pl-3 pr-20 py-1.5 bg-white border border-slate-200 hover:border-slate-300 focus:border-[#FF8000] rounded text-xs text-slate-800 focus:outline-none transition"
+                />
+                
+                {/* Actions inside Para field: Contacts book + Add (Cc/Bcc) */}
+                <div className="absolute right-1.5 flex items-center space-x-1">
+                  
+                  {/* Contacts Book Dropdown */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsContactsDropdownOpen(!isContactsDropdownOpen)}
+                      className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                      title="Selecionar da lista de clientes cadastrados"
+                    >
+                      <Users size={14} />
+                    </button>
+
+                    {isContactsDropdownOpen && (
+                      <div className="absolute right-0 mt-1 w-72 max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-50 text-xs">
+                        <div className="px-3 py-1.5 font-bold text-[11px] text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                          Clientes Cadastrados ({clients.length})
+                        </div>
+                        {clients.length === 0 ? (
+                          <div className="px-3 py-3 text-slate-400 text-center">Nenhum cliente disponível</div>
+                        ) : (
+                          clients.map(c => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => {
+                                setRecipientEmail(c.email || '');
+                                setIsContactsDropdownOpen(false);
+                                if (c.proposals && c.proposals.length > 0 && !attachedProposal) {
+                                  setAttachedProposal(c.proposals[0]);
+                                }
+                              }}
+                              className="w-full text-left px-3 py-2 hover:bg-orange-50 hover:text-[#FF8000] border-b border-slate-50 last:border-0 transition cursor-pointer"
+                            >
+                              <div className="font-semibold text-slate-800">{c.name}</div>
+                              <div className="text-[11px] text-slate-500 font-mono">{c.email || 'Sem e-mail'}</div>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Toggle Cc/Bcc */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!showCc) setShowCc(true);
+                      else if (!showBcc) setShowBcc(true);
+                      else {
+                        setShowCc(false);
+                        setShowBcc(false);
+                      }
+                    }}
+                    className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                    title="Adicionar campo Cc / Cco"
+                  >
+                    <Plus size={14} />
+                  </button>
+
                 </div>
               </div>
+            </div>
+
+            {/* Field: Cc */}
+            {showCc && (
+              <div className="flex items-center gap-3 animate-in fade-in">
+                <label className="w-14 text-xs font-semibold text-slate-600 text-left shrink-0">
+                  Cc
+                </label>
+                <div className="flex-1 relative flex items-center">
+                  <input
+                    type="email"
+                    value={ccEmail}
+                    onChange={e => setCcEmail(e.target.value)}
+                    placeholder="comercial@lecasu.co.mz"
+                    className="w-full px-3 py-1.5 bg-white border border-slate-200 hover:border-slate-300 focus:border-[#FF8000] rounded text-xs text-slate-800 focus:outline-none transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { setCcEmail(''); setShowCc(false); }}
+                    className="absolute right-2 text-slate-400 hover:text-rose-600"
+                    title="Remover Cc"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Field: Cco / Bcc */}
+            {showBcc && (
+              <div className="flex items-center gap-3 animate-in fade-in">
+                <label className="w-14 text-xs font-semibold text-slate-600 text-left shrink-0">
+                  Cco
+                </label>
+                <div className="flex-1 relative flex items-center">
+                  <input
+                    type="email"
+                    value={bccEmail}
+                    onChange={e => setBccEmail(e.target.value)}
+                    placeholder="arquivo@lecasu.co.mz"
+                    className="w-full px-3 py-1.5 bg-white border border-slate-200 hover:border-slate-300 focus:border-[#FF8000] rounded text-xs text-slate-800 focus:outline-none transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { setBccEmail(''); setShowBcc(false); }}
+                    className="absolute right-2 text-slate-400 hover:text-rose-600"
+                    title="Remover Cco"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Field: Assunto */}
+            <div className="flex items-center gap-3">
+              <label className="w-14 text-xs font-semibold text-slate-600 text-left shrink-0">
+                Assunto
+              </label>
+              <input
+                type="text"
+                required
+                value={subject}
+                onChange={e => setSubject(e.target.value)}
+                placeholder="Introduza o assunto do e-mail..."
+                className="flex-1 px-3 py-1.5 bg-white border border-slate-200 hover:border-slate-300 focus:border-[#FF8000] rounded text-xs font-medium text-slate-800 focus:outline-none transition"
+              />
+            </div>
+
+            {/* Attached Proposal Pill if linked */}
+            {attachedProposal && (
+              <div className="p-2.5 bg-orange-50/70 border border-orange-200 rounded-lg flex items-center justify-between text-xs animate-in fade-in">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-6 h-6 rounded bg-[#FF8000] text-white flex items-center justify-center font-bold text-[10px]">
+                    PDF
+                  </div>
+                  <div>
+                    <span className="font-semibold text-slate-800">
+                      Proposta_{attachedProposal.id}_{attachedProposal.title.replace(/\s+/g, '_')}.pdf
+                    </span>
+                    <span className="ml-2 text-slate-500 font-mono text-[11px]">
+                      ({formatMZN(Number(attachedProposal.total_amount) || 0)})
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAttachedProposal(null)}
+                  className="text-slate-400 hover:text-rose-600 p-1 rounded"
+                  title="Remover proposta vinculada"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+
+            {/* ================= EDITOR CONTAINER ================= */}
+            <div className="flex-1 flex flex-col border border-slate-200 rounded-lg overflow-hidden focus-within:border-[#FF8000] transition">
+              
+              {/* Mini Formatting Header Bar (Roundcube Style) */}
+              <div className="bg-slate-50 px-3 py-1.5 border-b border-slate-200 flex items-center justify-between text-slate-500">
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    className="p-1 rounded hover:bg-slate-200/60 text-slate-600 transition cursor-pointer"
+                    title="Inserir imagem / logotipo timbrado"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <ImageIcon size={15} />
+                  </button>
+                  <span className="text-[11px] text-slate-400">Texto formatado (HTML / Plain)</span>
+                </div>
+                <span className="text-[11px] text-slate-400 font-mono">UTF-8</span>
+              </div>
+
+              {/* Textarea Area */}
+              <textarea
+                required
+                rows={12}
+                value={body}
+                onChange={e => setBody(e.target.value)}
+                placeholder="Escreva a sua mensagem..."
+                className="w-full flex-1 p-3.5 bg-white text-slate-800 text-xs font-sans leading-relaxed focus:outline-none resize-none"
+              />
+            </div>
+
+            {/* Bottom Controls Bar (Roundcube Style) */}
+            <div className="pt-2 flex items-center justify-between shrink-0">
+              
+              {/* Enviar Button - LECASU Official Palette */}
+              <button
+                type="submit"
+                disabled={isSending}
+                className="px-5 py-2 rounded-lg bg-[#FF8000] hover:bg-[#E67300] active:bg-[#CC6600] text-white font-bold text-xs flex items-center gap-2 shadow-xs transition cursor-pointer disabled:opacity-50"
+              >
+                {isSending ? (
+                  <Loader2 size={15} className="animate-spin text-white" />
+                ) : (
+                  <Send size={15} />
+                )}
+                <span>{isSending ? 'A enviar...' : 'Enviar'}</span>
+              </button>
+
+              {/* Abrir numa nova janela link */}
               <button
                 type="button"
-                onClick={() => setAttachedProposal(null)}
-                className="text-slate-400 hover:text-rose-600 p-1 rounded-md"
-                title="Remover anexo"
+                onClick={() => setIsMaximized(!isMaximized)}
+                className="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1.5 transition cursor-pointer"
               >
-                <X size={15} />
+                <ExternalLink size={14} className="text-slate-400" />
+                <span>{isMaximized ? 'Restaurar janela' : 'Abrir numa nova janela'}</span>
               </button>
-            </div>
-          )}
 
-          {/* Body Editor */}
-          <div className="pt-1">
-            <textarea
-              rows={11}
-              required
-              value={body}
-              onChange={e => setBody(e.target.value)}
-              placeholder="Escreva a sua mensagem..."
-              className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs font-sans leading-relaxed focus:outline-none focus:ring-1 focus:ring-[#0078D4] focus:bg-white resize-none transition"
-            />
+            </div>
+
           </div>
 
-          {/* Error Banner */}
-          {errorMessage && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-rose-800 text-xs font-medium">
-              <AlertCircle size={16} className="text-rose-600 shrink-0" />
-              <span>{errorMessage}</span>
+          {/* ================= RIGHT COLUMN: OPÇÕES E ANEXOS ================= */}
+          <div className="w-full md:w-72 lg:w-80 p-4 md:p-5 bg-slate-50/50 flex flex-col space-y-4 overflow-y-auto">
+            
+            <div className="font-bold text-xs text-slate-800 uppercase tracking-wider pb-1 border-b border-slate-200">
+              Opções e anexos
             </div>
-          )}
+
+            {/* Dashed Drop Zone Container (Roundcube Style) */}
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-slate-300 hover:border-[#FF8000] bg-white rounded-xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition group"
+            >
+              <p className="text-[11px] text-slate-500 mb-3 font-medium">
+                Tamanho máximo permitido do ficheiro é 50 MB
+              </p>
+
+              {/* Adicionar anexo button */}
+              <button
+                type="button"
+                className="px-3.5 py-1.5 rounded-lg bg-slate-100 group-hover:bg-orange-50 group-hover:text-[#FF8000] text-slate-700 font-semibold text-xs border border-slate-200 group-hover:border-orange-200 transition flex items-center gap-1.5 mb-3"
+              >
+                <Paperclip size={13} className="text-[#FF8000]" />
+                <span>Adicionar anexo</span>
+              </button>
+
+              {/* Subtle tray / upload icon */}
+              <div className="text-slate-300 group-hover:text-orange-300 transition my-1">
+                <UploadCloud size={44} strokeWidth={1.2} />
+              </div>
+            </div>
+
+            {/* Uploaded Files List */}
+            {attachedFiles.length > 0 && (
+              <div className="space-y-1.5">
+                <div className="text-[11px] font-semibold text-slate-500">
+                  Ficheiros Anexados ({attachedFiles.length}):
+                </div>
+                {attachedFiles.map((file, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-lg text-xs">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <FileText size={14} className="text-slate-500 shrink-0" />
+                      <span className="truncate text-slate-800 font-medium" title={file.name}>
+                        {file.name}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveFile(idx)}
+                      className="text-slate-400 hover:text-rose-600 p-0.5 ml-1 shrink-0"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ================= OPTIONS & TOGGLE SWITCHES ================= */}
+            <div className="space-y-3.5 pt-2 text-xs">
+              
+              {/* Recibo de leitura */}
+              <div className="flex items-center justify-between">
+                <span className="text-slate-700 font-medium">Recibo de leitura</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={readReceipt}
+                    onChange={e => setReadReceipt(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#FF8000]" />
+                </label>
+              </div>
+
+              {/* Recibo de entrega */}
+              <div className="flex items-center justify-between">
+                <span className="text-slate-700 font-medium">Recibo de entrega</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={deliveryReceipt}
+                    onChange={e => setDeliveryReceipt(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#FF8000]" />
+                </label>
+              </div>
+
+              {/* Manter formatação */}
+              <div className="flex items-center justify-between">
+                <span className="text-slate-700 font-medium">Manter formatação</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={keepFormatting}
+                    onChange={e => setKeepFormatting(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#FF8000]" />
+                </label>
+              </div>
+
+              {/* Prioridade */}
+              <div className="space-y-1">
+                <label className="text-slate-700 font-medium block">Prioridade</label>
+                <select
+                  value={priority}
+                  onChange={e => setPriority(e.target.value as any)}
+                  className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-[#FF8000] cursor-pointer"
+                >
+                  <option value="Baixa">Baixa</option>
+                  <option value="Normal">Normal</option>
+                  <option value="Alta">Alta</option>
+                  <option value="Muito Alta">Muito Alta</option>
+                </select>
+              </div>
+
+              {/* Guardar mensagem enviada em */}
+              <div className="space-y-1">
+                <label className="text-slate-700 font-medium block">
+                  Guardar mensagem enviada em
+                </label>
+                <select
+                  value={saveFolder}
+                  onChange={e => setSaveFolder(e.target.value)}
+                  className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:border-[#FF8000] cursor-pointer"
+                >
+                  <option value="Enviados">Enviados</option>
+                  <option value="Rascunhos">Rascunhos</option>
+                  <option value="Arquivo">Arquivo</option>
+                </select>
+              </div>
+
+            </div>
+
+          </div>
 
         </form>
-
-        {/* Footer info */}
-        <div className="bg-slate-50 px-6 py-2.5 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 shrink-0">
-          <span>Servidor SMTP Conectado</span>
-          <span className="font-mono text-slate-400">LECASU Corporate Mail</span>
-        </div>
 
       </div>
     </div>
