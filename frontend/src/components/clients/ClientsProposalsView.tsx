@@ -15,7 +15,6 @@ import {
   ShieldCheck, 
   Paperclip, 
   LayoutGrid, 
-  Check, 
   X, 
   Archive, 
   AlertOctagon, 
@@ -27,6 +26,7 @@ import {
   ChevronRight, 
   ExternalLink, 
   SlidersHorizontal, 
+  Download,
   File as FileIcon 
 } from 'lucide-react';
 import type { Client, ClientCreateInput, Proposal, ProposalCreateInput, ToastMessage } from '../../types';
@@ -478,72 +478,72 @@ Jeremias Como`,
       <div className="h-11 bg-[#F4F6F8] border-b border-slate-200 flex items-stretch shrink-0 text-xs">
         
         {/* Pane 1 Header: Email da Conta (info@lecasu.co.mz) */}
-        <div className="w-52 sm:w-56 px-3 flex items-center justify-between border-r border-slate-200 font-semibold text-slate-800 bg-[#EBF0F4]/60">
+        <div className="w-52 sm:w-56 px-3 flex items-center justify-between border-r border-slate-200 font-semibold text-slate-800 bg-[#FAFAF9] shrink-0">
           <div className="flex items-center gap-2 truncate">
-            <Mail size={15} className="text-[#0078D4] shrink-0" />
+            <Mail size={15} className="text-[#FF8000] shrink-0" />
             <span className="truncate text-xs font-mono">{emailConfig.email}</span>
           </div>
           <button
             type="button"
             onClick={() => setIsEmailConfigModalOpen(true)}
-            className="text-slate-500 hover:text-slate-800 p-1 rounded hover:bg-slate-200 transition cursor-pointer"
+            className="text-slate-500 hover:text-slate-800 p-1 rounded hover:bg-slate-200 transition cursor-pointer shrink-0"
             title="Configurações da Conta"
           >
             <MoreVertical size={14} />
           </button>
         </div>
 
-        {/* Pane 2 Header Actions: Selecionar | Tópicos | Opções | Atualizar */}
-        <div className="w-72 sm:w-80 px-3 flex items-center justify-between border-r border-slate-200 bg-[#F4F6F8]">
-          <div className="flex items-center gap-2.5 text-slate-600">
+        {/* Pane 2 Header Actions: Escrever | + Proposta | Atualizar */}
+        <div className="w-72 sm:w-80 px-3 flex items-center justify-between border-r border-slate-200 bg-[#F4F6F8] shrink-0">
+          <div className="flex items-center gap-2.5 text-slate-600 whitespace-nowrap">
             <button
               type="button"
               onClick={() => handleOpenCompose()}
-              className="flex items-center gap-1 hover:text-[#0078D4] transition font-medium cursor-pointer"
+              className="flex items-center gap-1.5 hover:text-[#FF8000] transition font-medium cursor-pointer whitespace-nowrap shrink-0"
               title="Escrever Novo E-mail"
             >
-              <Edit3 size={13} className="text-[#0078D4]" />
-              <span className="hidden sm:inline">Escrever</span>
+              <Edit3 size={13} className="text-[#FF8000] shrink-0" />
+              <span className="whitespace-nowrap">Escrever</span>
             </button>
 
             <button
               type="button"
               onClick={() => setIsProposalModalOpen(true)}
-              className="flex items-center gap-1 text-[#FF8000] hover:text-[#e07000] transition font-medium cursor-pointer"
+              className="flex items-center gap-1.5 text-[#FF8000] hover:text-[#E67300] transition font-medium cursor-pointer whitespace-nowrap shrink-0"
               title="Criar Proposta Comercial"
             >
-              <FileSpreadsheet size={13} />
-              <span>+ Proposta</span>
+              <FileSpreadsheet size={13} className="shrink-0" />
+              <span className="whitespace-nowrap">+ Proposta</span>
             </button>
           </div>
 
-          <div className="flex items-center gap-2 text-slate-600">
+          <div className="flex items-center gap-2 text-slate-600 shrink-0">
             <button
               type="button"
               onClick={() => loadClients(true)}
-              className="flex items-center gap-1 hover:text-slate-900 transition cursor-pointer"
+              className="flex items-center gap-1.5 hover:text-[#FF8000] transition cursor-pointer whitespace-nowrap shrink-0"
               title="Atualizar correio"
             >
-              <RefreshCw size={13} className={isLoading ? 'animate-spin text-[#0078D4]' : ''} />
-              <span className="hidden md:inline text-[11px]">Atualizar</span>
+              <RefreshCw size={13} className={isLoading ? 'animate-spin text-[#FF8000]' : 'shrink-0'} />
+              <span className="hidden md:inline text-[11px] whitespace-nowrap">Atualizar</span>
             </button>
           </div>
         </div>
 
-        {/* Pane 3 Header Actions: Responder | Responder a todos | Reencaminhar | Eliminar | Arquivo | Spam | Marcar | Mais */}
-        <div className="flex-1 px-4 flex items-center justify-between bg-[#F4F6F8] overflow-x-auto scrollbar-none">
-          <div className="flex items-center gap-3 sm:gap-4 text-slate-600 font-medium text-xs">
+        {/* Pane 3 Header Actions: Responder | Responder a todos | Reencaminhar | Eliminar | Arquivo | Spam | Marcar | Tabela CRM */}
+        <div className="flex-1 px-4 flex items-center justify-between bg-[#F4F6F8] overflow-x-auto scrollbar-none whitespace-nowrap">
+          <div className="flex items-center gap-3 sm:gap-4 text-slate-700 font-medium text-xs whitespace-nowrap shrink-0">
             
             {/* Responder */}
             <button
               type="button"
               disabled={!currentItem}
               onClick={() => currentItem && handleOpenCompose(clients.find(c => c.id === currentItem.clientId))}
-              className="flex items-center gap-1 hover:text-[#0078D4] transition cursor-pointer disabled:opacity-40"
+              className="flex items-center gap-1.5 hover:text-[#FF8000] transition cursor-pointer disabled:opacity-40 whitespace-nowrap shrink-0"
               title="Responder"
             >
-              <Reply size={14} className="text-[#0078D4]" />
-              <span>Responder</span>
+              <Reply size={14} className="text-[#FF8000] shrink-0" />
+              <span className="whitespace-nowrap">Responder</span>
             </button>
 
             {/* Responder a todos */}
@@ -551,11 +551,11 @@ Jeremias Como`,
               type="button"
               disabled={!currentItem}
               onClick={() => currentItem && handleOpenCompose(clients.find(c => c.id === currentItem.clientId))}
-              className="hidden lg:flex items-center gap-1 hover:text-slate-900 transition cursor-pointer disabled:opacity-40"
+              className="hidden lg:flex items-center gap-1.5 hover:text-[#FF8000] transition cursor-pointer disabled:opacity-40 whitespace-nowrap shrink-0"
               title="Responder a todos"
             >
-              <ReplyAll size={14} />
-              <span>Responder ...</span>
+              <ReplyAll size={14} className="shrink-0" />
+              <span className="whitespace-nowrap">Responder a todos</span>
             </button>
 
             {/* Reencaminhar */}
@@ -563,25 +563,25 @@ Jeremias Como`,
               type="button"
               disabled={!currentItem}
               onClick={() => addToast('info', 'Reencaminhar', 'Selecione o destinatário para reencaminhar.')}
-              className="flex items-center gap-1 hover:text-slate-900 transition cursor-pointer disabled:opacity-40"
+              className="flex items-center gap-1.5 hover:text-[#FF8000] transition cursor-pointer disabled:opacity-40 whitespace-nowrap shrink-0"
               title="Reencaminhar"
             >
-              <Forward size={14} />
-              <span>Reencamin...</span>
+              <Forward size={14} className="shrink-0" />
+              <span className="whitespace-nowrap">Reencaminhar</span>
             </button>
 
-            <div className="h-4 w-px bg-slate-300 mx-0.5" />
+            <div className="h-4 w-px bg-slate-300 mx-0.5 shrink-0" />
 
             {/* Eliminar */}
             <button
               type="button"
               disabled={!currentItem}
               onClick={() => currentItem && handleDeleteItem(currentItem.id)}
-              className="flex items-center gap-1 hover:text-rose-600 transition cursor-pointer disabled:opacity-40"
+              className="flex items-center gap-1.5 hover:text-red-600 transition cursor-pointer disabled:opacity-40 whitespace-nowrap shrink-0"
               title="Eliminar"
             >
-              <Trash2 size={14} className="text-rose-500" />
-              <span>Eliminar</span>
+              <Trash2 size={14} className="text-slate-500 hover:text-red-600 shrink-0" />
+              <span className="whitespace-nowrap">Eliminar</span>
             </button>
 
             {/* Arquivo */}
@@ -589,11 +589,11 @@ Jeremias Como`,
               type="button"
               disabled={!currentItem}
               onClick={() => addToast('info', 'Arquivo', 'Mensagem arquivada.')}
-              className="hidden sm:flex items-center gap-1 hover:text-slate-900 transition cursor-pointer disabled:opacity-40"
+              className="hidden sm:flex items-center gap-1.5 hover:text-[#FF8000] transition cursor-pointer disabled:opacity-40 whitespace-nowrap shrink-0"
               title="Arquivo"
             >
-              <Archive size={14} />
-              <span>Arquivo</span>
+              <Archive size={14} className="shrink-0" />
+              <span className="whitespace-nowrap">Arquivo</span>
             </button>
 
             {/* Spam */}
@@ -601,11 +601,11 @@ Jeremias Como`,
               type="button"
               disabled={!currentItem}
               onClick={() => addToast('info', 'Spam', 'Marcado como spam.')}
-              className="hidden md:flex items-center gap-1 hover:text-slate-900 transition cursor-pointer disabled:opacity-40"
+              className="hidden md:flex items-center gap-1.5 hover:text-[#FF8000] transition cursor-pointer disabled:opacity-40 whitespace-nowrap shrink-0"
               title="Marcar como Spam"
             >
-              <AlertOctagon size={14} />
-              <span>Spam</span>
+              <AlertOctagon size={14} className="shrink-0" />
+              <span className="whitespace-nowrap">Spam</span>
             </button>
 
             {/* Marcar */}
@@ -613,11 +613,11 @@ Jeremias Como`,
               type="button"
               disabled={!currentItem}
               onClick={() => currentItem && handleToggleRead(currentItem.id)}
-              className="hidden md:flex items-center gap-1 hover:text-slate-900 transition cursor-pointer disabled:opacity-40"
+              className="hidden md:flex items-center gap-1.5 hover:text-[#FF8000] transition cursor-pointer disabled:opacity-40 whitespace-nowrap shrink-0"
               title="Marcar como lida/não lida"
             >
-              <Tag size={13} />
-              <span>Marcar</span>
+              <Tag size={13} className="shrink-0" />
+              <span className="whitespace-nowrap">Marcar</span>
             </button>
           </div>
 
@@ -625,11 +625,11 @@ Jeremias Como`,
           <button
             type="button"
             onClick={() => setViewMode(viewMode === 'roundcube' ? 'crm' : 'roundcube')}
-            className="px-2.5 py-1 text-slate-700 hover:text-slate-900 hover:bg-slate-200 rounded text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer border border-slate-300 bg-white shadow-2xs"
+            className="px-2.5 py-1 text-slate-700 hover:text-[#FF8000] hover:border-[#FF8000] hover:bg-orange-50/50 rounded text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer border border-slate-300 bg-white shadow-2xs whitespace-nowrap shrink-0 ml-3"
             title="Alternar entre visualização de Correio e Tabela CRM"
           >
-            <LayoutGrid size={13} className="text-orange-500" />
-            <span className="hidden sm:inline">{viewMode === 'roundcube' ? 'Tabela CRM' : 'Correio'}</span>
+            <LayoutGrid size={13} className="text-[#FF8000] shrink-0" />
+            <span className="whitespace-nowrap">{viewMode === 'roundcube' ? 'Tabela CRM' : 'Correio'}</span>
           </button>
         </div>
 
@@ -652,17 +652,17 @@ Jeremias Como`,
                 onClick={() => setSelectedFolder('inbox')}
                 className={`flex items-center justify-between px-2.5 py-1.5 rounded cursor-pointer transition ${
                   selectedFolder === 'inbox'
-                    ? 'bg-[#0078D4] text-white font-semibold'
-                    : 'text-slate-700 hover:bg-slate-200/60'
+                    ? 'bg-[#FF8000] text-white font-semibold shadow-2xs'
+                    : 'text-slate-700 hover:bg-orange-50/70 hover:text-[#FF8000]'
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <Inbox size={15} className={selectedFolder === 'inbox' ? 'text-white' : 'text-[#0078D4]'} />
+                  <Inbox size={15} className={selectedFolder === 'inbox' ? 'text-white' : 'text-[#FF8000]'} />
                   <span>A receber</span>
                 </div>
                 {inboxUnreadCount > 0 && (
                   <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
-                    selectedFolder === 'inbox' ? 'bg-white text-[#0078D4]' : 'bg-[#0078D4] text-white'
+                    selectedFolder === 'inbox' ? 'bg-white text-[#FF8000]' : 'bg-[#FF8000] text-white'
                   }`}>
                     {inboxUnreadCount}
                   </span>
@@ -674,8 +674,8 @@ Jeremias Como`,
                 onClick={() => setSelectedFolder('drafts')}
                 className={`flex items-center gap-2 px-2.5 py-1.5 rounded cursor-pointer transition ${
                   selectedFolder === 'drafts'
-                    ? 'bg-[#0078D4] text-white font-semibold'
-                    : 'text-slate-700 hover:bg-slate-200/60'
+                    ? 'bg-[#FF8000] text-white font-semibold shadow-2xs'
+                    : 'text-slate-700 hover:bg-orange-50/70 hover:text-[#FF8000]'
                 }`}
               >
                 <Edit3 size={15} className={selectedFolder === 'drafts' ? 'text-white' : 'text-slate-500'} />
@@ -687,8 +687,8 @@ Jeremias Como`,
                 onClick={() => setSelectedFolder('sent')}
                 className={`flex items-center gap-2 px-2.5 py-1.5 rounded cursor-pointer transition ${
                   selectedFolder === 'sent'
-                    ? 'bg-[#0078D4] text-white font-semibold'
-                    : 'text-slate-700 hover:bg-slate-200/60'
+                    ? 'bg-[#FF8000] text-white font-semibold shadow-2xs'
+                    : 'text-slate-700 hover:bg-orange-50/70 hover:text-[#FF8000]'
                 }`}
               >
                 <Send size={15} className={selectedFolder === 'sent' ? 'text-white' : 'text-slate-500'} />
@@ -700,8 +700,8 @@ Jeremias Como`,
                 onClick={() => setSelectedFolder('spam')}
                 className={`flex items-center gap-2 px-2.5 py-1.5 rounded cursor-pointer transition ${
                   selectedFolder === 'spam'
-                    ? 'bg-[#0078D4] text-white font-semibold'
-                    : 'text-slate-700 hover:bg-slate-200/60'
+                    ? 'bg-[#FF8000] text-white font-semibold shadow-2xs'
+                    : 'text-slate-700 hover:bg-orange-50/70 hover:text-[#FF8000]'
                 }`}
               >
                 <AlertOctagon size={15} className={selectedFolder === 'spam' ? 'text-white' : 'text-slate-500'} />
@@ -713,8 +713,8 @@ Jeremias Como`,
                 onClick={() => setSelectedFolder('trash')}
                 className={`flex items-center gap-2 px-2.5 py-1.5 rounded cursor-pointer transition ${
                   selectedFolder === 'trash'
-                    ? 'bg-[#0078D4] text-white font-semibold'
-                    : 'text-slate-700 hover:bg-slate-200/60'
+                    ? 'bg-[#FF8000] text-white font-semibold shadow-2xs'
+                    : 'text-slate-700 hover:bg-orange-50/70 hover:text-[#FF8000]'
                 }`}
               >
                 <Trash2 size={15} className={selectedFolder === 'trash' ? 'text-white' : 'text-slate-500'} />
@@ -726,8 +726,8 @@ Jeremias Como`,
                 onClick={() => setSelectedFolder('archive')}
                 className={`flex items-center gap-2 px-2.5 py-1.5 rounded cursor-pointer transition ${
                   selectedFolder === 'archive'
-                    ? 'bg-[#0078D4] text-white font-semibold'
-                    : 'text-slate-700 hover:bg-slate-200/60'
+                    ? 'bg-[#FF8000] text-white font-semibold shadow-2xs'
+                    : 'text-slate-700 hover:bg-orange-50/70 hover:text-[#FF8000]'
                 }`}
               >
                 <Archive size={15} className={selectedFolder === 'archive' ? 'text-white' : 'text-slate-500'} />
@@ -739,8 +739,8 @@ Jeremias Como`,
                 onClick={() => setSelectedFolder('proposals_all')}
                 className={`flex items-center justify-between px-2.5 py-1.5 rounded cursor-pointer transition ${
                   selectedFolder === 'proposals_all'
-                    ? 'bg-[#FF8000] text-white font-semibold'
-                    : 'text-slate-700 hover:bg-slate-200/60'
+                    ? 'bg-[#FF8000] text-white font-semibold shadow-2xs'
+                    : 'text-slate-700 hover:bg-orange-50/70 hover:text-[#FF8000]'
                 }`}
               >
                 <div className="flex items-center gap-2">
@@ -748,7 +748,7 @@ Jeremias Como`,
                   <span>Propostas</span>
                 </div>
                 <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
-                  selectedFolder === 'proposals_all' ? 'bg-white text-[#FF8000]' : 'bg-orange-100 text-orange-700'
+                  selectedFolder === 'proposals_all' ? 'bg-white text-[#FF8000]' : 'bg-orange-100 text-[#FF8000]'
                 }`}>
                   {allProposals.length}
                 </span>
@@ -762,7 +762,7 @@ Jeremias Como`,
               <button
                 type="button"
                 onClick={() => setIsClientModalOpen(true)}
-                className="text-slate-400 hover:text-slate-800 p-0.5 cursor-pointer"
+                className="text-slate-400 hover:text-[#FF8000] p-0.5 cursor-pointer transition"
                 title="Novo Cliente"
               >
                 <Plus size={13} />
@@ -779,14 +779,14 @@ Jeremias Como`,
                     onClick={() => setSelectedFolder(`client_${client.id}`)}
                     className={`flex items-center justify-between px-2 py-1 rounded cursor-pointer transition ${
                       isSelected
-                        ? 'bg-slate-200 font-semibold text-slate-900'
-                        : 'text-slate-600 hover:bg-slate-200/50'
+                        ? 'bg-orange-100/70 text-[#FF8000] font-bold border-l-2 border-[#FF8000]'
+                        : 'text-slate-600 hover:bg-orange-50/50 hover:text-[#FF8000]'
                     }`}
                     title={client.name}
                   >
                     <span className="truncate text-xs">{truncate45(client.name, 18)}</span>
                     {clientProposalsCount > 0 && (
-                      <span className="text-[10px] text-orange-600 font-mono font-semibold ml-1 shrink-0">
+                      <span className="text-[10px] text-[#FF8000] font-mono font-semibold ml-1 shrink-0">
                         {clientProposalsCount}p
                       </span>
                     )}
@@ -796,11 +796,12 @@ Jeremias Como`,
             </div>
 
             {/* Footer Status */}
-            <div className="p-2.5 border-t border-slate-200 bg-[#F0F2F5] text-[11px] text-slate-500 flex items-center justify-between">
-              <span className="flex items-center gap-1.5 font-mono">
-                <ShieldCheck size={13} className="text-emerald-600" />
-                <span>SSL Criptografado</span>
+            <div className="p-2.5 border-t border-slate-200 bg-[#F0F2F5] text-[11px] text-slate-600 flex items-center justify-between shrink-0 font-sans">
+              <span className="flex items-center gap-1.5">
+                <ShieldCheck size={13} className="text-[#FF8000]" />
+                <span className="font-semibold text-slate-700">LECASU Mail</span>
               </span>
+              <span className="text-[10px] text-slate-400 font-mono">v2.0 • SSL</span>
             </div>
 
           </div>
@@ -819,7 +820,7 @@ Jeremias Como`,
                   placeholder="Pesquisar..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-8 pr-6 py-1 bg-white border border-slate-200 rounded text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0078D4]"
+                  className="w-full pl-8 pr-6 py-1 bg-white border border-slate-200 rounded text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#FF8000]"
                 />
                 {searchQuery && (
                   <button
@@ -833,7 +834,7 @@ Jeremias Como`,
               </div>
               <button
                 type="button"
-                className="p-1 text-slate-500 hover:text-slate-800 rounded hover:bg-slate-200 transition"
+                className="p-1 text-slate-500 hover:text-[#FF8000] rounded hover:bg-slate-200 transition cursor-pointer"
                 title="Filtrar Mensagens"
               >
                 <SlidersHorizontal size={14} />
@@ -859,7 +860,7 @@ Jeremias Como`,
                       }}
                       className={`px-3 py-2 cursor-pointer transition relative ${
                         isSelected
-                          ? 'bg-[#D9EDF7] text-[#0066AA] font-semibold border-l-4 border-[#0078D4]'
+                          ? 'bg-orange-50/90 text-slate-900 font-semibold border-l-4 border-[#FF8000]'
                           : 'hover:bg-slate-50 border-l-4 border-transparent text-slate-700'
                       }`}
                     >
@@ -876,9 +877,9 @@ Jeremias Como`,
                       {/* Linha 2: • Assunto + Ícone de Anexo à direita */}
                       <div className="flex items-center justify-between text-xs gap-1">
                         <p className={`truncate text-xs ${
-                          isSelected ? 'text-[#0066AA]' : !msg.isRead ? 'font-bold text-slate-900' : 'text-slate-600'
+                          isSelected ? 'text-[#FF8000]' : !msg.isRead ? 'font-bold text-slate-900' : 'text-slate-600'
                         }`}>
-                          {!msg.isRead && <span className="text-[#0078D4] mr-1">•</span>}
+                          {!msg.isRead && <span className="text-[#FF8000] font-bold mr-1">•</span>}
                           {msg.subject}
                         </p>
                         {msg.hasAttachment && (
@@ -886,17 +887,12 @@ Jeremias Como`,
                         )}
                       </div>
 
-                      {/* Linha 3 (Opcional): Tamanho / Tag da Proposta */}
+                      {/* Linha 3 (Opcional): Tag da Proposta */}
                       {msg.attachedProposalId && (
                         <div className="mt-1 flex items-center justify-between text-[10px]">
                           <span className="text-[#FF8000] font-semibold">
                             Proposta #{msg.attachedProposalId}
                           </span>
-                          {msg.attachedProposalAmount && (
-                            <span className="font-mono font-semibold text-emerald-700">
-                              {formatMZN(msg.attachedProposalAmount)}
-                            </span>
-                          )}
                         </div>
                       )}
                     </div>
@@ -905,13 +901,21 @@ Jeremias Como`,
               )}
             </div>
 
-            {/* Roundcube Bottom Pagination Bar (Mensagem 1 de X | [ 1 ] | < > >>) */}
-            <div className="px-3 py-1.5 bg-[#F0F2F5] border-t border-slate-200 text-[11px] text-slate-500 flex items-center justify-between shrink-0 font-mono">
-              <span>{filteredMessages.length} mensagem(ns)</span>
-              <div className="flex items-center space-x-1">
-                <button type="button" className="p-0.5 hover:text-slate-800 disabled:opacity-30"><ChevronLeft size={13} /></button>
-                <span className="px-1.5 py-0.2 bg-white border border-slate-300 rounded text-slate-800 font-bold text-[10px]">1</span>
-                <button type="button" className="p-0.5 hover:text-slate-800 disabled:opacity-30"><ChevronRight size={13} /></button>
+            {/* Roundcube Bottom Pagination Bar */}
+            <div className="px-3 py-2 bg-[#F0F2F5] border-t border-slate-200 text-[11px] text-slate-600 flex items-center justify-between shrink-0 font-sans">
+              <span className="font-medium text-slate-700">
+                {filteredMessages.length} {filteredMessages.length === 1 ? 'mensagem' : 'mensagens'}
+              </span>
+              <div className="flex items-center gap-1">
+                <button type="button" className="p-1 hover:text-[#FF8000] hover:bg-white rounded transition text-slate-500 disabled:opacity-30 cursor-pointer" title="Página anterior">
+                  <ChevronLeft size={13} />
+                </button>
+                <span className="px-2 py-0.5 bg-white border border-slate-300 rounded text-slate-800 font-bold text-[10px] shadow-2xs">
+                  1
+                </span>
+                <button type="button" className="p-1 hover:text-[#FF8000] hover:bg-white rounded transition text-slate-500 disabled:opacity-30 cursor-pointer" title="Próxima página">
+                  <ChevronRight size={13} />
+                </button>
               </div>
             </div>
 
@@ -929,7 +933,7 @@ Jeremias Como`,
                   <h1 className="text-lg font-bold text-slate-900 leading-tight flex items-center gap-2">
                     <span>{currentItem.subject}</span>
                     <span title="Abrir em nova janela">
-                      <ExternalLink size={15} className="text-[#0078D4] cursor-pointer hover:text-[#106EBE]" />
+                      <ExternalLink size={15} className="text-slate-400 cursor-pointer hover:text-[#FF8000] transition" />
                     </span>
                   </h1>
                 </div>
@@ -937,7 +941,7 @@ Jeremias Como`,
                 {/* 2. Roundcube Sender Info Header: Avatar + "De [Nome] em [Data]" + Links: Detalhes, Cabeçalhos */}
                 <div className="flex items-start gap-3 py-2.5 border-b border-slate-200 mb-4">
                   {/* Round Avatar Icon */}
-                  <div className="w-10 h-10 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-orange-100 text-[#FF8000] border border-orange-200 flex items-center justify-center font-bold text-sm shrink-0">
                     {(currentItem.clientName || currentItem.from).substring(0, 2).toUpperCase()}
                   </div>
 
@@ -945,20 +949,20 @@ Jeremias Como`,
                     {/* De [Nome] em YYYY-MM-DD HH:MM */}
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-slate-500">De</span>
-                      <a href={`mailto:${currentItem.from}`} className="font-semibold text-[#0078D4] hover:underline">
+                      <a href={`mailto:${currentItem.from}`} className="font-semibold text-[#FF8000] hover:underline">
                         {currentItem.clientName || currentItem.from}
                       </a>
                       <span className="text-slate-400">em {formatRoundcubeFullDate(currentItem.date)}</span>
                     </div>
 
                     {/* Action Links: ✉ Detalhes | ℹ Cabeçalhos | ≡ Texto simples */}
-                    <div className="flex items-center gap-3 mt-1 text-[11px] text-[#0078D4]">
+                    <div className="flex items-center gap-3 mt-1 text-[11px] text-slate-500">
                       <button
                         type="button"
                         onClick={() => setShowDetailsHeader(!showDetailsHeader)}
-                        className="hover:underline flex items-center gap-1 cursor-pointer"
+                        className="hover:text-[#FF8000] hover:underline flex items-center gap-1 cursor-pointer transition"
                       >
-                        <Mail size={11} />
+                        <Mail size={11} className="text-[#FF8000]" />
                         <span>Detalhes</span>
                       </button>
                       <span className="text-slate-300">•</span>
@@ -977,55 +981,64 @@ Jeremias Como`,
                   </div>
                 </div>
 
-                {/* 3. Roundcube Attachment Strips: 📄 [Nome Arquivo] (~Tamanho) ▾ */}
+                {/* 3. Roundcube Attachment Strips: 📄 [Nome Arquivo] (~Tamanho) ▾ com Apenas Ícone de Baixar */}
                 {currentItem.hasAttachment && (
                   <div className="mb-5 space-y-1.5">
                     {/* Attachment Row 1 */}
-                    <div className="p-2 px-3 bg-[#F8F9FA] hover:bg-slate-100 border border-slate-200 rounded flex items-center justify-between text-xs transition">
-                      <div className="flex items-center gap-2 text-slate-800">
-                        <FileIcon size={14} className="text-rose-600 shrink-0" />
-                        <span className="font-medium text-[#0078D4] hover:underline cursor-pointer">
+                    <div className="p-2 px-3 bg-[#F8F9FA] hover:bg-orange-50/40 border border-slate-200 rounded flex items-center justify-between text-xs transition gap-2 whitespace-nowrap">
+                      <div className="flex items-center gap-2 text-slate-800 min-w-0 flex-1 whitespace-nowrap overflow-hidden">
+                        <FileIcon size={14} className="text-[#FF8000] shrink-0" />
+                        <span 
+                          onClick={() => addToast('info', 'Anexo', 'Abertura de anexo PDF...')}
+                          className="font-medium text-slate-800 hover:text-[#FF8000] hover:underline cursor-pointer truncate"
+                          title={currentItem.attachedProposalTitle 
+                            ? `Processo_${currentItem.attachedProposalId || '01914318'}_${currentItem.attachedProposalTitle.replace(/\s+/g, '_')}.pdf`
+                            : 'Documento_Anexo_LECASU.pdf'}
+                        >
                           {currentItem.attachedProposalTitle 
                             ? `Processo_${currentItem.attachedProposalId || '01914318'}_${currentItem.attachedProposalTitle.replace(/\s+/g, '_')}.pdf`
                             : 'Documento_Anexo_LECASU.pdf'}
                         </span>
-                        <span className="text-slate-400 text-[11px] font-mono">(~807 KB)</span>
-                        <ChevronDown size={12} className="text-slate-400" />
+                        <span className="text-slate-400 text-[11px] font-mono shrink-0 whitespace-nowrap">(~807 KB)</span>
+                        <ChevronDown size={12} className="text-slate-400 shrink-0" />
                       </div>
 
-                      {/* Approval Action if it's a Proposal */}
-                      {currentItem.attachedProposalId && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const p = allProposals.find(item => item.proposal.id === currentItem.attachedProposalId);
-                            if (p) handleConvertToProject(p.proposal);
-                          }}
-                          className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
-                        >
-                          <Check size={13} />
-                          <span>Aprovar & Gerar Projeto</span>
-                        </button>
-                      )}
+                      {/* Apenas Ícone de Baixar Ficheiro */}
+                      <button
+                        type="button"
+                        onClick={() => addToast('success', 'Download', 'Transferência do ficheiro iniciada.')}
+                        className="p-1.5 text-slate-500 hover:text-[#FF8000] hover:bg-orange-100/70 rounded transition cursor-pointer shrink-0"
+                        title="Baixar ficheiro"
+                      >
+                        <Download size={14} />
+                      </button>
                     </div>
 
                     {/* Attachment Row 2 if proposal */}
                     {currentItem.attachedProposalId && (
-                      <div className="p-2 px-3 bg-[#F8F9FA] hover:bg-slate-100 border border-slate-200 rounded flex items-center justify-between text-xs transition">
-                        <div className="flex items-center gap-2 text-slate-800">
-                          <FileIcon size={14} className="text-sky-600 shrink-0" />
-                          <span className="font-medium text-[#0078D4] hover:underline cursor-pointer">
+                      <div className="p-2 px-3 bg-[#F8F9FA] hover:bg-orange-50/40 border border-slate-200 rounded flex items-center justify-between text-xs transition gap-2 whitespace-nowrap">
+                        <div className="flex items-center gap-2 text-slate-800 min-w-0 flex-1 whitespace-nowrap overflow-hidden">
+                          <FileIcon size={14} className="text-[#FF8000] shrink-0" />
+                          <span 
+                            onClick={() => addToast('info', 'Anexo', 'Abertura de anexo PDF...')}
+                            className="font-medium text-slate-800 hover:text-[#FF8000] hover:underline cursor-pointer truncate"
+                            title="Relatorio_Fotografico_Viabilidade_LECASU.pdf"
+                          >
                             Relatorio_Fotografico_Viabilidade_LECASU.pdf
                           </span>
-                          <span className="text-slate-400 text-[11px] font-mono">(~1.3 MB)</span>
-                          <ChevronDown size={12} className="text-slate-400" />
+                          <span className="text-slate-400 text-[11px] font-mono shrink-0 whitespace-nowrap">(~1.3 MB)</span>
+                          <ChevronDown size={12} className="text-slate-400 shrink-0" />
                         </div>
 
-                        {currentItem.attachedProposalAmount && (
-                          <span className="font-mono font-bold text-emerald-700 text-xs">
-                            Valor: {formatMZN(currentItem.attachedProposalAmount)}
-                          </span>
-                        )}
+                        {/* Apenas Ícone de Baixar Ficheiro */}
+                        <button
+                          type="button"
+                          onClick={() => addToast('success', 'Download', 'Transferência do relatório iniciada.')}
+                          className="p-1.5 text-slate-500 hover:text-[#FF8000] hover:bg-orange-100/70 rounded transition cursor-pointer shrink-0"
+                          title="Baixar ficheiro"
+                        >
+                          <Download size={14} />
+                        </button>
                       </div>
                     )}
                   </div>
@@ -1036,11 +1049,33 @@ Jeremias Como`,
                   {currentItem.body}
                 </div>
 
-                {/* 5. Roundcube Signature (Alinhada no final da mensagem) */}
-                <div className="pt-4 border-t border-slate-200 mt-auto text-xs text-slate-600 space-y-1">
-                  <p className="font-bold text-slate-900 text-sm">{currentItem.clientName || 'LECASU Engenharia'}</p>
-                  <p className="text-slate-500">Departamento Comercial & Gestão de Contratos</p>
-                  <p className="text-slate-400 font-mono text-[11px]">Av. 24 de Julho, Maputo - Moçambique • info@lecasu.co.mz</p>
+                {/* 5. Roundcube Signature (Alinhada no final da mensagem - Paleta Oficial LECASU) */}
+                <div className="pt-6 border-t border-slate-200 mt-auto text-xs">
+                  <div className="flex items-start gap-3.5">
+                    <div className="w-1 self-stretch bg-[#FF8000] rounded-full shrink-0 min-h-[52px]" />
+                    <div className="space-y-1 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-900 text-sm">
+                          {currentItem.clientName || 'LECASU Engenharia'}
+                        </span>
+                        <span className="px-1.5 py-0.2 bg-orange-50 text-[#FF8000] border border-orange-200 rounded text-[10px] font-bold">
+                          LECASU
+                        </span>
+                      </div>
+                      <p className="text-slate-600 font-medium">
+                        Departamento Comercial & Gestão de Contratos
+                      </p>
+                      <div className="flex items-center gap-2 text-slate-500 text-[11px] flex-wrap pt-0.5">
+                        <span>Av. 24 de Julho, Maputo - Moçambique</span>
+                        <span>•</span>
+                        <a href="mailto:info@lecasu.co.mz" className="text-[#FF8000] hover:underline">
+                          info@lecasu.co.mz
+                        </a>
+                        <span>•</span>
+                        <span className="text-slate-400">www.lecasu.co.mz</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
               </div>
@@ -1065,7 +1100,7 @@ Jeremias Como`,
             </div>
             <button
               onClick={() => setViewMode('roundcube')}
-              className="btn-primary btn-sm bg-[#0078D4] hover:bg-[#106EBE] text-white flex items-center gap-1.5"
+              className="btn-primary btn-sm bg-[#FF8000] hover:bg-[#E67300] text-white flex items-center gap-1.5 cursor-pointer shadow-2xs"
             >
               <Mail size={14} />
               <span>Voltar para o Modo Correio</span>
@@ -1101,7 +1136,7 @@ Jeremias Como`,
                           e.stopPropagation();
                           handleOpenCompose(client);
                         }}
-                        className="px-2.5 py-1 bg-sky-50 text-sky-700 hover:bg-sky-100 rounded text-xs font-semibold mr-1.5"
+                        className="px-2.5 py-1 bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900 border border-slate-300 rounded text-xs font-semibold mr-1.5 transition cursor-pointer"
                       >
                         Enviar E-mail
                       </button>
