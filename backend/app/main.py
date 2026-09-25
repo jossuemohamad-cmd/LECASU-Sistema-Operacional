@@ -14,6 +14,7 @@ from app.api.suppliers import router as suppliers_router
 from app.api.hr import router as hr_router
 from app.api.ged import router as ged_router
 from app.api.finance import router as finance_router
+from app.api.emails import router as emails_router
 
 import asyncio
 import sqlalchemy
@@ -89,6 +90,7 @@ app.include_router(finance_router, prefix='/api/v1')
 app.include_router(suppliers_router, prefix='/api/v1')
 app.include_router(hr_router, prefix='/api/v1')
 app.include_router(ged_router, prefix='/api/v1')
+app.include_router(emails_router, prefix='/api/v1')
 
 @app.get('/api/health')
 def health_check():

@@ -29,15 +29,25 @@ import {
   Download,
   File as FileIcon 
 } from 'lucide-react';
-import type { Client, ClientCreateInput, Proposal, ProposalCreateInput, ToastMessage } from '../../types';
-import { fetchClients, createClient, createProposal, convertProposalToProject } from '../../services/api';
+import type { Client, ClientCreateInput, Proposal, ProposalCreateInput, ToastMessage, EmailAccountConfig, EmailMessage } from '../../types';
+import { 
+  fetchClients, 
+  createClient, 
+  createProposal, 
+  convertProposalToProject,
+  fetchEmails,
+  sendEmail,
+  syncEmails,
+  toggleEmailRead,
+  deleteEmail,
+  fetchEmailConfig,
+  saveEmailConfig
+} from '../../services/api';
 import { ClientModal } from './ClientModal';
 import { ProposalModal } from './ProposalModal';
 import { ClientDetailsModal } from './ClientDetailsModal';
 import { EmailConfigModal, DEFAULT_EMAIL_CONFIG } from './EmailConfigModal';
-import type { EmailAccountConfig } from './EmailConfigModal';
 import { EmailComposeModal } from './EmailComposeModal';
-import type { EmailMessage } from './EmailComposeModal';
 import { Toast } from '../common/Toast';
 import { formatMZN } from '../../utils/formatters';
 
@@ -93,7 +103,7 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
     return DEFAULT_EMAIL_CONFIG;
   });
 
-  // Email Messages State (In-Memory + LocalStorage)
+  // Email Messages State (PostgreSQL Backend + Cache)
   const [messages, setMessages] = useState<EmailMessage[]>(() => {
     try {
       const saved = localStorage.getItem('lecasu_outlook_emails');
@@ -107,7 +117,9 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
     return [];
   });
 
-  // Save changes to localStorage
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  // Save changes to localStorage as offline cache
   useEffect(() => {
     localStorage.setItem('lecasu_email_config', JSON.stringify(emailConfig));
   }, [emailConfig]);
@@ -131,7 +143,45 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
     setToasts(prev => prev.filter(t => t.id !== id));
   };
 
-  // Fetch clients from PostgreSQL backend
+  // Load emails from backend database
+  const loadEmails = async (targetFolder?: string) => {
+    try {
+      const emailList = await fetchEmails(targetFolder);
+      if (emailList && emailList.length > 0) {
+        setMessages(emailList);
+        setSelectedItemId(prev => prev || emailList[0].id);
+      }
+    } catch (e) {
+      console.warn('Usando mensagens em cache/locais:', e);
+    }
+  };
+
+  // Sync emails via real IMAP from mail server
+  const handleSyncEmails = async (showToast = true) => {
+    try {
+      setIsSyncing(true);
+      const res = await syncEmails({ config: emailConfig });
+      const emailList = await fetchEmails();
+      if (emailList && emailList.length > 0) {
+        setMessages(emailList);
+      }
+      if (showToast) {
+        if (res.imap_connected) {
+          addToast('success', 'Correio Sincronizado', `${res.new_messages_count} novas mensagens recebidas via IMAP.`);
+        } else {
+          addToast('info', 'Correio Atualizado', res.message || 'Mensagens da base de dados carregadas.');
+        }
+      }
+    } catch (err: any) {
+      if (showToast) {
+        addToast('error', 'Falha na Sincronização', err.message || 'Erro ao sincronizar correio via IMAP.');
+      }
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Fetch clients, configuration & emails from PostgreSQL backend
   const loadClients = async (showSuccessToast = false) => {
     try {
       setIsLoading(true);
@@ -139,113 +189,26 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
       const data = await fetchClients();
       setClients(data);
 
-      // Seed initial realistic communications matching Roundcube reference if empty
-      setMessages(prev => {
-        if (prev.length > 0) return prev;
+      // Load email account config from backend
+      try {
+        const savedConfig = await fetchEmailConfig();
+        if (savedConfig && savedConfig.email) {
+          setEmailConfig(savedConfig);
+        }
+      } catch (err) {
+        // fallback to existing emailConfig
+      }
 
-        const seeded: EmailMessage[] = [
-          {
-            id: 'rc_msg_1',
-            clientId: data[0]?.id,
-            clientName: 'Sualehe S. Sualehe',
-            from: 'sualehe@lecasu.co.mz',
-            to: emailConfig.email,
-            subject: 'RE: WO 01914318 Matendene 83830.32',
-            body: `Prezados Senhores,
-
-Espero que se encontrem bem.
-
-Escrevemos para informar que a obra referente à Montagem e desmontagem de painéis solares na capela de Matendene (5023169-01) foi concluída e entregue com sucesso. Em anexo seguem os documentos necessários:
-  • Fatura
-  • Cotação
-  • Goods and Services Verification – Matendene 2
-  • Relatório Fotográfico
-
-Caso seja necessária alguma informação adicional, por favor, não hesitem em contactar-nos. Permanecemos inteiramente à disposição para quaisquer esclarecimentos.
-
-Agradecemos, mais uma vez, a confiança e a parceria.
-
-Com os melhores cumprimentos,`,
-            date: '2026-09-23T12:31:00Z',
-            isRead: false,
-            hasAttachment: true,
-            attachedProposalId: data[0]?.proposals?.[0]?.id || 102,
-            attachedProposalTitle: 'WO 01914318 Matendene 83830.32',
-            attachedProposalAmount: 83830.32,
-            folder: 'inbox'
-          },
-          {
-            id: 'rc_msg_2',
-            clientId: data[1]?.id,
-            clientName: 'Vladmir Naiene',
-            from: 'vladmir.naiene@ronil.co.mz',
-            to: emailConfig.email,
-            subject: 'A Ronil, Lda. Apresenta Viaturas da Marca Hyundai H100',
-            body: `Exmos. Senhores da LECASU,
-
-Temos o prazer de apresentar a nova linha de viaturas comerciais para a vossa frota de engenharia. Segue portfólio em anexo.
-
-Cumprimentos,
-Vladmir Naiene`,
-            date: '2026-09-24T16:53:00Z',
-            isRead: true,
-            hasAttachment: true,
-            folder: 'inbox'
-          },
-          {
-            id: 'rc_msg_3',
-            clientId: data[0]?.id,
-            clientName: 'Jeremias Heigar Como',
-            from: 'j.como@cfm.co.mz',
-            to: emailConfig.email,
-            subject: 'Re: [Ext:] Autorização para Diagnóstico Técnico de Subestação',
-            body: `Bom dia caros colegas,
-
-Confirmamos a autorização de acesso da vossa equipa técnica às instalações a partir de segunda-feira.
-
-Atenciosamente,
-Jeremias Como`,
-            date: '2026-09-24T09:29:00Z',
-            isRead: true,
-            hasAttachment: false,
-            folder: 'inbox'
-          }
-        ];
-
-        // Also add database proposals
-        data.forEach(client => {
-          if (client.proposals && client.proposals.length > 0) {
-            client.proposals.forEach(p => {
-              seeded.push({
-                id: `prop_seed_${p.id}`,
-                clientId: client.id,
-                clientName: client.name,
-                from: emailConfig.email,
-                to: client.email || 'comercial@cliente.co.mz',
-                subject: `Proposta Comercial #${p.id} - ${p.title}`,
-                body: `Exmo.(s) Senhor(es) da ${client.name},\n\nEnviamos em anexo a proposta comercial detalhada para "${p.title}".\n\nValor: ${formatMZN(Number(p.total_amount) || 0)}\n\nFicamos ao dispor para os passos seguintes.\n\nAtenciosamente,\nLECASU Engenharia`,
-                date: p.created_at || new Date().toISOString(),
-                isRead: true,
-                hasAttachment: true,
-                attachedProposalId: p.id,
-                attachedProposalTitle: p.title,
-                attachedProposalAmount: Number(p.total_amount),
-                folder: 'sent'
-              });
-            });
-          }
-        });
-
-        return seeded;
-      });
+      // Load emails from backend database
+      await loadEmails();
 
       if (showSuccessToast) {
-        addToast('success', 'Atualizado com Sucesso', 'Caixa de correio e clientes sincronizados.');
+        addToast('success', 'Atualizado com Sucesso', 'Clientes e correio sincronizados com a base de dados.');
       }
     } catch (err: any) {
       console.error('Erro ao buscar clientes:', err);
       setError(err.message || 'Falha ao conectar com o servidor API.');
-      addToast('error', 'Falha na conexão', 'Não foi possível carregar a lista de clientes.');
+      addToast('error', 'Falha na conexão', 'Não foi possível carregar os dados do servidor.');
     } finally {
       setIsLoading(false);
     }
@@ -338,22 +301,69 @@ Jeremias Como`,
     setIsEmailComposeModalOpen(true);
   };
 
-  // Send Email Handler
+  // Send Email Handler with real backend SMTP & database persistence
   const handleSendEmailMessage = async (msg: EmailMessage) => {
-    setMessages(prev => [msg, ...prev]);
-    setSelectedItemId(msg.id);
-    addToast('success', 'E-mail Enviado!', `Mensagem enviada com sucesso para ${msg.to} via SMTP.`);
+    try {
+      const res = await sendEmail({
+        to: msg.to,
+        subject: msg.subject,
+        body: msg.body,
+        cc: msg.cc,
+        clientId: msg.clientId,
+        proposalId: msg.attachedProposalId,
+        config: emailConfig
+      });
+
+      if (res && res.success) {
+        const updatedList = await fetchEmails();
+        setMessages(updatedList);
+        setSelectedItemId(res.email?.id || msg.id);
+
+        if (res.smtp_sent) {
+          addToast('success', 'E-mail Enviado!', `Mensagem enviada com sucesso para ${msg.to} via servidor SMTP.`);
+        } else {
+          addToast('info', 'E-mail Registado nos Enviados', res.smtp_warning || 'Guardado no sistema LECASU.');
+        }
+      }
+    } catch (err: any) {
+      console.error('Erro ao enviar e-mail:', err);
+      addToast('error', 'Erro no Envio de E-mail', err.message || 'Falha ao processar envio no servidor.');
+      // Fallback otimista para não perder a mensagem na interface
+      setMessages(prev => [msg, ...prev]);
+      setSelectedItemId(msg.id);
+    }
   };
 
-  // Delete message / move to trash
-  const handleDeleteItem = (id: string) => {
-    setMessages(prev => prev.map(m => m.id === id ? { ...m, folder: 'trash' } : m));
-    addToast('info', 'Mensagem movida para a Reciclagem', 'Pode restaurar a qualquer momento.');
+  // Delete message / move to trash with backend sync
+  const handleDeleteItem = async (id: string) => {
+    try {
+      await deleteEmail(id);
+      setMessages(prev => prev.map(m => m.id === id ? { ...m, folder: 'trash' } : m));
+      addToast('info', 'Mensagem movida para a Reciclagem', 'Pode restaurar a qualquer momento.');
+    } catch (err) {
+      setMessages(prev => prev.map(m => m.id === id ? { ...m, folder: 'trash' } : m));
+    }
   };
 
-  // Toggle Read Status
-  const handleToggleRead = (id: string) => {
-    setMessages(prev => prev.map(m => m.id === id ? { ...m, isRead: !m.isRead } : m));
+  // Toggle Read Status with backend sync
+  const handleToggleRead = async (id: string) => {
+    try {
+      await toggleEmailRead(id);
+      setMessages(prev => prev.map(m => m.id === id ? { ...m, isRead: !m.isRead } : m));
+    } catch (err) {
+      setMessages(prev => prev.map(m => m.id === id ? { ...m, isRead: !m.isRead } : m));
+    }
+  };
+
+  // Save email configuration with backend persistence
+  const handleSaveEmailConfig = async (newCfg: EmailAccountConfig) => {
+    setEmailConfig(newCfg);
+    try {
+      await saveEmailConfig(newCfg);
+      addToast('success', 'Configurações Salvas', 'Servidores SMTP e IMAP atualizados no banco de dados.');
+    } catch (err: any) {
+      addToast('info', 'Configuração Salva Localmente', err.message || 'Sincronizado na sessão.');
+    }
   };
 
   // All Proposals flattened from clients
@@ -520,12 +530,14 @@ Jeremias Como`,
           <div className="flex items-center gap-2 text-slate-600 shrink-0">
             <button
               type="button"
-              onClick={() => loadClients(true)}
+              onClick={() => handleSyncEmails(true)}
               className="flex items-center gap-1.5 hover:text-[#FF8000] transition cursor-pointer whitespace-nowrap shrink-0"
-              title="Atualizar correio"
+              title="Sincronizar correio via IMAP e base de dados"
             >
-              <RefreshCw size={13} className={isLoading ? 'animate-spin text-[#FF8000]' : 'shrink-0'} />
-              <span className="hidden md:inline text-[11px] whitespace-nowrap">Atualizar</span>
+              <RefreshCw size={13} className={isSyncing || isLoading ? 'animate-spin text-[#FF8000]' : 'shrink-0'} />
+              <span className="hidden md:inline text-[11px] whitespace-nowrap">
+                {isSyncing ? 'Sincronizando...' : 'Atualizar'}
+              </span>
             </button>
           </div>
         </div>
@@ -1199,10 +1211,7 @@ Jeremias Como`,
         isOpen={isEmailConfigModalOpen}
         onClose={() => setIsEmailConfigModalOpen(false)}
         initialConfig={emailConfig}
-        onSave={(newCfg) => {
-          setEmailConfig(newCfg);
-          addToast('success', 'Configurações Salvas', 'Servidores SMTP e IMAP atualizados com sucesso.');
-        }}
+        onSave={handleSaveEmailConfig}
       />
 
       {/* Modal: Novo E-mail / Compor Proposta */}

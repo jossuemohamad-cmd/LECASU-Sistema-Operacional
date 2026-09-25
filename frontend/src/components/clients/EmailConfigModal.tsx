@@ -12,6 +12,8 @@ import {
   Layers,
   HelpCircle
 } from 'lucide-react';
+import { testEmailConnection } from '../../services/api';
+
 
 export interface EmailAccountConfig {
   provider: 'gmail' | 'office365' | 'cpanel' | 'custom';
@@ -123,28 +125,44 @@ export const EmailConfigModal: React.FC<EmailConfigModalProps> = ({
     setIsTesting(true);
     setTestResult(null);
 
-    // Simulate real connection test to SMTP and IMAP
-    await new Promise(res => setTimeout(res, 1800));
-
     if (!config.email || !config.smtpHost || !config.incomingHost) {
       setTestResult({
         success: false,
-        message: 'Por favor preencha todos os campos obrigatórios (E-mail, SMTP e IMAP).'
+        message: 'Por favor preencha todos os campos obrigatórios (E-mail, Host SMTP e Host IMAP).'
       });
       setIsTesting(false);
       return;
     }
 
-    setTestResult({
-      success: true,
-      message: `Conexão bem-sucedida! Servidor SMTP (${config.smtpHost}:${config.smtpPort}) e IMAP (${config.incomingHost}:${config.incomingPort}) autenticados com sucesso.`
-    });
-    setConfig(prev => ({
-      ...prev,
-      isConnected: true,
-      lastSync: 'Agora mesmo'
-    }));
-    setIsTesting(false);
+    try {
+      const res = await testEmailConnection(config);
+      if (res.success) {
+        setTestResult({
+          success: true,
+          message: `Conexão bem-sucedida! Servidor SMTP (${config.smtpHost}:${config.smtpPort}) e IMAP (${config.incomingHost}:${config.incomingPort}) autenticados e operacionais.`
+        });
+        setConfig(prev => ({
+          ...prev,
+          isConnected: true,
+          lastSync: 'Agora mesmo'
+        }));
+      } else {
+        const errorParts: string[] = [];
+        if (!res.smtp.success) errorParts.push(`SMTP: ${res.smtp.message}`);
+        if (!res.imap.success) errorParts.push(`IMAP: ${res.imap.message}`);
+        setTestResult({
+          success: false,
+          message: errorParts.join(' | ') || 'Falha ao conectar com os servidores de correio.'
+        });
+      }
+    } catch (err: any) {
+      setTestResult({
+        success: false,
+        message: err.message || 'Erro ao conectar ao serviço de verificação do backend.'
+      });
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   const handleSave = (e: React.FormEvent) => {

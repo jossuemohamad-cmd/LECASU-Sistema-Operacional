@@ -494,5 +494,41 @@ export interface FinanceOverviewKPIs {
   paid_invoices_count: number;
 }
 
+export interface EmailAccountConfig {
+  provider: 'gmail' | 'office365' | 'cpanel' | 'custom';
+  displayName: string;
+  email: string;
+  smtpHost: string;
+  smtpPort: number;
+  smtpSecure: 'ssl' | 'tls' | 'none';
+  incomingType: 'imap' | 'pop3';
+  incomingHost: string;
+  incomingPort: number;
+  incomingSecure: 'ssl' | 'tls' | 'none';
+  username: string;
+  password?: string;
+  isConnected: boolean;
+  lastSync?: string;
+}
+
+export interface EmailMessage {
+  id: string;
+  clientId?: number;
+  clientName?: string;
+  from: string;
+  to: string;
+  cc?: string;
+  subject: string;
+  body: string;
+  date: string;
+  isRead: boolean;
+  hasAttachment: boolean;
+  attachedProposalId?: number;
+  attachedProposalTitle?: string;
+  attachedProposalAmount?: number;
+  folder: 'inbox' | 'sent' | 'drafts' | 'trash' | 'spam' | string;
+}
+
+
 
 

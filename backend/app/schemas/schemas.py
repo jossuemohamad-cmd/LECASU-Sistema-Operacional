@@ -816,3 +816,39 @@ class FinanceOverviewKPIs(BaseModel):
     paid_invoices_count: int
 
 
+# ================= EMAIL SCHEMAS =================
+class EmailAccountConfigSchema(BaseModel):
+    provider: str = 'cpanel'
+    displayName: str = 'LECASU - Departamento Comercial'
+    email: str = 'comercial@lecasu.co.mz'
+    smtpHost: str = 'mail.lecasu.co.mz'
+    smtpPort: int = 465
+    smtpSecure: str = 'ssl'
+    incomingType: str = 'imap'
+    incomingHost: str = 'mail.lecasu.co.mz'
+    incomingPort: int = 993
+    incomingSecure: str = 'ssl'
+    username: str = 'comercial@lecasu.co.mz'
+    password: Optional[str] = None
+    isConnected: Optional[bool] = False
+    lastSync: Optional[str] = None
+
+class EmailSendRequest(BaseModel):
+    to: str
+    subject: str
+    body: str
+    cc: Optional[str] = None
+    clientId: Optional[int] = None
+    proposalId: Optional[int] = None
+    config: Optional[EmailAccountConfigSchema] = None
+
+class EmailSyncRequest(BaseModel):
+    folder: Optional[str] = 'INBOX'
+    limit: Optional[int] = 30
+    config: Optional[EmailAccountConfigSchema] = None
+
+class EmailTestRequest(BaseModel):
+    config: EmailAccountConfigSchema
+
+
+

@@ -38,7 +38,9 @@ import type {
   GEDOverviewKPIs,
   Invoice,
   InvoiceCreateInput,
-  FinanceOverviewKPIs
+  FinanceOverviewKPIs,
+  EmailAccountConfig,
+  EmailMessage
 } from '../types';
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api/v1';
@@ -850,3 +852,116 @@ export async function deleteGEDFolder(folderName: string): Promise<any> {
   });
   return handleResponse<any>(res);
 }
+
+// ================= EMAIL / CORREIO ELETRÓNICO =================
+
+export async function fetchEmailConfig(): Promise<EmailAccountConfig> {
+  const res = await fetch(`${API_BASE_URL}/emails/config`, {
+    headers: getAuthHeaders()
+  });
+  return handleResponse<EmailAccountConfig>(res);
+}
+
+export async function saveEmailConfig(config: EmailAccountConfig): Promise<EmailAccountConfig> {
+  const res = await fetch(`${API_BASE_URL}/emails/config`, {
+    method: 'POST',
+    headers: {
+      ...getAuthHeaders(),
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(config)
+  });
+  return handleResponse<EmailAccountConfig>(res);
+}
+
+export async function testEmailConnection(config: EmailAccountConfig): Promise<{
+  success: boolean;
+  smtp: { success: boolean; message: string };
+  imap: { success: boolean; message: string };
+}> {
+  const res = await fetch(`${API_BASE_URL}/emails/test-connection`, {
+    method: 'POST',
+    headers: {
+      ...getAuthHeaders(),
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ config })
+  });
+  return handleResponse<any>(res);
+}
+
+export async function sendEmail(payload: {
+  to: string;
+  subject: string;
+  body: string;
+  cc?: string;
+  clientId?: number;
+  proposalId?: number;
+  config?: EmailAccountConfig;
+}): Promise<{
+  success: boolean;
+  smtp_sent: boolean;
+  message: string;
+  smtp_warning?: string;
+  email: EmailMessage;
+}> {
+  const res = await fetch(`${API_BASE_URL}/emails/send`, {
+    method: 'POST',
+    headers: {
+      ...getAuthHeaders(),
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  return handleResponse<any>(res);
+}
+
+export async function syncEmails(payload?: {
+  folder?: string;
+  limit?: number;
+  config?: EmailAccountConfig;
+}): Promise<{
+  success: boolean;
+  imap_connected: boolean;
+  message: string;
+  new_messages_count: number;
+}> {
+  const res = await fetch(`${API_BASE_URL}/emails/sync`, {
+    method: 'POST',
+    headers: {
+      ...getAuthHeaders(),
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload || {})
+  });
+  return handleResponse<any>(res);
+}
+
+export async function fetchEmails(folder?: string, clientId?: number): Promise<EmailMessage[]> {
+  const params = new URLSearchParams();
+  if (folder) params.append('folder', folder);
+  if (clientId) params.append('client_id', clientId.toString());
+
+  const query = params.toString() ? `?${params.toString()}` : '';
+  const res = await fetch(`${API_BASE_URL}/emails${query}`, {
+    headers: getAuthHeaders()
+  });
+  return handleResponse<EmailMessage[]>(res);
+}
+
+export async function toggleEmailRead(id: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/emails/${id}/read`, {
+    method: 'PATCH',
+    headers: getAuthHeaders()
+  });
+  return handleResponse<any>(res);
+}
+
+export async function deleteEmail(id: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/emails/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  return handleResponse<any>(res);
+}
+

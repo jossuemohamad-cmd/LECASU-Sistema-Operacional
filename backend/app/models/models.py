@@ -173,5 +173,51 @@ class Document(Base):
     client = relationship('Client')
     uploaded_by = relationship('User')
 
+class EmailAccount(Base):
+    __tablename__ = 'email_accounts'
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(150), unique=True, index=True, nullable=False)
+    display_name = Column(String(150), default='LECASU Comercial')
+    provider = Column(String(50), default='cpanel')  # cpanel, gmail, office365, custom
+    smtp_host = Column(String(150), default='mail.lecasu.co.mz')
+    smtp_port = Column(Integer, default=465)
+    smtp_secure = Column(String(20), default='ssl')  # ssl, tls, none
+    incoming_type = Column(String(20), default='imap')  # imap, pop3
+    incoming_host = Column(String(150), default='mail.lecasu.co.mz')
+    incoming_port = Column(Integer, default=993)
+    incoming_secure = Column(String(20), default='ssl')  # ssl, tls, none
+    username = Column(String(150), default='comercial@lecasu.co.mz')
+    password = Column(String(255), nullable=True)
+    is_active = Column(Boolean, default=True)
+    last_sync = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class EmailMessageModel(Base):
+    __tablename__ = 'email_messages'
+    id = Column(Integer, primary_key=True, index=True)
+    external_id = Column(String(255), unique=True, index=True, nullable=True)
+    account_id = Column(Integer, ForeignKey('email_accounts.id'), nullable=True, index=True)
+    client_id = Column(Integer, ForeignKey('clients.id'), nullable=True, index=True)
+    proposal_id = Column(Integer, ForeignKey('proposals.id'), nullable=True, index=True)
+    folder = Column(String(50), default='inbox', index=True)  # inbox, sent, drafts, trash, spam
+    from_email = Column(String(255), nullable=False, index=True)
+    from_name = Column(String(150), nullable=True)
+    to_email = Column(String(255), nullable=False, index=True)
+    cc = Column(Text, nullable=True)
+    subject = Column(String(500), nullable=False, default='')
+    body_text = Column(Text, nullable=True)
+    body_html = Column(Text, nullable=True)
+    is_read = Column(Boolean, default=False, index=True)
+    has_attachment = Column(Boolean, default=False)
+    attachments_json = Column(Text, nullable=True)
+    date = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    client = relationship('Client')
+    proposal = relationship('Proposal')
+    account = relationship('EmailAccount')
+
+
 
 
