@@ -178,23 +178,43 @@ export const OutlookAccountWizard: React.FC<OutlookAccountWizardProps> = ({
   // Handler for Provider Selection (Step 2 -> Step 3)
   const handleSelectProvider = (prov: typeof providers[0]) => {
     setSelectedProvider(prov.id);
-    if (prov.id === 'pop') {
-      setIncomingType('pop3');
-      setIncomingPort(995);
-      setIncomingHost('mail.lecasu.co.mz');
-    } else {
-      setIncomingType('imap');
-      setIncomingPort(prov.id === 'google' ? 993 : 993);
-      if (prov.id === 'google') {
-        setIncomingHost('imap.gmail.com');
-        setSmtpHost('smtp.gmail.com');
-      } else if (prov.id === 'office365' || prov.id === 'outlook') {
-        setIncomingHost('outlook.office365.com');
-        setSmtpHost('smtp.office365.com');
-        setSmtpPort(587);
-        setSmtpSecure('tls');
+    const domain = emailAddress.split('@')[1]?.toLowerCase();
+    const isLecasu = domain === 'lecasu.co.mz';
+
+    if (isLecasu) {
+      // Para o domínio oficial lecasu.co.mz, usar sempre os servidores dedicados da empresa
+      if (prov.id === 'pop') {
+        setIncomingType('pop3');
+        setIncomingPort(995);
       } else {
-        setIncomingHost('mail.lecasu.co.mz');
+        setIncomingType('imap');
+        setIncomingPort(993);
+      }
+      setIncomingHost('mail.lecasu.co.mz');
+      setSmtpHost('mail.lecasu.co.mz');
+      setSmtpPort(465);
+      setSmtpSecure('ssl');
+    } else {
+      if (prov.id === 'pop') {
+        setIncomingType('pop3');
+        setIncomingPort(995);
+        setIncomingHost('mail.' + domain);
+        setSmtpHost('mail.' + domain);
+      } else {
+        setIncomingType('imap');
+        setIncomingPort(993);
+        if (prov.id === 'google') {
+          setIncomingHost('imap.gmail.com');
+          setSmtpHost('smtp.gmail.com');
+        } else if (prov.id === 'office365' || prov.id === 'outlook') {
+          setIncomingHost('outlook.office365.com');
+          setSmtpHost('smtp.office365.com');
+          setSmtpPort(587);
+          setSmtpSecure('tls');
+        } else {
+          setIncomingHost('mail.' + domain);
+          setSmtpHost('mail.' + domain);
+        }
       }
     }
     setStep('password');
@@ -212,18 +232,21 @@ export const OutlookAccountWizard: React.FC<OutlookAccountWizardProps> = ({
     setErrorMessage(null);
     setStatusMessage('Autenticando nos servidores de correio (SMTP & ' + incomingType.toUpperCase() + ')...');
 
+    const domain = emailAddress.split('@')[1]?.toLowerCase();
+    const isLecasu = domain === 'lecasu.co.mz';
+
     const configToTest: EmailAccountConfig = {
       provider: selectedProvider,
       displayName,
       email: emailAddress,
       username: emailAddress,
       password,
-      smtpHost,
-      smtpPort,
-      smtpSecure,
+      smtpHost: isLecasu ? 'mail.lecasu.co.mz' : smtpHost,
+      smtpPort: isLecasu ? 465 : smtpPort,
+      smtpSecure: isLecasu ? 'ssl' : smtpSecure,
       incomingType,
-      incomingHost,
-      incomingPort,
+      incomingHost: isLecasu ? 'mail.lecasu.co.mz' : incomingHost,
+      incomingPort: isLecasu ? (incomingType === 'pop3' ? 995 : 993) : incomingPort,
       incomingSecure,
       isConnected: false
     };
@@ -239,13 +262,12 @@ export const OutlookAccountWizard: React.FC<OutlookAccountWizardProps> = ({
         });
         setStep('success');
       } else {
-        // If strict testing returned false, check the detailed message
         const failureDetails = result.smtp?.message || result.imap?.message || 'Falha ao autenticar com o servidor.';
         setErrorMessage(`Falha na autenticação: ${failureDetails}. Verifique a senha ou os parâmetros do servidor.`);
       }
     } catch (err: any) {
       console.warn('Authentication diagnostic warning:', err);
-      // If network or server temporarily rejected, allow saving if user confirms
+      // Fallback permissivo: permitir guardar no sistema
       await saveEmailConfig({
         ...configToTest,
         isConnected: true

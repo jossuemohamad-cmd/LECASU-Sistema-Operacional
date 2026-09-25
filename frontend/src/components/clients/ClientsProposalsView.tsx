@@ -19,7 +19,6 @@ import {
   Archive, 
   AlertOctagon, 
   Edit3, 
-  MoreVertical, 
   Tag, 
   ChevronDown, 
   ChevronLeft, 
@@ -526,16 +525,18 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
 
   // Selected item object (EmailMessage)
   const currentItem = useMemo(() => {
-    if (!selectedItemId && filteredMessages.length > 0) {
-      return filteredMessages[0];
-    }
-    return messages.find(m => m.id === selectedItemId) || filteredMessages[0] || null;
-  }, [selectedItemId, filteredMessages, messages]);
+    if (filteredMessages.length === 0) return null;
+    return filteredMessages.find(m => m.id === selectedItemId) || filteredMessages[0] || null;
+  }, [selectedItemId, filteredMessages]);
 
-  // Auto-select first item when folder changes
+  // Auto-select first item when folder changes or reset to null when empty
   useEffect(() => {
-    if (filteredMessages.length > 0 && (!selectedItemId || !filteredMessages.find(m => m.id === selectedItemId))) {
-      setSelectedItemId(filteredMessages[0].id);
+    if (filteredMessages.length > 0) {
+      if (!selectedItemId || !filteredMessages.find(m => m.id === selectedItemId)) {
+        setSelectedItemId(filteredMessages[0].id);
+      }
+    } else {
+      setSelectedItemId(null);
     }
   }, [selectedFolder, filteredMessages]);
 
@@ -593,20 +594,96 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
          ========================================================================= */}
       <div className="h-11 bg-[#F4F6F8] border-b border-slate-200 flex items-stretch shrink-0 text-xs">
         
-        {/* Pane 1 Header: Email da Conta (info@lecasu.co.mz) */}
-        <div className="w-52 sm:w-56 px-3 flex items-center justify-between border-r border-slate-200 font-semibold text-slate-800 bg-[#FAFAF9] shrink-0">
-          <div className="flex items-center gap-2 truncate">
-            <Mail size={15} className="text-[#FF8000] shrink-0" />
-            <span className="truncate text-xs font-mono">{emailConfig.email}</span>
-          </div>
+        {/* Pane 1 Header: Email da Conta & Multi-Account Switcher */}
+        <div className="relative w-52 sm:w-56 px-3 flex items-center justify-between border-r border-slate-200 font-semibold text-slate-800 bg-[#FAFAF9] shrink-0">
+          <button
+            type="button"
+            onClick={() => setShowAccountDropdown(!showAccountDropdown)}
+            className="flex items-center gap-2 truncate text-left hover:text-[#FF8000] cursor-pointer flex-1 py-1 mr-1"
+            title="Alternar conta ou gerenciar conexões de e-mail"
+          >
+            <div className={`w-2 h-2 rounded-full shrink-0 ${emailConfig.isConnected ? 'bg-emerald-500 ring-2 ring-emerald-200' : 'bg-slate-300'}`} />
+            <span className="truncate text-xs font-mono font-bold text-slate-800">
+              {emailConfig.isConnected ? emailConfig.email : 'Sem Conta'}
+            </span>
+            <ChevronDown size={13} className="text-slate-400 shrink-0 ml-auto" />
+          </button>
+          
           <button
             type="button"
             onClick={() => setActiveSidebarTab('settings')}
-            className="text-slate-500 hover:text-slate-800 p-1 rounded hover:bg-slate-200 transition cursor-pointer shrink-0"
-            title="Configurações da Conta"
+            className="text-slate-400 hover:text-slate-800 p-1 rounded hover:bg-slate-200 transition cursor-pointer shrink-0"
+            title="Ajustes Técnicos da Conta"
           >
-            <MoreVertical size={14} />
+            <Settings size={13} />
           </button>
+
+          {/* Multi-Account Dropdown in Pane 1 */}
+          {showAccountDropdown && (
+            <div className="absolute left-1 top-full mt-1 w-72 bg-white border border-slate-200 rounded-lg shadow-xl z-50 p-2 text-xs divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
+              <div className="pb-2">
+                <span className="text-[10px] uppercase font-bold text-slate-400 px-2 block mb-1">
+                  Contas de Correio ({emailAccounts.length})
+                </span>
+                {emailAccounts.length === 0 ? (
+                  <p className="text-slate-500 px-2 py-1 text-[11px]">Nenhuma conta ativa no momento</p>
+                ) : (
+                  emailAccounts.map(acc => {
+                    const isCurActive = acc.isActive && emailConfig.isConnected;
+                    return (
+                      <div
+                        key={acc.id}
+                        onClick={() => handleSwitchAccount(acc.id, acc.email)}
+                        className={`flex items-center justify-between p-2 rounded cursor-pointer transition ${
+                          isCurActive
+                            ? 'bg-orange-50 text-[#FF8000] font-semibold'
+                            : 'hover:bg-slate-50 text-slate-700'
+                        }`}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className={`w-2 h-2 rounded-full ${isCurActive ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                            <span className="truncate text-xs font-mono">{acc.email}</span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 block pl-3.5">
+                            {acc.incomingType.toUpperCase()} • {acc.displayName}
+                          </span>
+                        </div>
+                        {isCurActive && (
+                          <Check size={14} className="text-[#FF8000] shrink-0 ml-1" />
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="pt-2 space-y-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAccountDropdown(false);
+                    setIsAccountWizardOpen(true);
+                  }}
+                  className="w-full flex items-center gap-2 p-2 rounded hover:bg-orange-50/60 text-slate-700 hover:text-[#FF8000] font-medium transition cursor-pointer text-left"
+                >
+                  <Plus size={14} className="text-[#FF8000]" />
+                  <span>+ Adicionar Conta (Outlook / cPanel)</span>
+                </button>
+
+                {emailConfig.isConnected && (
+                  <button
+                    type="button"
+                    onClick={handleLogoutAccount}
+                    className="w-full flex items-center gap-2 p-2 rounded hover:bg-rose-50 text-rose-600 font-medium transition cursor-pointer text-left"
+                  >
+                    <X size={14} className="text-rose-500" />
+                    <span>Desconectar Conta Atual</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Pane 2 Header Actions: Escrever | + Proposta | Atualizar */}
@@ -737,96 +814,6 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
               <Tag size={13} className="shrink-0" />
               <span className="whitespace-nowrap">Marcar</span>
             </button>
-          </div>
-
-          {/* Multi-Account Dropdown & Switcher */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowAccountDropdown(!showAccountDropdown)}
-              className="hidden sm:flex items-center gap-2 px-2.5 py-1 text-slate-700 hover:text-[#0078D4] hover:border-[#0078D4] hover:bg-blue-50/50 rounded text-xs font-medium transition cursor-pointer border border-slate-300 bg-white shadow-2xs whitespace-nowrap shrink-0 ml-3"
-              title="Gerenciar contas / Alternar usuário de correio"
-            >
-              <div className="w-4 h-4 rounded bg-[#0078D4] flex items-center justify-center text-white text-[9px] font-black">
-                O
-              </div>
-              <div className="flex items-center gap-1.5 font-mono text-[11px]">
-                <span className={`w-2 h-2 rounded-full ${emailConfig.isConnected ? 'bg-emerald-500' : 'bg-amber-400'}`} />
-                <span className="font-semibold text-slate-800 truncate max-w-[130px]">
-                  {emailConfig.isConnected ? emailConfig.email : 'Nenhuma conta'}
-                </span>
-                <span className="text-[10px] text-slate-400 font-sans uppercase">
-                  ({emailConfig.isConnected ? emailConfig.incomingType.toUpperCase() : 'OFFLINE'})
-                </span>
-              </div>
-              <ChevronDown size={12} className="text-slate-400" />
-            </button>
-
-            {showAccountDropdown && (
-              <div className="absolute right-0 top-full mt-1.5 w-72 bg-white border border-slate-200 rounded-lg shadow-xl z-50 p-2 text-xs divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
-                <div className="pb-2">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 px-2 block mb-1">
-                    Contas Conectadas ({emailAccounts.length})
-                  </span>
-                  {emailAccounts.length === 0 ? (
-                    <p className="text-slate-500 px-2 py-1 text-[11px]">Nenhuma conta ativa no momento</p>
-                  ) : (
-                    emailAccounts.map(acc => {
-                      const isCurActive = acc.isActive && emailConfig.isConnected;
-                      return (
-                        <div
-                          key={acc.id}
-                          onClick={() => handleSwitchAccount(acc.id, acc.email)}
-                          className={`flex items-center justify-between p-2 rounded cursor-pointer transition ${
-                            isCurActive
-                              ? 'bg-blue-50 text-[#0078D4] font-semibold'
-                              : 'hover:bg-slate-50 text-slate-700'
-                          }`}
-                        >
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5">
-                              <span className={`w-2 h-2 rounded-full ${isCurActive ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-                              <span className="truncate text-xs font-mono">{acc.email}</span>
-                            </div>
-                            <span className="text-[10px] text-slate-400 block pl-3.5">
-                              {acc.incomingType.toUpperCase()} • {acc.displayName}
-                            </span>
-                          </div>
-                          {isCurActive && (
-                            <Check size={14} className="text-[#0078D4] shrink-0 ml-1" />
-                          )}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-
-                <div className="pt-2 space-y-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowAccountDropdown(false);
-                      setIsAccountWizardOpen(true);
-                    }}
-                    className="w-full flex items-center gap-2 p-2 rounded hover:bg-slate-50 text-slate-700 font-medium transition cursor-pointer text-left"
-                  >
-                    <Plus size={14} className="text-[#0078D4]" />
-                    <span>+ Adicionar Outra Conta (Outlook)</span>
-                  </button>
-
-                  {emailConfig.isConnected && (
-                    <button
-                      type="button"
-                      onClick={handleLogoutAccount}
-                      className="w-full flex items-center gap-2 p-2 rounded hover:bg-rose-50 text-rose-600 font-medium transition cursor-pointer text-left"
-                    >
-                      <X size={14} className="text-rose-500" />
-                      <span>Desconectar Conta Atual</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Right toggle: CRM Mode */}

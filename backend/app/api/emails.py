@@ -157,10 +157,19 @@ def save_email_config(config: EmailAccountConfigSchema, db: Session = Depends(ge
 # ================= TESTE DE CONECTIVIDADE =================
 
 @router.post("/test-connection")
-def test_connection(req: EmailTestRequest):
+def test_connection(req: EmailTestRequest, db: Session = Depends(get_db)):
     """Testa conexões SMTP e IMAP / POP3 com os servidores de correio."""
     cfg = req.config
     password = cfg.password or ""
+    
+    # Se senha vazia ou mascarada, buscar do banco se a conta já existe
+    if not password or password == '••••••••••••':
+        existing = db.query(EmailAccount).filter(EmailAccount.email == cfg.email).first()
+        if not existing:
+            existing = db.query(EmailAccount).filter(EmailAccount.is_active == True).first()
+        if existing and existing.password:
+            password = existing.password
+
     incoming_type = (cfg.incomingType or 'imap').lower()
     
     # 1. Testar Servidor de Envio (SMTP)
@@ -208,31 +217,41 @@ def test_connection(req: EmailTestRequest):
 @router.post("/send")
 def send_email(req: EmailSendRequest, db: Session = Depends(get_db)):
     """Envia um e-mail através do servidor SMTP e registra na base de dados."""
-    # Obter credenciais da requisição ou do banco
+    active_account = db.query(EmailAccount).filter(EmailAccount.is_active == True).first()
     cfg = req.config
-    password = cfg.password if cfg else None
+    
+    target_account = active_account
+    if cfg and cfg.email:
+        acc_by_email = db.query(EmailAccount).filter(EmailAccount.email == cfg.email).first()
+        if acc_by_email:
+            target_account = acc_by_email
 
-    if not cfg or not password or password == '••••••••••••':
-        saved_account = db.query(EmailAccount).filter(EmailAccount.is_active == True).first()
-        if saved_account:
+    password = None
+    if cfg and cfg.password and cfg.password != '••••••••••••':
+        password = cfg.password
+    elif target_account and target_account.password:
+        password = target_account.password
+
+    if not cfg or not cfg.smtpHost or not cfg.username:
+        if target_account:
             cfg = EmailAccountConfigSchema(
-                provider=saved_account.provider,
-                displayName=saved_account.display_name,
-                email=saved_account.email,
-                smtpHost=saved_account.smtp_host,
-                smtpPort=saved_account.smtp_port,
-                smtpSecure=saved_account.smtp_secure,
-                incomingType=saved_account.incoming_type,
-                incomingHost=saved_account.incoming_host,
-                incomingPort=saved_account.incoming_port,
-                incomingSecure=saved_account.incoming_secure,
-                username=saved_account.username,
-                password=saved_account.password
+                provider=target_account.provider,
+                displayName=target_account.display_name,
+                email=target_account.email,
+                smtpHost=target_account.smtp_host,
+                smtpPort=target_account.smtp_port,
+                smtpSecure=target_account.smtp_secure,
+                incomingType=target_account.incoming_type,
+                incomingHost=target_account.incoming_host,
+                incomingPort=target_account.incoming_port,
+                incomingSecure=target_account.incoming_secure,
+                username=target_account.username,
+                password=target_account.password
             )
-            password = saved_account.password
+            password = target_account.password
 
-    from_email = cfg.email if cfg else "info@lecasu.co.mz"
-    display_name = cfg.displayName if cfg else "LECASU Engenharia & Serviços"
+    from_email = cfg.email if cfg else (target_account.email if target_account else "info@lecasu.co.mz")
+    display_name = cfg.displayName if cfg else (target_account.display_name if target_account else "LECASU Engenharia & Serviços")
 
     # Preparar anexo da proposta se houver
     attachments = []
@@ -240,7 +259,6 @@ def send_email(req: EmailSendRequest, db: Session = Depends(get_db)):
     if req.proposalId:
         attached_proposal = db.query(Proposal).filter(Proposal.id == req.proposalId).first()
         if attached_proposal:
-            # Gerar PDF simulado ou real para anexo
             dummy_pdf_content = f"PROPOSTA COMERCIAL #{attached_proposal.id}\nLECASU ENGENHARIA\nTitulo: {attached_proposal.title}\nValor: {attached_proposal.total_amount} MZN\n".encode('utf-8')
             attachments.append({
                 "filename": f"Proposta_{attached_proposal.id}_{attached_proposal.title.replace(' ', '_')}.pdf",
@@ -293,7 +311,7 @@ def send_email(req: EmailSendRequest, db: Session = Depends(get_db)):
 
     email_record = EmailMessageModel(
         external_id=msg_id,
-        account_id=saved_account.id if saved_account else None,
+        account_id=target_account.id if target_account else None,
         client_id=client.id if client else None,
         proposal_id=req.proposalId,
         folder='sent',
@@ -338,33 +356,44 @@ def send_email(req: EmailSendRequest, db: Session = Depends(get_db)):
 
 @router.post("/sync")
 def sync_emails(req: EmailSyncRequest, db: Session = Depends(get_db)):
-    """Sincroniza os e-mails da caixa de correio através do protocolo IMAP."""
+    """Sincroniza os e-mails da caixa de correio através do protocolo IMAP ou POP3."""
+    active_account = db.query(EmailAccount).filter(EmailAccount.is_active == True).first()
     cfg = req.config
-    password = cfg.password if cfg else None
+    
+    target_account = active_account
+    if cfg and cfg.email:
+        acc_by_email = db.query(EmailAccount).filter(EmailAccount.email == cfg.email).first()
+        if acc_by_email:
+            target_account = acc_by_email
 
-    if not cfg or not password or password == '••••••••••••':
-        saved_account = db.query(EmailAccount).filter(EmailAccount.is_active == True).first()
-        if saved_account:
+    password = None
+    if cfg and cfg.password and cfg.password != '••••••••••••':
+        password = cfg.password
+    elif target_account and target_account.password:
+        password = target_account.password
+
+    if not cfg or not cfg.incomingHost or not cfg.username:
+        if target_account:
             cfg = EmailAccountConfigSchema(
-                provider=saved_account.provider,
-                displayName=saved_account.display_name,
-                email=saved_account.email,
-                smtpHost=saved_account.smtp_host,
-                smtpPort=saved_account.smtp_port,
-                smtpSecure=saved_account.smtp_secure,
-                incomingType=saved_account.incoming_type,
-                incomingHost=saved_account.incoming_host,
-                incomingPort=saved_account.incoming_port,
-                incomingSecure=saved_account.incoming_secure,
-                username=saved_account.username,
-                password=saved_account.password
+                provider=target_account.provider,
+                displayName=target_account.display_name,
+                email=target_account.email,
+                smtpHost=target_account.smtp_host,
+                smtpPort=target_account.smtp_port,
+                smtpSecure=target_account.smtp_secure,
+                incomingType=target_account.incoming_type,
+                incomingHost=target_account.incoming_host,
+                incomingPort=target_account.incoming_port,
+                incomingSecure=target_account.incoming_secure,
+                username=target_account.username,
+                password=target_account.password
             )
-            password = saved_account.password
+            password = target_account.password
 
     incoming_connected = False
     incoming_message = ""
     synced_count = 0
-    incoming_type = (cfg.incomingType or 'imap').lower() if cfg else 'imap'
+    incoming_type = (cfg.incomingType or (target_account.incoming_type if target_account else 'imap') or 'imap').lower() if cfg else 'imap'
 
     if cfg and cfg.incomingHost and cfg.username and password and password != '••••••••••••':
         if incoming_type == 'pop3':
@@ -395,11 +424,10 @@ def sync_emails(req: EmailSyncRequest, db: Session = Depends(get_db)):
                 # Verificar se já existe
                 existing = db.query(EmailMessageModel).filter(EmailMessageModel.external_id == ext_id).first()
                 if not existing:
-                    # Encontrar cliente por email
                     client = db.query(Client).filter(Client.email == item["from"]).first()
                     new_email = EmailMessageModel(
                         external_id=ext_id,
-                        account_id=saved_account.id if saved_account else None,
+                        account_id=target_account.id if target_account else None,
                         client_id=client.id if client else None,
                         folder='inbox',
                         from_email=item["from"],
@@ -420,10 +448,9 @@ def sync_emails(req: EmailSyncRequest, db: Session = Depends(get_db)):
     else:
         incoming_message = f"Credenciais {incoming_type.upper()} não configuradas. Exibindo mensagens locais salvas no ERP."
 
-    # Atualizar last_sync na conta
-    saved_acc = db.query(EmailAccount).filter(EmailAccount.is_active == True).first()
-    if saved_acc:
-        saved_acc.last_sync = datetime.utcnow()
+    # Atualizar last_sync na conta ativa
+    if target_account:
+        target_account.last_sync = datetime.utcnow()
         db.commit()
 
     return {
