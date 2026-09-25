@@ -166,8 +166,9 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
         setMessages(emailList);
       }
       if (showToast) {
-        if (res.imap_connected) {
-          addToast('success', 'Correio Sincronizado', `${res.new_messages_count} novas mensagens recebidas via IMAP.`);
+        if (res.incoming_connected || res.imap_connected) {
+          const proto = (res.incoming_type || 'imap').toUpperCase();
+          addToast('success', 'Correio Sincronizado', `${res.new_messages_count} novas mensagens recebidas via ${proto}.`);
         } else {
           addToast('info', 'Correio Atualizado', res.message || 'Mensagens da base de dados carregadas.');
         }

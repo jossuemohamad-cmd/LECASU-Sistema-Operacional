@@ -15,8 +15,10 @@ from app.schemas.schemas import (
 from app.services.email_service import (
     test_smtp_connection,
     test_imap_connection,
+    test_pop3_connection,
     send_email_smtp,
-    fetch_imap_emails
+    fetch_imap_emails,
+    fetch_pop3_emails
 )
 
 router = APIRouter(prefix="/emails", tags=["Emails"])
@@ -79,10 +81,12 @@ def save_email_config(config: EmailAccountConfigSchema, db: Session = Depends(ge
 
 @router.post("/test-connection")
 def test_connection(req: EmailTestRequest):
-    """Testa conexões SMTP e IMAP com os servidores de correio."""
+    """Testa conexões SMTP e IMAP / POP3 com os servidores de correio."""
     cfg = req.config
     password = cfg.password or ""
+    incoming_type = (cfg.incomingType or 'imap').lower()
     
+    # 1. Testar Servidor de Envio (SMTP)
     smtp_ok, smtp_msg = test_smtp_connection(
         host=cfg.smtpHost,
         port=cfg.smtpPort,
@@ -91,24 +95,35 @@ def test_connection(req: EmailTestRequest):
         password=password
     )
 
-    imap_ok, imap_msg = test_imap_connection(
-        host=cfg.incomingHost,
-        port=cfg.incomingPort,
-        secure=cfg.incomingSecure,
-        username=cfg.username,
-        password=password
-    )
+    # 2. Testar Servidor de Entrada (IMAP ou POP3)
+    if incoming_type == 'pop3':
+        inc_ok, inc_msg = test_pop3_connection(
+            host=cfg.incomingHost,
+            port=cfg.incomingPort or 995,
+            secure=cfg.incomingSecure or 'ssl',
+            username=cfg.username,
+            password=password
+        )
+    else:
+        inc_ok, inc_msg = test_imap_connection(
+            host=cfg.incomingHost,
+            port=cfg.incomingPort or 993,
+            secure=cfg.incomingSecure or 'ssl',
+            username=cfg.username,
+            password=password
+        )
 
     return {
-        "success": smtp_ok and imap_ok,
+        "success": smtp_ok and inc_ok,
         "smtp": {
             "success": smtp_ok,
             "message": smtp_msg
         },
         "imap": {
-            "success": imap_ok,
-            "message": imap_msg
-        }
+            "success": inc_ok,
+            "message": inc_msg
+        },
+        "incomingType": incoming_type
     }
 
 # ================= ENVIO DE EMAIL =================
@@ -139,7 +154,7 @@ def send_email(req: EmailSendRequest, db: Session = Depends(get_db)):
             )
             password = saved_account.password
 
-    from_email = cfg.email if cfg else "comercial@lecasu.co.mz"
+    from_email = cfg.email if cfg else "info@lecasu.co.mz"
     display_name = cfg.displayName if cfg else "LECASU Engenharia & Serviços"
 
     # Preparar anexo da proposta se houver
@@ -268,22 +283,33 @@ def sync_emails(req: EmailSyncRequest, db: Session = Depends(get_db)):
             )
             password = saved_account.password
 
-    imap_connected = False
-    imap_message = ""
+    incoming_connected = False
+    incoming_message = ""
     synced_count = 0
+    incoming_type = (cfg.incomingType or 'imap').lower() if cfg else 'imap'
 
     if cfg and cfg.incomingHost and cfg.username and password and password != '••••••••••••':
-        success, fetched_list, msg = fetch_imap_emails(
-            host=cfg.incomingHost,
-            port=cfg.incomingPort,
-            secure=cfg.incomingSecure,
-            username=cfg.username,
-            password=password,
-            folder=req.folder or 'INBOX',
-            limit=req.limit or 25
-        )
-        imap_connected = success
-        imap_message = msg
+        if incoming_type == 'pop3':
+            success, fetched_list, msg = fetch_pop3_emails(
+                host=cfg.incomingHost,
+                port=cfg.incomingPort or 995,
+                secure=cfg.incomingSecure or 'ssl',
+                username=cfg.username,
+                password=password,
+                limit=req.limit or 25
+            )
+        else:
+            success, fetched_list, msg = fetch_imap_emails(
+                host=cfg.incomingHost,
+                port=cfg.incomingPort or 993,
+                secure=cfg.incomingSecure or 'ssl',
+                username=cfg.username,
+                password=password,
+                folder=req.folder or 'INBOX',
+                limit=req.limit or 25
+            )
+        incoming_connected = success
+        incoming_message = msg
 
         if success:
             for item in fetched_list:
@@ -313,7 +339,7 @@ def sync_emails(req: EmailSyncRequest, db: Session = Depends(get_db)):
                     synced_count += 1
             db.commit()
     else:
-        imap_message = "Credenciais IMAP não configuradas. Exibindo mensagens locais salvas no ERP."
+        incoming_message = f"Credenciais {incoming_type.upper()} não configuradas. Exibindo mensagens locais salvas no ERP."
 
     # Atualizar last_sync na conta
     saved_acc = db.query(EmailAccount).filter(EmailAccount.is_active == True).first()
@@ -323,8 +349,10 @@ def sync_emails(req: EmailSyncRequest, db: Session = Depends(get_db)):
 
     return {
         "success": True,
-        "imap_connected": imap_connected,
-        "message": imap_message,
+        "imap_connected": incoming_connected,
+        "incoming_connected": incoming_connected,
+        "incoming_type": incoming_type,
+        "message": incoming_message,
         "new_messages_count": synced_count
     }
 

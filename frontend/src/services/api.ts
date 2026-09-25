@@ -923,6 +923,8 @@ export async function syncEmails(payload?: {
 }): Promise<{
   success: boolean;
   imap_connected: boolean;
+  incoming_connected?: boolean;
+  incoming_type?: string;
   message: string;
   new_messages_count: number;
 }> {

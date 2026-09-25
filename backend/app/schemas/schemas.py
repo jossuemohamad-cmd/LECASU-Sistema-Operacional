@@ -819,8 +819,8 @@ class FinanceOverviewKPIs(BaseModel):
 # ================= EMAIL SCHEMAS =================
 class EmailAccountConfigSchema(BaseModel):
     provider: str = 'cpanel'
-    displayName: str = 'LECASU - Departamento Comercial'
-    email: str = 'comercial@lecasu.co.mz'
+    displayName: str = 'LECASU - Engenharia & Serviços'
+    email: str = 'info@lecasu.co.mz'
     smtpHost: str = 'mail.lecasu.co.mz'
     smtpPort: int = 465
     smtpSecure: str = 'ssl'
@@ -828,7 +828,7 @@ class EmailAccountConfigSchema(BaseModel):
     incomingHost: str = 'mail.lecasu.co.mz'
     incomingPort: int = 993
     incomingSecure: str = 'ssl'
-    username: str = 'comercial@lecasu.co.mz'
+    username: str = 'info@lecasu.co.mz'
     password: Optional[str] = None
     isConnected: Optional[bool] = False
     lastSync: Optional[str] = None

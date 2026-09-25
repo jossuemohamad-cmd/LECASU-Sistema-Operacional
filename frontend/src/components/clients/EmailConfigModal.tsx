@@ -34,8 +34,8 @@ export interface EmailAccountConfig {
 
 export const DEFAULT_EMAIL_CONFIG: EmailAccountConfig = {
   provider: 'cpanel',
-  displayName: 'LECASU - Departamento Comercial',
-  email: 'comercial@lecasu.co.mz',
+  displayName: 'LECASU - Engenharia & Serviços',
+  email: 'info@lecasu.co.mz',
   smtpHost: 'mail.lecasu.co.mz',
   smtpPort: 465,
   smtpSecure: 'ssl',
@@ -43,10 +43,10 @@ export const DEFAULT_EMAIL_CONFIG: EmailAccountConfig = {
   incomingHost: 'mail.lecasu.co.mz',
   incomingPort: 993,
   incomingSecure: 'ssl',
-  username: 'comercial@lecasu.co.mz',
-  password: '••••••••••••',
+  username: 'info@lecasu.co.mz',
+  password: '',
   isConnected: true,
-  lastSync: 'Hoje às 08:30'
+  lastSync: 'Sincronizado'
 };
 
 interface EmailConfigModalProps {
@@ -78,6 +78,24 @@ export const EmailConfigModal: React.FC<EmailConfigModalProps> = ({
 
   if (!isOpen) return null;
 
+  const applyLecasuOfficialConfig = (type: 'imap' | 'pop3' = 'imap') => {
+    setConfig(prev => ({
+      ...prev,
+      provider: 'cpanel',
+      displayName: prev.displayName || 'LECASU - Engenharia & Serviços',
+      email: prev.email || 'info@lecasu.co.mz',
+      username: prev.username || 'info@lecasu.co.mz',
+      smtpHost: 'mail.lecasu.co.mz',
+      smtpPort: 465,
+      smtpSecure: 'ssl',
+      incomingType: type,
+      incomingHost: 'mail.lecasu.co.mz',
+      incomingPort: type === 'imap' ? 993 : 995,
+      incomingSecure: 'ssl',
+    }));
+    setTestResult(null);
+  };
+
   const handleProviderSelect = (provider: EmailAccountConfig['provider']) => {
     if (provider === 'gmail') {
       setConfig(prev => ({
@@ -104,17 +122,7 @@ export const EmailConfigModal: React.FC<EmailConfigModalProps> = ({
         incomingSecure: 'ssl',
       }));
     } else if (provider === 'cpanel') {
-      setConfig(prev => ({
-        ...prev,
-        provider: 'cpanel',
-        smtpHost: 'mail.lecasu.co.mz',
-        smtpPort: 465,
-        smtpSecure: 'ssl',
-        incomingType: 'imap',
-        incomingHost: 'mail.lecasu.co.mz',
-        incomingPort: 993,
-        incomingSecure: 'ssl',
-      }));
+      applyLecasuOfficialConfig(config.incomingType);
     } else {
       setConfig(prev => ({ ...prev, provider: 'custom' }));
     }
@@ -325,7 +333,7 @@ export const EmailConfigModal: React.FC<EmailConfigModalProps> = ({
                     required
                     value={config.displayName}
                     onChange={e => setConfig(prev => ({ ...prev, displayName: e.target.value }))}
-                    placeholder="ex: LECASU Engenharia"
+                    placeholder="ex: LECASU Engenharia & Serviços"
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#0078D4] focus:bg-white transition"
                   />
                 </div>
@@ -339,7 +347,7 @@ export const EmailConfigModal: React.FC<EmailConfigModalProps> = ({
                     required
                     value={config.email}
                     onChange={e => setConfig(prev => ({ ...prev, email: e.target.value, username: e.target.value }))}
-                    placeholder="comercial@lecasu.co.mz"
+                    placeholder="info@lecasu.co.mz"
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#0078D4] focus:bg-white transition"
                   />
                 </div>
@@ -356,22 +364,74 @@ export const EmailConfigModal: React.FC<EmailConfigModalProps> = ({
                     required
                     value={config.username}
                     onChange={e => setConfig(prev => ({ ...prev, username: e.target.value }))}
+                    placeholder="info@lecasu.co.mz"
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#0078D4] focus:bg-white transition"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
-                    <span>Palavra-passe / Token de App</span>
+                    <span>Palavra-passe da Conta</span>
                     <span className="text-slate-400 font-normal text-[10px]">Criptografado</span>
                   </label>
                   <input
                     type="password"
                     value={config.password || ''}
                     onChange={e => setConfig(prev => ({ ...prev, password: e.target.value }))}
-                    placeholder="Palavra-passe do e-mail"
+                    placeholder="Usar a senha da conta de e-mail"
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#0078D4] focus:bg-white transition"
                   />
+                </div>
+              </div>
+
+              {/* Tabela de Parâmetros Oficiais de SSL/TLS (cPanel LECASU) */}
+              <div className="border border-sky-300 rounded-xl overflow-hidden shadow-xs bg-white mt-2">
+                <div className="bg-[#2B88D8] text-white px-4 py-2 font-bold flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck size={16} />
+                    <span>Configurações Seguras de SSL/TLS (Recomendado)</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => applyLecasuOfficialConfig(config.incomingType)}
+                    className="px-2.5 py-0.5 rounded bg-white text-[#2B88D8] hover:bg-sky-50 text-[11px] font-semibold transition cursor-pointer shadow-xs"
+                  >
+                    Aplicar no Formulário
+                  </button>
+                </div>
+                <div className="divide-y divide-slate-100 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 px-4 py-2.5 items-center">
+                    <span className="font-semibold text-slate-700">Nome do usuário:</span>
+                    <span className="sm:col-span-2 font-mono font-medium text-slate-900">info@lecasu.co.mz</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 px-4 py-2.5 items-center">
+                    <span className="font-semibold text-slate-700">Senha:</span>
+                    <span className="sm:col-span-2 italic text-slate-500">Usar a senha da conta do e-mail.</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 px-4 py-2.5 items-center">
+                    <span className="font-semibold text-slate-700">Servidor de entrada:</span>
+                    <div className="sm:col-span-2 flex flex-wrap items-center gap-2.5">
+                      <span className="font-mono font-medium text-slate-900">mail.lecasu.co.mz</span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-[11px] font-mono border border-blue-200">
+                        IMAP Port: 993
+                      </span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px] font-mono border border-slate-200">
+                        POP3 Port: 995
+                      </span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 px-4 py-2.5 items-center">
+                    <span className="font-semibold text-slate-700">Servidor de saída:</span>
+                    <div className="sm:col-span-2 flex items-center gap-2.5">
+                      <span className="font-mono font-medium text-slate-900">mail.lecasu.co.mz</span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[11px] font-mono border border-emerald-200">
+                        SMTP Port: 465
+                      </span>
+                    </div>
+                  </div>
+                  <div className="px-4 py-2 bg-slate-50 text-[11px] text-slate-500 font-medium">
+                    IMAP, POP3 e SMTP require authentication.
+                  </div>
                 </div>
               </div>
 

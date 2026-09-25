@@ -177,7 +177,7 @@ class EmailAccount(Base):
     __tablename__ = 'email_accounts'
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(150), unique=True, index=True, nullable=False)
-    display_name = Column(String(150), default='LECASU Comercial')
+    display_name = Column(String(150), default='LECASU - Engenharia & Serviços')
     provider = Column(String(50), default='cpanel')  # cpanel, gmail, office365, custom
     smtp_host = Column(String(150), default='mail.lecasu.co.mz')
     smtp_port = Column(Integer, default=465)
@@ -186,7 +186,7 @@ class EmailAccount(Base):
     incoming_host = Column(String(150), default='mail.lecasu.co.mz')
     incoming_port = Column(Integer, default=993)
     incoming_secure = Column(String(20), default='ssl')  # ssl, tls, none
-    username = Column(String(150), default='comercial@lecasu.co.mz')
+    username = Column(String(150), default='info@lecasu.co.mz')
     password = Column(String(255), nullable=True)
     is_active = Column(Boolean, default=True)
     last_sync = Column(DateTime, nullable=True)

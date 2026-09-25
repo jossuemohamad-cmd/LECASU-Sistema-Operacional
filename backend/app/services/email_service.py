@@ -1,5 +1,6 @@
 import smtplib
 import imaplib
+import poplib
 import email
 from email.header import decode_header, Header
 from email.mime.text import MIMEText
@@ -154,6 +155,45 @@ def test_imap_connection(
         return False, f"Tempo limite esgotado ao conectar ao IMAP {host}:{port}."
     except Exception as e:
         return False, f"Erro IMAP: {str(e)}"
+
+def test_pop3_connection(
+    host: str,
+    port: int,
+    secure: str,
+    username: str,
+    password: str,
+    timeout: int = 12
+) -> Tuple[bool, str]:
+    """Testa a conectividade e autenticação POP3 real."""
+    if not host or not username:
+        return False, "Host e utilizador POP3 são obrigatórios."
+
+    try:
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+
+        if secure.lower() == 'ssl' or port == 995:
+            client = poplib.POP3_SSL(host, port, context=context, timeout=timeout)
+        else:
+            client = poplib.POP3(host, port, timeout=timeout)
+            if secure.lower() == 'tls':
+                try:
+                    client.stls(context=context)
+                except Exception:
+                    pass
+
+        client.user(username)
+        if password:
+            client.pass_(password)
+        client.quit()
+        return True, f"Conexão POP3 com {host}:{port} bem-sucedida!"
+    except poplib.error_proto as e:
+        return False, f"Falha de autenticação/protocolo POP3: {str(e)}"
+    except TimeoutError:
+        return False, f"Tempo limite esgotado ao conectar ao POP3 {host}:{port}."
+    except Exception as e:
+        return False, f"Erro POP3: {str(e)}"
 
 def send_email_smtp(
     smtp_host: str,
@@ -344,3 +384,99 @@ def fetch_imap_emails(
 
     except Exception as e:
         return False, [], f"Falha na sincronização IMAP: {str(e)}"
+
+def fetch_pop3_emails(
+    host: str,
+    port: int,
+    secure: str,
+    username: str,
+    password: str,
+    limit: int = 25,
+    timeout: int = 15
+) -> Tuple[bool, List[Dict[str, Any]], str]:
+    """Busca e-mails reais do servidor POP3."""
+    if not host or not username or not password:
+        return False, [], "Credenciais POP3 incompletas."
+
+    try:
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+
+        if secure.lower() == 'ssl' or port == 995:
+            client = poplib.POP3_SSL(host, port, context=context, timeout=timeout)
+        else:
+            client = poplib.POP3(host, port, timeout=timeout)
+            if secure.lower() == 'tls':
+                try:
+                    client.stls(context=context)
+                except Exception:
+                    pass
+
+        client.user(username)
+        client.pass_(password)
+
+        stat = client.stat()
+        num_messages = stat[0]
+        if num_messages == 0:
+            client.quit()
+            return True, [], "Nenhum e-mail encontrado no servidor POP3."
+
+        start_idx = max(1, num_messages - limit + 1)
+        parsed_emails = []
+
+        for msg_num in range(num_messages, start_idx - 1, -1):
+            try:
+                response, lines, octets = client.retr(msg_num)
+                raw_bytes = b"\r\n".join(lines)
+                msg = email.message_from_bytes(raw_bytes)
+
+                subject = clean_header_str(msg.get("Subject"))
+                from_raw = clean_header_str(msg.get("From"))
+                name, from_email = parseaddr(from_raw)
+                client_name = name or from_email
+
+                to_raw = clean_header_str(msg.get("To"))
+                _, to_email = parseaddr(to_raw)
+
+                cc_raw = clean_header_str(msg.get("Cc"))
+
+                date_str = msg.get("Date")
+                parsed_date = datetime.utcnow()
+                if date_str:
+                    try:
+                        time_tuple = email.utils.parsedate_tz(date_str)
+                        if time_tuple:
+                            parsed_date = datetime.fromtimestamp(email.utils.mktime_tz(time_tuple))
+                    except Exception:
+                        pass
+
+                external_id = msg.get("Message-ID") or f"pop3_{msg_num}"
+                body_text, body_html, attachments = parse_email_body(msg)
+
+                parsed_emails.append({
+                    "id": f"pop3_{msg_num}",
+                    "external_id": external_id,
+                    "from": from_email or from_raw,
+                    "clientName": client_name,
+                    "to": to_email or to_raw,
+                    "cc": cc_raw,
+                    "subject": subject or "(Sem assunto)",
+                    "body": body_text or "(Conteúdo sem texto simples disponível)",
+                    "bodyHtml": body_html,
+                    "date": parsed_date.isoformat(),
+                    "isRead": True,
+                    "hasAttachment": len(attachments) > 0,
+                    "attachments": attachments,
+                    "folder": "inbox"
+                })
+            except Exception as e:
+                print(f"[POP3 Fetch Error] Msg {msg_num}: {e}")
+                continue
+
+        client.quit()
+        return True, parsed_emails, f"{len(parsed_emails)} e-mails sincronizados com sucesso via POP3."
+
+    except Exception as e:
+        return False, [], f"Falha na sincronização POP3: {str(e)}"
+
