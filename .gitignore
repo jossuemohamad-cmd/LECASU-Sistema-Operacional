@@ -12,7 +12,14 @@ __pycache__/
 *$py.class
 venv/
 .venv/
+
+# Variáveis de ambiente e segredos (NUNCA enviar ao GitHub)
 .env
+.env.*
+!.env.example
+
+# Ficheiros de credenciais OAuth (Google)
+client_secret*.json
 
 # Logs & OS
 npm-debug.log*
@@ -24,4 +31,3 @@ Thumbs.db
 # Storage
 backend/uploads/*
 !backend/uploads/.gitkeep
-

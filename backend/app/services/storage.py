@@ -4,10 +4,10 @@ from botocore.client import Config
 from botocore.exceptions import ClientError
 from typing import Optional
 
-# Neon S3 Storage Configurations
-AWS_ENDPOINT_URL_S3 = os.getenv("AWS_ENDPOINT_URL_S3", "https://br-misty-dawn-b40uhq67.storage.c-6.us-east-2.aws.neon.tech")
-AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "nak_live_71d741f88ef345d293b0239b2c89f0e8")
-AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "nsk_live_2bfdd86b3334ab13752c75b54ca191c23dbf4ae38ba9ed6850f2cba78be6d3bd")
+# Neon S3 Storage Configurations (lidas apenas de variáveis de ambiente)
+AWS_ENDPOINT_URL_S3 = os.getenv("AWS_ENDPOINT_URL_S3")
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 AWS_REGION = os.getenv("AWS_REGION", "us-east-2")
 S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "assets")
 

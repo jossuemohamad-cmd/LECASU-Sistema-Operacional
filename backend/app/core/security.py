@@ -8,7 +8,9 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 
-SECRET_KEY = os.getenv("SECRET_KEY", "LECASU-ERP-PROD-SECRET-KEY-2026-MOZAMBIQUE-ENTERPRISE-JWT")
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY não configurada no ambiente ou no ficheiro .env")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 Horas
 
