@@ -829,145 +829,151 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
           </div>
 
           {/* ---------------------------------------------------------------------
-              COLUNA 3: PAINEL DE LEITURA & PROPOSTA (Espaçoso, Visual Limpo)
+              COLUNA 3: PAINEL DE LEITURA (Padrão Oficial de Correio: Outlook / Gmail)
              --------------------------------------------------------------------- */}
-          <div className="flex-1 bg-slate-50/40 flex flex-col min-h-0 overflow-y-auto">
+          <div className="flex-1 bg-white flex flex-col min-h-0 overflow-y-auto">
             {currentItem ? (
-              <div className="p-6 md:p-8 space-y-5 max-w-4xl mx-auto w-full">
+              <div className="p-6 md:p-8 max-w-4xl mx-auto w-full flex flex-col min-h-full">
                 
-                {/* Header do E-mail */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-                  
-                  {/* Subject Title & Actions */}
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-slate-100 pb-4">
-                    <div>
-                      <h2 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
-                        {currentItem.subject}
-                      </h2>
-                      <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">
-                        <span>Pasta: <strong className="text-slate-700 capitalize">{currentItem.folder}</strong></span>
-                        <span>•</span>
-                        <span>{new Date(currentItem.date).toLocaleString('pt-MZ')}</span>
-                      </div>
-                    </div>
-
-                    {/* Quick Action Buttons */}
-                    <div className="flex items-center space-x-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenCompose(clients.find(c => c.id === currentItem.clientId))}
-                        className="px-3 py-1.5 bg-[#0078D4] hover:bg-[#106EBE] text-white font-semibold rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
-                        title="Responder"
-                      >
-                        <Reply size={14} />
-                        <span>Responder</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => addToast('info', 'Encaminhar', 'Selecione o destinatário para encaminhar.')}
-                        className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs flex items-center gap-1 transition cursor-pointer"
-                        title="Encaminhar"
-                      >
-                        <Forward size={14} />
-                        <span className="hidden sm:inline">Encaminhar</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteItem(currentItem.id)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition cursor-pointer"
-                        title="Excluir"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                {/* 1. Assunto no Topo + Ações Rápidas */}
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
+                  <div className="min-w-0 flex-1">
+                    <h1 className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">
+                      {currentItem.subject}
+                    </h1>
+                    <div className="flex items-center gap-2 mt-1.5 text-xs text-slate-400">
+                      <span className="capitalize font-medium text-slate-600">
+                        {currentItem.folder === 'sent' ? 'Itens Enviados' : currentItem.folder === 'inbox' ? 'Caixa de Entrada' : currentItem.folder}
+                      </span>
+                      <span>•</span>
+                      <span>
+                        {new Date(currentItem.date).toLocaleDateString('pt-MZ', { 
+                          day: '2-digit', 
+                          month: 'long', 
+                          year: 'numeric', 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </span>
                     </div>
                   </div>
 
-                  {/* Sender & Recipient Details */}
-                  <div className="flex items-center space-x-3 text-xs">
-                    <div className="w-10 h-10 rounded-full bg-slate-100 text-[#0078D4] border border-slate-200 font-bold flex items-center justify-center text-sm shadow-2xs shrink-0">
-                      {(currentItem.clientName || currentItem.from).substring(0, 2).toUpperCase()}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-bold text-slate-900 text-xs">
-                        {currentItem.clientName || currentItem.from}
-                      </p>
-                      <p className="text-slate-500 font-mono text-[11px] truncate">
-                        De: <span className="text-slate-700">{currentItem.from}</span>
-                      </p>
-                      <p className="text-slate-500 font-mono text-[11px] truncate">
-                        Para: <span className="text-slate-700">{currentItem.to}</span>
-                      </p>
-                    </div>
-                  </div>
+                  {/* Botões de Ação no Topo */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenCompose(clients.find(c => c.id === currentItem.clientId))}
+                      className="px-3.5 py-1.5 bg-[#0078D4] hover:bg-[#106EBE] text-white font-semibold rounded-lg text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+                      title="Responder"
+                    >
+                      <Reply size={14} />
+                      <span>Responder</span>
+                    </button>
 
+                    <button
+                      type="button"
+                      onClick={() => addToast('info', 'Encaminhar', 'Selecione o destinatário para encaminhar.')}
+                      className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs flex items-center gap-1.5 transition cursor-pointer"
+                      title="Encaminhar"
+                    >
+                      <Forward size={14} />
+                      <span>Encaminhar</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteItem(currentItem.id)}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition cursor-pointer"
+                      title="Excluir mensagem"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
 
-                {/* Card de Proposta Comercial Anexa */}
-                {currentItem.attachedProposalId && (
-                  <div className="bg-white p-5 rounded-2xl border border-orange-200 shadow-xs space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-orange-100 pb-3.5">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-9 h-9 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold">
-                          <FileSpreadsheet size={20} />
-                        </div>
-                        <div>
-                          <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-orange-50 text-orange-700 border border-orange-200 uppercase mb-0.5">
-                            Proposta Comercial #{currentItem.attachedProposalId}
-                          </span>
-                          <h3 className="text-sm font-bold text-slate-900">
-                            {currentItem.attachedProposalTitle}
-                          </h3>
-                        </div>
-                      </div>
+                {/* 2. Bloco do Remetente (Linha Única Compacta, padrão de correio) */}
+                <div className="flex items-center gap-3 py-3 border-y border-slate-100 mb-5">
+                  <div className="w-10 h-10 rounded-full bg-[#0078D4]/10 text-[#0078D4] border border-[#0078D4]/20 font-bold flex items-center justify-center text-sm shrink-0">
+                    {(currentItem.clientName || currentItem.from).substring(0, 2).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-900">{currentItem.clientName || currentItem.from}</span>
+                      <span className="text-slate-400 font-mono text-[11px]">&lt;{currentItem.from}&gt;</span>
+                    </div>
+                    <div className="text-slate-500 text-[11px] mt-0.5">
+                      Para: <span className="text-slate-700 font-medium">{currentItem.to}</span>
+                    </div>
+                  </div>
+                </div>
 
-                      {currentItem.attachedProposalAmount && (
-                        <div className="text-left sm:text-right">
-                          <span className="text-[10px] uppercase font-semibold text-slate-400 block">Valor Global da Proposta</span>
-                          <span className="text-lg font-bold font-mono text-emerald-600">
-                            {formatMZN(currentItem.attachedProposalAmount)}
+                {/* 3. Strip Compacta de Proposta Anexa (Se houver) */}
+                {currentItem.attachedProposalId && (
+                  <div className="mb-5 p-3.5 bg-[#FFF9F3] border border-orange-200/80 rounded-xl flex flex-wrap items-center justify-between gap-3 shadow-2xs">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center font-bold shrink-0">
+                        <FileSpreadsheet size={18} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-orange-700 bg-orange-100/70 px-1.5 py-0.5 rounded">
+                            Proposta #{currentItem.attachedProposalId}
+                          </span>
+                          <span className="font-semibold text-xs text-slate-900 truncate">
+                            {currentItem.attachedProposalTitle}
                           </span>
                         </div>
-                      )}
+                        <p className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5 font-mono">
+                          <Paperclip size={12} className="text-orange-500" />
+                          <span>Proposta_LECASU_{currentItem.attachedProposalId}.pdf</span>
+                          {currentItem.attachedProposalAmount && (
+                            <strong className="text-emerald-700 ml-1 font-sans">
+                              • {formatMZN(currentItem.attachedProposalAmount)}
+                            </strong>
+                          )}
+                        </p>
+                      </div>
                     </div>
 
-                    {/* Ações da Proposta */}
-                    <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                      <div className="flex items-center space-x-2">
-                        <span className="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 flex items-center gap-2 text-xs font-mono">
-                          <Paperclip size={13} className="text-[#FF8000]" />
-                          <span>Proposta_LECASU_{currentItem.attachedProposalId}.pdf</span>
-                        </span>
-                      </div>
-
-                      <div className="flex items-center space-x-2.5">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const p = allProposals.find(item => item.proposal.id === currentItem.attachedProposalId);
-                            if (p) handleConvertToProject(p.proposal);
-                          }}
-                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
-                        >
-                          <Check size={15} />
-                          <span>Aprovar & Gerar Projeto</span>
-                        </button>
-                      </div>
+                    {/* Botão de Ação: Aprovar & Gerar Projeto */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const p = allProposals.find(item => item.proposal.id === currentItem.attachedProposalId);
+                          if (p) handleConvertToProject(p.proposal);
+                        }}
+                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+                      >
+                        <Check size={14} />
+                        <span>Aprovar Proposta & Gerar Projeto</span>
+                      </button>
                     </div>
                   </div>
                 )}
 
-                {/* Email Body Message */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs text-xs text-slate-800 leading-relaxed font-sans space-y-4 whitespace-pre-line">
+                {/* 4. Corpo da Mensagem (Tipografia Natural, Sem Caixas Sufocantes) */}
+                <div className="text-slate-800 text-[13px] leading-relaxed font-sans whitespace-pre-line py-2 mb-8">
                   {currentItem.body}
                 </div>
 
-                {/* Corporate Signature */}
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500 space-y-1">
-                  <p className="font-bold text-slate-800 text-xs">LECASU - Engenharia & Prestação de Serviços</p>
-                  <p>Departamento de Relações com Clientes & Gestão de Contratos</p>
-                  <p className="text-slate-400">Maputo, Moçambique • Email: {emailConfig.email}</p>
+                {/* 5. Assinatura Institucional (No rodapé do e-mail) */}
+                <div className="pt-4 border-t border-slate-200 mt-auto text-xs text-slate-500 space-y-1">
+                  <p className="font-bold text-slate-900 text-xs">LECASU - Engenharia & Prestação de Serviços</p>
+                  <p className="text-slate-600">Departamento de Relações com Clientes & Gestão de Contratos</p>
+                  <p className="text-slate-400 font-mono text-[11px]">Maputo, Moçambique • Email: {emailConfig.email}</p>
+                </div>
+
+                {/* 6. Botão de Resposta Rápida no Rodapé */}
+                <div className="mt-6 pt-4 border-t border-slate-100 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenCompose(clients.find(c => c.id === currentItem.clientId))}
+                    className="px-4 py-2 border border-slate-300 hover:border-slate-400 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer flex items-center gap-2 shadow-2xs"
+                  >
+                    <Reply size={14} className="text-slate-500" />
+                    <span>Responder a esta mensagem...</span>
+                  </button>
                 </div>
 
               </div>
