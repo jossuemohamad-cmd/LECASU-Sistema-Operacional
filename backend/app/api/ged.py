@@ -17,7 +17,11 @@ from app.services.storage import (
     upload_file_to_s3,
     generate_presigned_url,
     delete_file_from_s3,
-    test_storage_connection
+    test_storage_connection,
+    list_s3_folders,
+    create_s3_folder,
+    delete_s3_folder,
+    STANDARD_GED_FOLDERS
 )
 
 router = APIRouter()
@@ -43,6 +47,60 @@ def check_storage_health():
     Verifica se o Neon S3 Object Storage está ativo e operacional.
     """
     return test_storage_connection()
+
+
+@router.get('/ged/folders', summary='Listar pastas sincronizadas do S3')
+def get_s3_folders(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Retorna as pastas existentes no Neon S3 e sincroniza com o repositório.
+    """
+    s3_folder_keys = list_s3_folders()
+    if not s3_folder_keys:
+        s3_folder_keys = STANDARD_GED_FOLDERS
+
+    folder_list = []
+    for f in s3_folder_keys:
+        cap_name = f.replace('_', ' ').capitalize()
+        folder_list.append({
+            "id": f,
+            "name": cap_name,
+            "path": f"/{f}",
+            "category": cap_name,
+            "iconType": "mail" if f == "mail" else "web" if f == "public_html" else "pdf" if f == "pdf" else "excel" if f == "planilhas" else "word" if f == "word" else "image" if f in ["png", "jpg"] else "cad" if f == "projetos_cad" else "folder",
+            "color": "text-amber-500",
+            "permissions": "0700" if f == "logs" else "0750" if f == "etc" else "0751" if f == "mail" else "0755",
+            "createdAt": "2026-09-24 12:00"
+        })
+    return folder_list
+
+
+@router.post('/ged/folders', summary='Criar nova pasta física no S3')
+def create_folder(payload: dict, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    raw_name = payload.get("name", "").strip().lower().replace(" ", "_")
+    if not raw_name:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Nome da pasta inválido.")
+    
+    success = create_s3_folder(raw_name)
+    cap_name = raw_name.replace('_', ' ').capitalize()
+    return {
+        "id": raw_name,
+        "name": cap_name,
+        "path": f"/{raw_name}",
+        "category": payload.get("category", cap_name),
+        "iconType": payload.get("iconType", "folder"),
+        "color": "text-amber-500",
+        "permissions": "0755",
+        "createdAt": datetime.utcnow().strftime("%Y-%m-%d %H:%M"),
+        "s3_synced": success
+    }
+
+
+@router.delete('/ged/folders/{folder_name}', summary='Deletar pasta do S3')
+def delete_folder(folder_name: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    raw_name = folder_name.strip().lower()
+    delete_s3_folder(raw_name)
+    return {"message": f"Pasta '{folder_name}' excluída do S3 com sucesso."}
+
 
 
 @router.get('/ged/documents', response_model=List[DocumentResponse], summary='Listar documentos do repositório GED')

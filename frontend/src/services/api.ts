@@ -823,3 +823,30 @@ export async function updateDocument(documentId: number, data: {
 export async function fetchGEDOverviewKPIs(): Promise<GEDOverviewKPIs> {
   return cachedFetch<GEDOverviewKPIs>(`${API_BASE_URL}/ged/overview`, getAuthHeaders(), 15 * 1000);
 }
+
+export async function fetchGEDFolders(): Promise<any[]> {
+  const res = await fetch(`${API_BASE_URL}/ged/folders`, {
+    headers: getAuthHeaders()
+  });
+  return handleResponse<any[]>(res);
+}
+
+export async function createGEDFolder(name: string, category = 'Geral'): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/ged/folders`, {
+    method: 'POST',
+    headers: {
+      ...getAuthHeaders(),
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ name, category })
+  });
+  return handleResponse<any>(res);
+}
+
+export async function deleteGEDFolder(folderName: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/ged/folders/${folderName}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  return handleResponse<any>(res);
+}

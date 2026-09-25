@@ -47,6 +47,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"[LECASU ERP] Aviso na inicialização: {e}")
     
+    # Sincronizar todas as pastas no Neon S3 Bucket em background
+    try:
+        from app.services.storage import ensure_s3_folders_exist
+        asyncio.create_task(asyncio.to_thread(ensure_s3_folders_exist))
+    except Exception as e:
+        print(f"[LECASU ERP] Aviso ao sincronizar S3: {e}")
+
     # Iniciar worker de warm connection em background
     keepalive_task = asyncio.create_task(neon_keepalive_worker())
     

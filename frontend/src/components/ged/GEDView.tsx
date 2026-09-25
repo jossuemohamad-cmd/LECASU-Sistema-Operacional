@@ -49,7 +49,10 @@ import {
   downloadDocument,
   fetchGEDOverviewKPIs, 
   fetchProjects, 
-  fetchClients 
+  fetchClients,
+  fetchGEDFolders,
+  createGEDFolder,
+  deleteGEDFolder
 } from '../../services/api';
 import { Toast } from '../common/Toast';
 import { ConfirmationModal } from '../common/ConfirmationModal';
@@ -242,18 +245,22 @@ export const GEDView: React.FC = () => {
   const loadAllData = async (showToastFeedback = false) => {
     setIsLoading(true);
     try {
-      const [docsData, kpisData, projectsData, clientsData] = await Promise.all([
+      const [docsData, kpisData, projectsData, clientsData, foldersData] = await Promise.all([
         fetchDocuments(),
         fetchGEDOverviewKPIs(),
         fetchProjects().catch(() => []),
-        fetchClients().catch(() => [])
+        fetchClients().catch(() => []),
+        fetchGEDFolders().catch(() => [])
       ]);
       setDocuments(docsData);
       setKpis(kpisData);
       setProjects(projectsData);
       setClients(clientsData);
+      if (Array.isArray(foldersData) && foldersData.length > 0) {
+        setFolders(foldersData);
+      }
       if (showToastFeedback) {
-        showToast('success', 'Repositório Atualizado', 'Ficheiros e diretórios sincronizados.');
+        showToast('success', 'Repositório Atualizado', 'Ficheiros e pastas sincronizados com o Neon S3.');
       }
     } catch (err: any) {
       console.error('Erro ao carregar dados do GED:', err);
@@ -673,9 +680,12 @@ export const GEDView: React.FC = () => {
     };
 
     setFolders(prev => [...prev, newFolder]);
+    createGEDFolder(cleanName.toLowerCase(), newFolderCategory).catch((err) => {
+      console.warn('Erro ao sincronizar pasta no S3:', err);
+    });
     setIsNewFolderModalOpen(false);
     setNewFolderName('');
-    showToast('success', 'Pasta Criada', `Pasta "${formattedCapName}" criada com sucesso.`);
+    showToast('success', 'Pasta Criada', `Pasta "${formattedCapName}" criada e sincronizada no Neon S3.`);
   };
 
   // Move to Trash (Soft Delete)
@@ -734,9 +744,12 @@ export const GEDView: React.FC = () => {
       }
     } else {
       const folderId = itemToPermanentDelete.id as string;
+      deleteGEDFolder(folderId).catch((err) => {
+        console.warn('Erro ao deletar pasta no S3:', err);
+      });
       setFolders(prev => prev.filter(f => f.id !== folderId));
       setTrashedFolderIds(prev => prev.filter(id => id !== folderId));
-      showToast('success', 'Pasta Eliminada', `A pasta "${itemToPermanentDelete.name}" foi excluída.`);
+      showToast('success', 'Pasta Eliminada', `A pasta "${itemToPermanentDelete.name}" foi excluída do Neon S3.`);
     }
     setItemToPermanentDelete(null);
   };

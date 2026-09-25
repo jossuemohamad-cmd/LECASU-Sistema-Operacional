@@ -106,6 +106,89 @@ def delete_file_from_s3(key: str, bucket: Optional[str] = None) -> bool:
         return False
 
 
+STANDARD_GED_FOLDERS = [
+    'etc', 'logs', 'mail', 'public_html', 'pdf', 'planilhas', 'word', 
+    'png', 'jpg', 'logos', 'projetos_cad', 'contratos', 'rh_pessoal', 
+    'ssl', 'tmp', 'geral'
+]
+
+
+def ensure_s3_folders_exist(folders: Optional[list] = None, bucket: Optional[str] = None):
+    """
+    Cria fisicamente todos os marcadores de pasta no bucket Neon S3 (ged/<pasta>/.keep)
+    para que apareçam 100% sincronizados tanto no console S3 quanto no ERP.
+    """
+    target_bucket = bucket or S3_BUCKET_NAME
+    client = get_s3_client()
+    target_folders = folders or STANDARD_GED_FOLDERS
+    for folder in target_folders:
+        clean_folder = folder.strip().lower().replace(" ", "_")
+        key = f"ged/{clean_folder}/.keep"
+        try:
+            client.put_object(
+                Bucket=target_bucket,
+                Key=key,
+                Body=b"",
+                ContentType="application/x-directory"
+            )
+        except Exception as e:
+            print(f"Aviso ao criar pasta S3 {clean_folder}: {e}")
+
+
+def create_s3_folder(folder_name: str, bucket: Optional[str] = None) -> bool:
+    """Cria marcador de pasta no Neon S3"""
+    target_bucket = bucket or S3_BUCKET_NAME
+    clean_folder = folder_name.strip().lower().replace(" ", "_")
+    key = f"ged/{clean_folder}/.keep"
+    try:
+        client = get_s3_client()
+        client.put_object(
+            Bucket=target_bucket,
+            Key=key,
+            Body=b"",
+            ContentType="application/x-directory"
+        )
+        return True
+    except Exception as e:
+        print(f"Erro ao criar pasta S3 {folder_name}: {e}")
+        return False
+
+
+def delete_s3_folder(folder_name: str, bucket: Optional[str] = None) -> bool:
+    """Deleta pasta e todos os seus objetos do Neon S3"""
+    target_bucket = bucket or S3_BUCKET_NAME
+    clean_folder = folder_name.strip().lower().replace(" ", "_")
+    prefix = f"ged/{clean_folder}/"
+    client = get_s3_client()
+    try:
+        response = client.list_objects_v2(Bucket=target_bucket, Prefix=prefix)
+        objects_to_delete = [{'Key': obj['Key']} for obj in response.get('Contents', [])]
+        if objects_to_delete:
+            client.delete_objects(Bucket=target_bucket, Delete={'Objects': objects_to_delete})
+        return True
+    except Exception as e:
+        print(f"Erro ao deletar pasta S3 {folder_name}: {e}")
+        return False
+
+
+def list_s3_folders(prefix: str = "ged/", bucket: Optional[str] = None) -> list:
+    """Retorna lista de pastas existentes no Neon S3 sob ged/"""
+    target_bucket = bucket or S3_BUCKET_NAME
+    client = get_s3_client()
+    try:
+        response = client.list_objects_v2(Bucket=target_bucket, Prefix=prefix, Delimiter="/")
+        prefixes = response.get("CommonPrefixes", [])
+        folders = []
+        for p in prefixes:
+            raw_folder = p.get("Prefix", "").replace("ged/", "").rstrip("/")
+            if raw_folder:
+                folders.append(raw_folder)
+        return folders
+    except Exception as e:
+        print(f"Erro ao listar pastas no S3: {e}")
+        return []
+
+
 def test_storage_connection() -> dict:
     """
     Testa conexão e permissões no bucket Neon S3.
@@ -138,3 +221,4 @@ def test_storage_connection() -> dict:
             "endpoint": AWS_ENDPOINT_URL_S3,
             "error": str(e)
         }
+
