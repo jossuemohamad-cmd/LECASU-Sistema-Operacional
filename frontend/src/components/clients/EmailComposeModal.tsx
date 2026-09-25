@@ -95,7 +95,6 @@ Web: www.lecasu.co.mz`
     const client = clients.find(c => c.id === clientId);
     if (client) {
       setRecipientEmail(client.email || '');
-      // If client has proposals, auto-suggest first proposal
       if (client.proposals && client.proposals.length > 0 && !attachedProposal) {
         setAttachedProposal(client.proposals[0]);
       }
@@ -202,52 +201,53 @@ Diretoria Executiva LECASU`
 
   return (
     <div className="modal-overlay-erp animate-in fade-in select-none">
-      <div className="bg-[#242424] text-slate-100 rounded-xl border border-[#3C3C3C] shadow-2xl max-w-3xl w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[92vh]">
+      <div className="bg-white text-slate-800 rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[92vh]">
         
-        {/* Top Window Bar (Outlook Compose Style) */}
-        <div className="bg-[#1F1F1F] px-4 py-2.5 border-b border-[#3C3C3C] flex items-center justify-between shrink-0">
-          <div className="flex items-center space-x-2">
-            <div className="w-6 h-6 rounded bg-[#0078D4] text-white flex items-center justify-center font-bold text-xs">
-              ✉
+        {/* Top Window Bar - Clean White & Professional */}
+        <div className="bg-slate-50/80 px-6 py-3.5 border-b border-slate-200 flex items-center justify-between shrink-0">
+          <div className="flex items-center space-x-2.5">
+            <div className="w-8 h-8 rounded-lg bg-[#0078D4]/10 text-[#0078D4] flex items-center justify-center font-bold text-sm shadow-2xs">
+              <Send size={16} />
             </div>
-            <span className="text-xs font-semibold text-white tracking-wide">
-              Novo E-mail - Microsoft Outlook / LECASU Mail
-            </span>
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 leading-tight">Novo E-mail / Envio de Proposta</h3>
+              <p className="text-xs text-slate-500">Composição corporativa via servidor SMTP</p>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="text-neutral-400 hover:text-white p-1 rounded hover:bg-neutral-800 transition"
+            className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition"
           >
-            <X size={15} />
+            <X size={18} />
           </button>
         </div>
 
-        {/* Compose Ribbon Actions Bar */}
-        <div className="bg-[#2D2D2D] px-4 py-2 border-b border-[#3C3C3C] flex items-center justify-between shrink-0 gap-2 overflow-x-auto text-xs">
-          <div className="flex items-center space-x-2">
+        {/* Compose Action Bar */}
+        <div className="bg-white px-6 py-2.5 border-b border-slate-200 flex items-center justify-between shrink-0 gap-3 text-xs">
+          <div className="flex items-center space-x-2.5">
             
             {/* Botão Enviar Azul */}
             <button
               type="button"
               onClick={handleSend}
               disabled={isSending}
-              className="px-4 py-1.5 bg-[#0078D4] hover:bg-[#106EBE] text-white font-semibold rounded text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer disabled:opacity-50"
+              className="px-4 py-2 bg-[#0078D4] hover:bg-[#106EBE] text-white font-semibold rounded-lg text-xs flex items-center gap-2 shadow-xs transition cursor-pointer disabled:opacity-50"
             >
               {isSending ? (
-                <Loader2 size={13} className="animate-spin text-white" />
+                <Loader2 size={14} className="animate-spin text-white" />
               ) : (
-                <Send size={13} />
+                <Send size={14} />
               )}
-              <span>{isSending ? 'A enviar...' : 'Enviar'}</span>
+              <span>{isSending ? 'A enviar...' : 'Enviar Mensagem'}</span>
             </button>
 
             {/* Modelos Rápidos */}
-            <div className="flex items-center gap-1.5 bg-[#202020] px-2 py-1 rounded border border-[#3C3C3C]">
-              <Sparkles size={13} className="text-amber-400" />
+            <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+              <Sparkles size={14} className="text-amber-500" />
               <select
                 value={selectedTemplate}
                 onChange={e => handleTemplateChange(e.target.value)}
-                className="bg-transparent text-neutral-300 text-xs focus:outline-none cursor-pointer"
+                className="bg-transparent text-slate-700 text-xs font-medium focus:outline-none cursor-pointer"
               >
                 <option value="custom">Mensagem Personalizada</option>
                 <option value="proposal">Modelo: Envio de Proposta</option>
@@ -265,10 +265,10 @@ Diretoria Executiva LECASU`
                   setAttachedProposal(targetClient.proposals[0]);
                 }
               }}
-              className="px-2.5 py-1 bg-[#383838] hover:bg-[#444444] text-neutral-200 rounded border border-[#4C4C4C] text-xs flex items-center gap-1.5 transition cursor-pointer"
+              className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg border border-slate-200 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
               title="Vincular proposta cadastrada"
             >
-              <FileText size={13} className="text-orange-400" />
+              <FileText size={14} className="text-[#FF8000]" />
               <span>Anexar Proposta</span>
             </button>
           </div>
@@ -276,36 +276,36 @@ Diretoria Executiva LECASU`
           <button
             type="button"
             onClick={onClose}
-            className="text-neutral-400 hover:text-rose-400 p-1.5 rounded hover:bg-neutral-800 transition"
+            className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition"
             title="Descartar rascunho"
           >
-            <Trash2 size={14} />
+            <Trash2 size={16} />
           </button>
         </div>
 
         {/* Compose Form Fields */}
-        <form onSubmit={handleSend} className="p-4 space-y-2.5 overflow-y-auto flex-1 text-xs">
+        <form onSubmit={handleSend} className="p-6 space-y-3 overflow-y-auto flex-1 text-xs">
           
           {/* De (From) */}
-          <div className="flex items-center gap-2 border-b border-[#383838] pb-2">
-            <span className="w-16 font-semibold text-neutral-400 text-right shrink-0">De:</span>
-            <div className="flex items-center gap-2 text-neutral-200 font-mono text-[11px] bg-[#1E1E1E] px-2.5 py-1 rounded border border-[#3A3A3A] flex-1">
+          <div className="flex items-center gap-3 border-b border-slate-100 pb-2.5">
+            <span className="w-14 font-semibold text-slate-500 text-right shrink-0">De:</span>
+            <div className="flex items-center gap-2 text-slate-800 font-mono text-xs bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 flex-1">
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
               <span>{senderEmail}</span>
-              <span className="text-[10px] text-neutral-400 ml-auto">(SMTP Seguro)</span>
+              <span className="text-[11px] text-slate-400 ml-auto font-sans">(SMTP Seguro SSL)</span>
             </div>
           </div>
 
           {/* Selecionar Cliente Registado */}
-          <div className="flex items-center gap-2 border-b border-[#383838] pb-2">
-            <span className="w-16 font-semibold text-neutral-400 text-right shrink-0">Cliente:</span>
+          <div className="flex items-center gap-3 border-b border-slate-100 pb-2.5">
+            <span className="w-14 font-semibold text-slate-500 text-right shrink-0">Cliente:</span>
             <div className="flex-1 flex items-center gap-2">
               <select
                 value={selectedClientId}
                 onChange={e => handleClientChange(Number(e.target.value))}
-                className="flex-1 px-2.5 py-1.5 bg-[#1E1E1E] border border-[#3A3A3A] rounded text-white focus:outline-none focus:border-[#0078D4]"
+                className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:ring-1 focus:ring-[#0078D4] focus:bg-white transition"
               >
-                <option value="">-- Selecionar Cliente do Catálogo LECASU --</option>
+                <option value="">-- Selecionar Cliente da Base LECASU --</option>
                 {clients.map(c => (
                   <option key={c.id} value={c.id}>
                     {c.name} {c.email ? `(${c.email})` : ''}
@@ -315,7 +315,7 @@ Diretoria Executiva LECASU`
               <button
                 type="button"
                 onClick={() => setShowCc(!showCc)}
-                className="text-neutral-400 hover:text-white px-2 py-1 text-[11px] rounded hover:bg-neutral-800"
+                className="text-slate-500 hover:text-slate-900 px-2.5 py-1 text-xs font-semibold rounded-md hover:bg-slate-100 border border-slate-200"
               >
                 Cc
               </button>
@@ -323,68 +323,68 @@ Diretoria Executiva LECASU`
           </div>
 
           {/* Para (To) */}
-          <div className="flex items-center gap-2 border-b border-[#383838] pb-2">
-            <span className="w-16 font-semibold text-neutral-400 text-right shrink-0">Para:</span>
+          <div className="flex items-center gap-3 border-b border-slate-100 pb-2.5">
+            <span className="w-14 font-semibold text-slate-500 text-right shrink-0">Para:</span>
             <input
               type="email"
               required
               value={recipientEmail}
               onChange={e => setRecipientEmail(e.target.value)}
               placeholder="ex: contato@cliente.co.mz"
-              className="flex-1 px-2.5 py-1.5 bg-[#1E1E1E] border border-[#3A3A3A] rounded text-white focus:outline-none focus:border-[#0078D4]"
+              className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:ring-1 focus:ring-[#0078D4] focus:bg-white transition"
             />
           </div>
 
           {/* Cc (Opcional) */}
           {showCc && (
-            <div className="flex items-center gap-2 border-b border-[#383838] pb-2 animate-in fade-in">
-              <span className="w-16 font-semibold text-neutral-400 text-right shrink-0">Cc:</span>
+            <div className="flex items-center gap-3 border-b border-slate-100 pb-2.5 animate-in fade-in">
+              <span className="w-14 font-semibold text-slate-500 text-right shrink-0">Cc:</span>
               <input
                 type="email"
                 value={ccEmail}
                 onChange={e => setCcEmail(e.target.value)}
                 placeholder="gerencia@lecasu.co.mz"
-                className="flex-1 px-2.5 py-1.5 bg-[#1E1E1E] border border-[#3A3A3A] rounded text-white focus:outline-none focus:border-[#0078D4]"
+                className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-xs focus:outline-none focus:ring-1 focus:ring-[#0078D4] focus:bg-white transition"
               />
             </div>
           )}
 
           {/* Assunto */}
-          <div className="flex items-center gap-2 border-b border-[#383838] pb-2">
-            <span className="w-16 font-semibold text-neutral-400 text-right shrink-0">Assunto:</span>
+          <div className="flex items-center gap-3 border-b border-slate-100 pb-2.5">
+            <span className="w-14 font-semibold text-slate-500 text-right shrink-0">Assunto:</span>
             <input
               type="text"
               required
               value={subject}
               onChange={e => setSubject(e.target.value)}
-              placeholder="Digite o assunto do e-mail..."
-              className="flex-1 px-2.5 py-1.5 bg-[#1E1E1E] border border-[#3A3A3A] rounded text-white focus:outline-none focus:border-[#0078D4]"
+              placeholder="Assunto da comunicação ou orçamento..."
+              className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#0078D4] focus:bg-white transition"
             />
           </div>
 
           {/* Attached Proposal Preview Banner */}
           {attachedProposal && (
-            <div className="p-2.5 bg-[#282F3A] border border-[#0078D4]/40 rounded-lg flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded bg-rose-950/60 border border-rose-500/40 text-rose-400 flex items-center justify-center font-bold text-xs">
+            <div className="p-3 bg-orange-50/70 border border-orange-200 rounded-xl flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-xs">
                   PDF
                 </div>
                 <div>
-                  <p className="font-semibold text-white text-xs leading-tight">
+                  <p className="font-semibold text-slate-900 text-xs leading-tight">
                     Proposta_{attachedProposal.id}_{attachedProposal.title.replace(/\s+/g, '_')}.pdf
                   </p>
-                  <p className="text-[11px] text-sky-300 font-mono">
-                    Valor: {formatMZN(Number(attachedProposal.total_amount) || 0)} (Anexo Timbrado)
+                  <p className="text-[11px] text-orange-700 font-mono font-medium">
+                    Valor: {formatMZN(Number(attachedProposal.total_amount) || 0)} (Documento Timbrado LECASU)
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setAttachedProposal(null)}
-                className="text-neutral-400 hover:text-rose-400 p-1"
+                className="text-slate-400 hover:text-rose-600 p-1 rounded-md"
                 title="Remover anexo"
               >
-                <X size={14} />
+                <X size={15} />
               </button>
             </div>
           )}
@@ -396,15 +396,15 @@ Diretoria Executiva LECASU`
               required
               value={body}
               onChange={e => setBody(e.target.value)}
-              placeholder="Escreva a sua mensagem aqui..."
-              className="w-full p-3 bg-[#1B1B1B] border border-[#3A3A3A] rounded text-neutral-200 text-xs font-sans leading-relaxed focus:outline-none focus:border-[#0078D4] resize-none"
+              placeholder="Escreva a sua mensagem..."
+              className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs font-sans leading-relaxed focus:outline-none focus:ring-1 focus:ring-[#0078D4] focus:bg-white resize-none transition"
             />
           </div>
 
           {/* Error Banner */}
           {errorMessage && (
-            <div className="p-2.5 bg-rose-950/50 border border-rose-600/50 rounded flex items-center gap-2 text-rose-200 text-xs">
-              <AlertCircle size={15} className="text-rose-400 shrink-0" />
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-rose-800 text-xs font-medium">
+              <AlertCircle size={16} className="text-rose-600 shrink-0" />
               <span>{errorMessage}</span>
             </div>
           )}
@@ -412,9 +412,9 @@ Diretoria Executiva LECASU`
         </form>
 
         {/* Footer info */}
-        <div className="bg-[#1C1C1C] px-4 py-2 border-t border-[#383838] flex items-center justify-between text-[11px] text-neutral-400 shrink-0">
+        <div className="bg-slate-50 px-6 py-2.5 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 shrink-0">
           <span>Servidor SMTP Conectado</span>
-          <span className="font-mono text-neutral-500">LECASU Secure Gateway</span>
+          <span className="font-mono text-slate-400">LECASU Corporate Mail</span>
         </div>
 
       </div>

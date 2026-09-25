@@ -10,20 +10,14 @@ import {
   FileText,
   Send,
   Inbox,
-  CheckCircle2,
   Trash2,
-  Archive,
   Reply,
-  ReplyAll,
   Forward,
   Settings,
   ShieldCheck,
   Paperclip,
-  ChevronDown,
   LayoutGrid,
   Check,
-  Minimize2,
-  Maximize2,
   X
 } from 'lucide-react';
 import type { Client, ClientCreateInput, Proposal, ProposalCreateInput, ToastMessage } from '../../types';
@@ -55,18 +49,11 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // View Mode: 'outlook' (default, modern Office UI) or 'crm' (tabular CRM)
+  // View Mode: 'outlook' (default, modern clean communication center) or 'crm' (tabular CRM)
   const [viewMode, setViewMode] = useState<'outlook' | 'crm'>('outlook');
-  const [isModernOutlook, setIsModernOutlook] = useState(true);
 
-  // Active Ribbon Tab in Outlook mode
-  const [activeRibbonTab, setActiveRibbonTab] = useState<'home' | 'send_receive' | 'proposals' | 'view'>('home');
-
-  // Active Left Rail Icon: 'mail' | 'proposals' | 'contacts' | 'settings'
-  const [activeRail, setActiveRail] = useState<'mail' | 'proposals' | 'contacts' | 'settings'>('mail');
-
-  // Selected Folder in Outlook Tree
-  // 'inbox' | 'sent' | 'proposals_all' | 'proposals_pending' | 'proposals_accepted' | 'drafts' | 'trash' | 'client_[id]'
+  // Selected Folder in Tree
+  // 'inbox' | 'sent' | 'proposals_all' | 'drafts' | 'trash' | 'client_[id]'
   const [selectedFolder, setSelectedFolder] = useState<string>('inbox');
   const [messageFilterTab, setMessageFilterTab] = useState<'all' | 'unread' | 'proposals'>('all');
 
@@ -149,7 +136,6 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
 
         const seeded: EmailMessage[] = [];
         data.forEach((client, idx) => {
-          // If client has proposals, create sent & accepted records
           if (client.proposals && client.proposals.length > 0) {
             client.proposals.forEach((p, pIdx) => {
               seeded.push({
@@ -189,7 +175,6 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
               }
             });
           } else {
-            // General inquiry email
             seeded.push({
               id: `seed_inquiry_${client.id}`,
               clientId: client.id,
@@ -247,7 +232,6 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
     const created = await createProposal(payload);
     await loadClients();
 
-    // Auto-create proposal email in sent folder
     const targetClient = clients.find(c => c.id === payload.client_id);
     const newSentProposalMsg: EmailMessage = {
       id: `prop_sent_${created.id}_${Date.now()}`,
@@ -425,469 +409,169 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-100px)] min-h-[640px] font-sans select-none rounded-xl overflow-hidden border border-[#3C3C3C] shadow-2xl bg-[#1F1F1F] text-slate-100">
+    <div className="flex flex-col h-[calc(100vh-120px)] min-h-[660px] font-sans select-none rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-white text-slate-800">
       <Toast toasts={toasts} onDismiss={removeToast} />
 
       {error && (
-        <div className="bg-rose-950/80 border-b border-rose-800 text-rose-200 px-4 py-2 text-xs flex items-center justify-between">
+        <div className="bg-rose-50 border-b border-rose-200 text-rose-800 px-4 py-2 text-xs flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <AlertCircle size={14} className="text-rose-400" />
+            <AlertCircle size={15} className="text-rose-600" />
             <span>{error}</span>
           </div>
-          <button onClick={() => loadClients()} className="underline hover:text-white font-semibold">Tentar novamente</button>
+          <button onClick={() => loadClients()} className="underline hover:text-rose-950 font-semibold cursor-pointer">
+            Tentar novamente
+          </button>
         </div>
       )}
 
       {/* =========================================================================
-          1. OUTLOOK TOP WINDOW BAR (Pesquisar, Avatar, Switch Moderno)
+          1. CLEAN EXECUTIVE ACTION TOOLBAR (Sem poluição visual, paleta branca)
          ========================================================================= */}
-      <div className="bg-[#1A1A1A] text-white px-3 py-1.5 flex items-center justify-between border-b border-[#2D2D2D] shrink-0 text-xs">
+      <div className="bg-white px-4 py-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 shrink-0">
         
-        {/* Left: App Logo / Name */}
-        <div className="flex items-center space-x-2">
-          <div className="w-5 h-5 rounded bg-[#0078D4] flex items-center justify-center font-bold text-[11px] text-white shadow-xs">
-            O
-          </div>
-          <span className="font-semibold text-white tracking-wide flex items-center gap-1.5">
-            <span>Microsoft Outlook</span>
-            <span className="text-[10px] bg-[#0078D4]/20 text-[#0078D4] px-1.5 py-0.2 rounded font-mono">LECASU ERP</span>
-          </span>
+        {/* Left Action Buttons */}
+        <div className="flex items-center gap-2 flex-wrap">
+          
+          {/* + Novo E-mail */}
+          <button
+            type="button"
+            onClick={() => handleOpenCompose()}
+            className="px-3.5 py-2 bg-[#0078D4] hover:bg-[#106EBE] text-white font-semibold rounded-lg text-xs flex items-center gap-2 shadow-xs transition cursor-pointer active:scale-95"
+            title="Compor Novo E-mail (Ctrl+N)"
+          >
+            <Mail size={15} />
+            <span>Novo E-mail</span>
+          </button>
 
-          <div className="h-3 w-px bg-neutral-700 mx-1" />
+          {/* + Nova Proposta */}
+          <button
+            type="button"
+            onClick={() => setIsProposalModalOpen(true)}
+            className="px-3.5 py-2 bg-[#FFF2E5] hover:bg-[#FFE5CC] text-[#FF8000] border border-[#FFD9B3] font-semibold rounded-lg text-xs flex items-center gap-2 transition cursor-pointer active:scale-95"
+            title="Elaborar Proposta Comercial para Cliente"
+          >
+            <FileSpreadsheet size={15} className="text-[#FF8000]" />
+            <span>+ Proposta</span>
+          </button>
 
-          {/* Quick Action Icons */}
+          {/* + Novo Cliente */}
+          <button
+            type="button"
+            onClick={() => setIsClientModalOpen(true)}
+            className="px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-semibold rounded-lg text-xs flex items-center gap-2 transition cursor-pointer"
+            title="Registar Novo Cliente no ERP"
+          >
+            <Users size={15} className="text-slate-600" />
+            <span>+ Cliente</span>
+          </button>
+
+          <div className="h-5 w-px bg-slate-200 mx-1 hidden sm:block" />
+
+          {/* Sincronizar */}
           <button
             type="button"
             onClick={() => loadClients(true)}
-            className="p-1 text-neutral-400 hover:text-white rounded hover:bg-neutral-800 transition"
+            className="p-2 text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-100 transition cursor-pointer border border-transparent hover:border-slate-200"
             title="Enviar / Receber (F9)"
           >
-            <RefreshCw size={13} className={isLoading ? 'animate-spin text-[#0078D4]' : ''} />
+            <RefreshCw size={15} className={isLoading ? 'animate-spin text-[#0078D4]' : ''} />
           </button>
-        </div>
 
-        {/* Center: Outlook Global Search Bar */}
-        <div className="relative w-80 sm:w-96 max-w-md">
-          <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Pesquisar clientes, propostas ou e-mails... (Ctrl+E)"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-7 py-1 bg-[#2C2C2C] hover:bg-[#333333] focus:bg-[#252525] border border-transparent focus:border-[#0078D4] rounded-md text-[11px] text-white placeholder-neutral-400 focus:outline-none transition"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white"
-            >
-              <X size={12} />
-            </button>
-          )}
-        </div>
-
-        {/* Right: Switch "Experimente o novo Outlook" & User Avatar */}
-        <div className="flex items-center space-x-3">
-          
-          {/* Switch: Experimente o novo Outlook */}
-          <div className="hidden md:flex items-center space-x-2 text-[11px] text-neutral-300">
-            <span>Experimente o novo Outlook</span>
-            <button
-              type="button"
-              onClick={() => setIsModernOutlook(!isModernOutlook)}
-              className={`w-9 h-4.5 rounded-full transition-colors relative cursor-pointer ${
-                isModernOutlook ? 'bg-[#0078D4]' : 'bg-neutral-600'
-              }`}
-            >
-              <span
-                className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 transition-transform ${
-                  isModernOutlook ? 'right-0.5' : 'left-0.5'
-                }`}
-              />
-            </button>
-          </div>
-
-          <div className="h-4 w-px bg-neutral-700 hidden md:block" />
-
-          {/* Account Avatar */}
-          <div 
-            onClick={() => setIsEmailConfigModalOpen(true)}
-            className="flex items-center space-x-1.5 cursor-pointer p-0.5 rounded hover:bg-neutral-800 transition"
-            title={`Conta conectada: ${emailConfig.email} (Clique para configurar)`}
-          >
-            <div className="w-6 h-6 rounded-full bg-orange-600 text-white font-bold flex items-center justify-center text-[11px] border border-orange-400 shadow-xs">
-              J
-            </div>
-            <span className="text-[11px] font-medium text-neutral-200 hidden lg:inline truncate max-w-[120px]">
-              {emailConfig.email.split('@')[0]}
-            </span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="Online & Conectado" />
-          </div>
-
-          {/* Window control buttons */}
-          <div className="flex items-center space-x-1 text-neutral-400">
-            <span className="p-1 hover:text-white cursor-pointer"><Minimize2 size={11} /></span>
-            <span className="p-1 hover:text-white cursor-pointer"><Maximize2 size={11} /></span>
-          </div>
-
-        </div>
-
-      </div>
-
-      {/* =========================================================================
-          2. OUTLOOK RIBBON (Faixa de Opções Superior)
-         ========================================================================= */}
-      <div className="bg-[#2B2B2B] text-slate-200 border-b border-[#3C3C3C] shrink-0 text-xs">
-        
-        {/* Ribbon Tab Bar */}
-        <div className="flex items-center space-x-0.5 px-2 pt-1 border-b border-[#333333] text-[11px]">
+          {/* Configuração de E-mail (SMTP/IMAP) */}
           <button
             type="button"
             onClick={() => setIsEmailConfigModalOpen(true)}
-            className="px-3 py-1 font-semibold text-neutral-300 hover:text-white transition"
+            className="px-2.5 py-1.5 text-xs text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition cursor-pointer flex items-center gap-1.5 border border-slate-200 bg-slate-50/50"
+            title="Configurar Protocolos SMTP, IMAP, POP3 e Conta Google"
           >
-            Arquivo
+            <Settings size={14} className="text-slate-500" />
+            <span className="hidden md:inline font-medium">Contas</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500" title="SMTP Conectado" />
           </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveRibbonTab('home')}
-            className={`px-3 py-1 font-semibold transition border-b-2 ${
-              activeRibbonTab === 'home'
-                ? 'border-[#0078D4] text-white bg-[#333333]'
-                : 'border-transparent text-neutral-400 hover:text-white'
-            }`}
-          >
-            Página Inicial
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveRibbonTab('send_receive')}
-            className={`px-3 py-1 font-semibold transition border-b-2 ${
-              activeRibbonTab === 'send_receive'
-                ? 'border-[#0078D4] text-white bg-[#333333]'
-                : 'border-transparent text-neutral-400 hover:text-white'
-            }`}
-          >
-            Enviar/Receber
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveRibbonTab('proposals')}
-            className={`px-3 py-1 font-semibold transition border-b-2 ${
-              activeRibbonTab === 'proposals'
-                ? 'border-[#0078D4] text-white bg-[#333333]'
-                : 'border-transparent text-neutral-400 hover:text-white'
-            }`}
-          >
-            Propostas & Contratos
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveRibbonTab('view')}
-            className={`px-3 py-1 font-semibold transition border-b-2 ${
-              activeRibbonTab === 'view'
-                ? 'border-[#0078D4] text-white bg-[#333333]'
-                : 'border-transparent text-neutral-400 hover:text-white'
-            }`}
-          >
-            Exibir
-          </button>
-
-          {/* Quick CRM Mode Toggle in Ribbon */}
-          <div className="ml-auto flex items-center gap-1.5 pb-0.5">
-            <button
-              type="button"
-              onClick={() => setViewMode(viewMode === 'outlook' ? 'crm' : 'outlook')}
-              className="px-2 py-0.5 rounded text-[11px] font-semibold bg-[#3A3A3A] hover:bg-[#444444] text-white border border-[#4C4C4C] transition flex items-center gap-1.5 cursor-pointer"
-            >
-              <LayoutGrid size={12} className="text-orange-400" />
-              <span>{viewMode === 'outlook' ? 'Ver Tabela CRM' : 'Ver Modo Outlook'}</span>
-            </button>
-          </div>
         </div>
 
-        {/* Ribbon Content Bar (matching the user reference image) */}
-        <div className="px-3 py-1.5 flex items-center gap-2 overflow-x-auto scrollbar-none text-[11px]">
+        {/* Right Actions: Search + View Switcher */}
+        <div className="flex items-center gap-3">
           
-          {/* Group 1: NOVO */}
-          <div className="flex items-center space-x-1 pr-2 border-r border-[#3D3D3D]">
-            
-            {/* Novo Email (Grande Botão) */}
-            <button
-              type="button"
-              onClick={() => handleOpenCompose()}
-              className="flex flex-col items-center justify-center px-2.5 py-1 rounded bg-[#0078D4] hover:bg-[#106EBE] text-white shadow-xs transition cursor-pointer group active:scale-95"
-              title="Compor Novo E-mail (Ctrl+N)"
-            >
-              <div className="flex items-center gap-1">
-                <Mail size={15} />
-                <span className="font-bold">Novo</span>
-              </div>
-              <span className="text-[10px] opacity-90">Email</span>
-            </button>
-
-            {/* Nova Proposta */}
-            <button
-              type="button"
-              onClick={() => setIsProposalModalOpen(true)}
-              className="flex flex-col items-center justify-center px-2 py-1 rounded hover:bg-white/10 text-neutral-200 transition cursor-pointer"
-              title="Elaborar Proposta Comercial para Cliente"
-            >
-              <FileSpreadsheet size={15} className="text-orange-400" />
-              <span className="text-[10px] mt-0.5 font-medium">+ Proposta</span>
-            </button>
-
-            {/* Novo Cliente */}
-            <button
-              type="button"
-              onClick={() => setIsClientModalOpen(true)}
-              className="flex flex-col items-center justify-center px-2 py-1 rounded hover:bg-white/10 text-neutral-200 transition cursor-pointer"
-              title="Registar Novo Cliente no ERP"
-            >
-              <Users size={15} className="text-emerald-400" />
-              <span className="text-[10px] mt-0.5 font-medium">+ Cliente</span>
-            </button>
-          </div>
-
-          {/* Group 2: EXCLUIR */}
-          <div className="flex items-center space-x-1 pr-2 border-r border-[#3D3D3D]">
-            <button
-              type="button"
-              disabled={!currentItem}
-              onClick={() => currentItem && handleDeleteItem(currentItem.id)}
-              className="flex flex-col items-center justify-center px-2 py-1 rounded hover:bg-rose-500/20 text-neutral-200 hover:text-rose-300 transition cursor-pointer disabled:opacity-40"
-              title="Excluir item selecionado"
-            >
-              <Trash2 size={14} className="text-rose-400" />
-              <span className="text-[10px] mt-0.5">Excluir</span>
-            </button>
-
-            <button
-              type="button"
-              disabled={!currentItem}
-              onClick={() => addToast('info', 'Item Arquivado', 'Mensagem transferida para o arquivo histórico.')}
-              className="flex flex-col items-center justify-center px-2 py-1 rounded hover:bg-white/10 text-neutral-200 transition cursor-pointer disabled:opacity-40"
-              title="Arquivar"
-            >
-              <Archive size={14} />
-              <span className="text-[10px] mt-0.5">Arquivar</span>
-            </button>
-          </div>
-
-          {/* Group 3: RESPONDER */}
-          <div className="flex items-center space-x-1 pr-2 border-r border-[#3D3D3D]">
-            <button
-              type="button"
-              disabled={!currentItem}
-              onClick={() => currentItem && handleOpenCompose(clients.find(c => c.id === currentItem.clientId))}
-              className="flex flex-col items-center justify-center px-2 py-1 rounded hover:bg-white/10 text-neutral-200 transition cursor-pointer disabled:opacity-40"
-              title="Responder ao remetente"
-            >
-              <Reply size={14} />
-              <span className="text-[10px] mt-0.5">Responder</span>
-            </button>
-
-            <button
-              type="button"
-              disabled={!currentItem}
-              onClick={() => currentItem && handleOpenCompose(clients.find(c => c.id === currentItem.clientId))}
-              className="flex flex-col items-center justify-center px-2 py-1 rounded hover:bg-white/10 text-neutral-200 transition cursor-pointer disabled:opacity-40"
-              title="Responder a todos"
-            >
-              <ReplyAll size={14} />
-              <span className="text-[10px] mt-0.5">A Todos</span>
-            </button>
-
-            <button
-              type="button"
-              disabled={!currentItem}
-              onClick={() => addToast('info', 'Encaminhar', 'Selecione o destinatário para encaminhar.')}
-              className="flex flex-col items-center justify-center px-2 py-1 rounded hover:bg-white/10 text-neutral-200 transition cursor-pointer disabled:opacity-40"
-              title="Encaminhar e-mail"
-            >
-              <Forward size={14} />
-              <span className="text-[10px] mt-0.5">Encaminhar</span>
-            </button>
-          </div>
-
-          {/* Group 4: ETAPAS RÁPIDAS & MARCAS */}
-          <div className="flex items-center space-x-1 pr-2 border-r border-[#3D3D3D]">
-            <button
-              type="button"
-              disabled={!currentItem}
-              onClick={() => currentItem && handleToggleRead(currentItem.id)}
-              className="flex flex-col items-center justify-center px-2 py-1 rounded hover:bg-white/10 text-neutral-200 transition cursor-pointer disabled:opacity-40"
-              title="Marcar como Lido/Não Lido"
-            >
-              <Mail size={14} className={currentItem?.isRead ? 'text-neutral-400' : 'text-[#0078D4]'} />
-              <span className="text-[10px] mt-0.5">Não Lido/Lido</span>
-            </button>
-
-            {currentItem?.attachedProposalId && (
+          {/* Clean Search Input */}
+          <div className="relative w-56 sm:w-64">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Pesquisar mensagens ou clientes..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-8 pr-7 py-1.5 bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 focus:border-[#0078D4] rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none transition"
+            />
+            {searchQuery && (
               <button
                 type="button"
-                onClick={() => {
-                  const prop = allProposals.find(p => p.proposal.id === currentItem.attachedProposalId);
-                  if (prop) handleConvertToProject(prop.proposal);
-                }}
-                className="flex flex-col items-center justify-center px-2 py-1 rounded bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 transition cursor-pointer"
-                title="Aprovar Proposta e Gerar Projeto Executivo no Módulo 04"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
               >
-                <CheckCircle2 size={14} className="text-emerald-400" />
-                <span className="text-[10px] mt-0.5 font-bold">Aprovar Proposta</span>
+                <X size={13} />
               </button>
             )}
           </div>
 
-          {/* Group 5: LOCALIZAR & CLIENTES */}
-          <div className="flex items-center space-x-1 pr-2 border-r border-[#3D3D3D]">
-            <button
-              type="button"
-              onClick={() => setActiveRail('contacts')}
-              className="flex flex-col items-center justify-center px-2 py-1 rounded hover:bg-white/10 text-neutral-200 transition cursor-pointer"
-              title="Catálogo de Endereços & Clientes"
-            >
-              <Users size={14} className="text-sky-400" />
-              <span className="text-[10px] mt-0.5">Catálogo Clientes</span>
-            </button>
-          </div>
-
-          {/* Group 6: CONFIGURAR CONTA SMTP/IMAP */}
-          <div className="flex items-center space-x-1 pr-2 border-r border-[#3D3D3D]">
-            <button
-              type="button"
-              onClick={() => setIsEmailConfigModalOpen(true)}
-              className="flex flex-col items-center justify-center px-2 py-1 rounded hover:bg-white/10 text-neutral-200 transition cursor-pointer"
-              title="Configurar Protocolos SMTP, IMAP, POP3 e Conta Google"
-            >
-              <Settings size={14} className="text-amber-400" />
-              <span className="text-[10px] mt-0.5">Contas de Correio</span>
-            </button>
-          </div>
-
-          {/* Group 7: ENVIAR/RECEBER */}
-          <div className="flex items-center space-x-1">
-            <button
-              type="button"
-              onClick={() => loadClients(true)}
-              className="flex flex-col items-center justify-center px-2.5 py-1 rounded hover:bg-white/10 text-neutral-200 transition cursor-pointer"
-              title="Enviar/Receber Todas as Pastas (F9)"
-            >
-              <RefreshCw size={14} className={`text-emerald-400 ${isLoading ? 'animate-spin' : ''}`} />
-              <span className="text-[10px] mt-0.5 font-semibold">Enviar/Receber</span>
-            </button>
-          </div>
+          {/* Toggle View Mode */}
+          <button
+            type="button"
+            onClick={() => setViewMode(viewMode === 'outlook' ? 'crm' : 'outlook')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition flex items-center gap-1.5 cursor-pointer ${
+              viewMode === 'crm'
+                ? 'bg-slate-800 text-white border-slate-800'
+                : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-2xs'
+            }`}
+            title="Alternar entre visão de Correio/Propostas e visão Tabular CRM"
+          >
+            <LayoutGrid size={13} className={viewMode === 'crm' ? 'text-orange-400' : 'text-slate-500'} />
+            <span className="hidden sm:inline">{viewMode === 'outlook' ? 'Modo Tabela CRM' : 'Modo Correio'}</span>
+          </button>
 
         </div>
 
       </div>
 
       {/* =========================================================================
-          3. CORPO PRINCIPAL DO OUTLOOK (Barra Vertical + Pastas + Lista + Leitor)
+          2. WORKSPACE EM 3 COLUNAS (Espaçoso, Visual Limpo, Sem Sufoco)
          ========================================================================= */}
       {viewMode === 'outlook' ? (
-        <div className="flex flex-1 min-h-0 overflow-hidden bg-[#242424]">
+        <div className="flex flex-1 min-h-0 overflow-hidden bg-white">
           
           {/* ---------------------------------------------------------------------
-              3.1 BARRA VERTICAL DE APLICATIVOS (Left-most Rail - Outlook Style)
+              COLUNA 1: PASTAS & CLIENTES (Limpo, Background Suave #FAFAF9)
              --------------------------------------------------------------------- */}
-          <div className="w-11 bg-[#1A1A1A] border-r border-[#2D2D2D] flex flex-col items-center py-2.5 space-y-3 shrink-0">
+          <div className="w-56 sm:w-60 bg-[#FAFAF9] border-r border-slate-200 flex flex-col shrink-0 min-h-0 overflow-y-auto text-xs">
             
-            {/* Ícone Correio */}
-            <button
-              type="button"
-              onClick={() => setActiveRail('mail')}
-              className={`p-2 rounded-lg transition cursor-pointer ${
-                activeRail === 'mail'
-                  ? 'bg-[#0078D4] text-white shadow-xs'
-                  : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-              }`}
-              title="Correio & E-mails"
-            >
-              <Mail size={17} />
-            </button>
-
-            {/* Ícone Propostas Comerciais */}
-            <button
-              type="button"
-              onClick={() => {
-                setActiveRail('proposals');
-                setSelectedFolder('proposals_all');
-              }}
-              className={`p-2 rounded-lg transition cursor-pointer ${
-                activeRail === 'proposals'
-                  ? 'bg-[#0078D4] text-white shadow-xs'
-                  : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-              }`}
-              title="Propostas Comerciais"
-            >
-              <FileSpreadsheet size={17} />
-            </button>
-
-            {/* Ícone Pessoas / Clientes */}
-            <button
-              type="button"
-              onClick={() => setActiveRail('contacts')}
-              className={`p-2 rounded-lg transition cursor-pointer ${
-                activeRail === 'contacts'
-                  ? 'bg-[#0078D4] text-white shadow-xs'
-                  : 'text-neutral-400 hover:text-white hover:bg-neutral-800'
-              }`}
-              title="Clientes & Catálogo de Contatos"
-            >
-              <Users size={17} />
-            </button>
-
-            {/* Ícone Configurações de E-mail */}
-            <div className="mt-auto">
-              <button
-                type="button"
-                onClick={() => setIsEmailConfigModalOpen(true)}
-                className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition cursor-pointer"
-                title="Configurações de Conta SMTP / IMAP / Google"
-              >
-                <Settings size={17} />
-              </button>
-            </div>
-          </div>
-
-          {/* ---------------------------------------------------------------------
-              3.2 PAINEL DE PASTAS / ÁRVORE DE DIRETÓRIOS (Pane 1)
-             --------------------------------------------------------------------- */}
-          <div className="w-56 sm:w-64 bg-[#1F1F1F] border-r border-[#2E2E2E] flex flex-col shrink-0 min-h-0 overflow-y-auto text-xs">
-            
-            {/* Header da Conta Conectada */}
-            <div className="p-3 border-b border-[#2E2E2E] flex items-center justify-between">
-              <div className="truncate">
-                <p className="font-bold text-white text-xs truncate leading-tight">
+            {/* Account Card */}
+            <div className="p-3.5 border-b border-slate-200 flex items-center justify-between bg-white">
+              <div className="min-w-0 pr-1">
+                <p className="font-bold text-slate-900 text-xs truncate leading-tight">
                   {emailConfig.displayName}
                 </p>
-                <p className="text-[11px] text-neutral-400 font-mono truncate">
+                <p className="text-[11px] text-slate-500 font-mono truncate">
                   {emailConfig.email}
                 </p>
               </div>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="SMTP/IMAP Ativo" />
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 shadow-2xs" title="Servidor Ativo" />
             </div>
 
-            {/* Árvore de Pastas do Correio */}
-            <div className="p-2 space-y-0.5">
+            {/* Pastas de Correio */}
+            <div className="p-2 space-y-1">
               
               {/* Caixa de Entrada */}
               <div
                 onClick={() => setSelectedFolder('inbox')}
-                className={`flex items-center justify-between px-2.5 py-1.5 rounded-md cursor-pointer transition ${
+                className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition ${
                   selectedFolder === 'inbox'
-                    ? 'bg-[#333333] text-white font-bold'
-                    : 'text-neutral-300 hover:bg-[#2A2A2A] hover:text-white'
+                    ? 'bg-[#EBF3FB] text-[#0078D4] font-bold shadow-2xs'
+                    : 'text-slate-700 hover:bg-slate-200/50'
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <Inbox size={14} className="text-sky-400" />
+                <div className="flex items-center gap-2.5">
+                  <Inbox size={15} className={selectedFolder === 'inbox' ? 'text-[#0078D4]' : 'text-slate-500'} />
                   <span>Caixa de Entrada</span>
                 </div>
                 {inboxUnreadCount > 0 && (
@@ -900,33 +584,33 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
               {/* Itens Enviados */}
               <div
                 onClick={() => setSelectedFolder('sent')}
-                className={`flex items-center justify-between px-2.5 py-1.5 rounded-md cursor-pointer transition ${
+                className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition ${
                   selectedFolder === 'sent'
-                    ? 'bg-[#333333] text-white font-bold'
-                    : 'text-neutral-300 hover:bg-[#2A2A2A] hover:text-white'
+                    ? 'bg-[#EBF3FB] text-[#0078D4] font-bold shadow-2xs'
+                    : 'text-slate-700 hover:bg-slate-200/50'
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <Send size={14} className="text-emerald-400" />
+                <div className="flex items-center gap-2.5">
+                  <Send size={15} className={selectedFolder === 'sent' ? 'text-[#0078D4]' : 'text-slate-500'} />
                   <span>Itens Enviados</span>
                 </div>
-                <span className="text-[10px] text-neutral-500 font-mono">{sentCount}</span>
+                <span className="text-[10px] text-slate-400 font-mono">{sentCount}</span>
               </div>
 
               {/* Propostas Comerciais */}
               <div
                 onClick={() => setSelectedFolder('proposals_all')}
-                className={`flex items-center justify-between px-2.5 py-1.5 rounded-md cursor-pointer transition ${
+                className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition ${
                   selectedFolder === 'proposals_all'
-                    ? 'bg-[#333333] text-white font-bold'
-                    : 'text-neutral-300 hover:bg-[#2A2A2A] hover:text-white'
+                    ? 'bg-[#FFF2E5] text-[#FF8000] font-bold shadow-2xs'
+                    : 'text-slate-700 hover:bg-slate-200/50'
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <FileSpreadsheet size={14} className="text-orange-400" />
+                <div className="flex items-center gap-2.5">
+                  <FileSpreadsheet size={15} className={selectedFolder === 'proposals_all' ? 'text-[#FF8000]' : 'text-slate-500'} />
                   <span>Propostas Comerciais</span>
                 </div>
-                <span className="bg-orange-500/20 text-orange-400 border border-orange-500/30 text-[10px] font-bold px-1.5 py-0.2 rounded-full">
+                <span className="bg-orange-100 text-orange-700 text-[10px] font-bold px-1.5 py-0.2 rounded-full">
                   {allProposals.length}
                 </span>
               </div>
@@ -934,14 +618,14 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
               {/* Rascunhos */}
               <div
                 onClick={() => setSelectedFolder('drafts')}
-                className={`flex items-center justify-between px-2.5 py-1.5 rounded-md cursor-pointer transition ${
+                className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition ${
                   selectedFolder === 'drafts'
-                    ? 'bg-[#333333] text-white font-bold'
-                    : 'text-neutral-300 hover:bg-[#2A2A2A] hover:text-white'
+                    ? 'bg-[#EBF3FB] text-[#0078D4] font-bold shadow-2xs'
+                    : 'text-slate-700 hover:bg-slate-200/50'
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <FileText size={14} className="text-neutral-400" />
+                <div className="flex items-center gap-2.5">
+                  <FileText size={15} className="text-slate-500" />
                   <span>Rascunhos</span>
                 </div>
               </div>
@@ -949,29 +633,29 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
               {/* Lixeira */}
               <div
                 onClick={() => setSelectedFolder('trash')}
-                className={`flex items-center justify-between px-2.5 py-1.5 rounded-md cursor-pointer transition ${
+                className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition ${
                   selectedFolder === 'trash'
-                    ? 'bg-[#333333] text-white font-bold'
-                    : 'text-neutral-300 hover:bg-[#2A2A2A] hover:text-white'
+                    ? 'bg-rose-50 text-rose-700 font-bold shadow-2xs'
+                    : 'text-slate-700 hover:bg-slate-200/50'
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <Trash2 size={14} className="text-rose-400" />
+                <div className="flex items-center gap-2.5">
+                  <Trash2 size={15} className="text-slate-500" />
                   <span>Lixeira</span>
                 </div>
               </div>
             </div>
 
-            {/* Divisor & Seção de Clientes */}
-            <div className="mt-2 pt-2 border-t border-[#2E2E2E] px-3 pb-1 flex items-center justify-between text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
-              <span>Clientes Cadastrados</span>
+            {/* Clientes Registados (Filtro Direto) */}
+            <div className="mt-3 pt-3 border-t border-slate-200 px-3.5 pb-1 flex items-center justify-between text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+              <span>Clientes ({clients.length})</span>
               <button
                 type="button"
                 onClick={() => setIsClientModalOpen(true)}
-                className="text-neutral-400 hover:text-white p-0.5"
+                className="text-slate-400 hover:text-slate-700 p-0.5 cursor-pointer"
                 title="Novo Cliente"
               >
-                <Plus size={13} />
+                <Plus size={14} />
               </button>
             </div>
 
@@ -983,22 +667,22 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
                   <div
                     key={client.id}
                     onClick={() => setSelectedFolder(`client_${client.id}`)}
-                    className={`flex items-center justify-between px-2.5 py-1.5 rounded-md cursor-pointer transition ${
+                    className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg cursor-pointer transition ${
                       isSelected
-                        ? 'bg-[#333333] text-white font-bold'
-                        : 'text-neutral-300 hover:bg-[#2A2A2A] hover:text-white'
+                        ? 'bg-white text-slate-900 font-bold shadow-xs border border-slate-200'
+                        : 'text-slate-600 hover:bg-slate-200/50'
                     }`}
                     title={client.name}
                   >
                     <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-4 h-4 rounded bg-neutral-700 text-neutral-300 font-bold text-[9px] flex items-center justify-center shrink-0">
+                      <div className="w-5 h-5 rounded-md bg-slate-200 text-slate-700 font-bold text-[10px] flex items-center justify-center shrink-0">
                         {client.name.substring(0, 1)}
                       </div>
-                      <span className="truncate text-xs">{truncate45(client.name, 22)}</span>
+                      <span className="truncate text-xs">{truncate45(client.name, 20)}</span>
                     </div>
 
                     {clientProposalsCount > 0 && (
-                      <span className="text-[10px] text-orange-400 font-mono ml-1 shrink-0">
+                      <span className="text-[10px] text-orange-600 font-mono font-semibold ml-1 shrink-0 bg-orange-50 px-1 rounded">
                         {clientProposalsCount}p
                       </span>
                     )}
@@ -1007,32 +691,32 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
               })}
             </div>
 
-            {/* Rodapé do Painel Esquerdo */}
-            <div className="p-2.5 bg-[#1A1A1A] border-t border-[#2E2E2E] text-[11px] text-neutral-400 flex items-center justify-between shrink-0">
-              <span className="flex items-center gap-1.5">
-                <ShieldCheck size={13} className="text-emerald-400" />
+            {/* Rodapé da Coluna 1 */}
+            <div className="p-3 bg-white border-t border-slate-200 text-xs text-slate-500 flex items-center justify-between shrink-0">
+              <span className="flex items-center gap-1.5 text-[11px]">
+                <ShieldCheck size={14} className="text-emerald-600" />
                 <span>IMAP 993 (SSL)</span>
               </span>
-              <span className="text-[10px] text-neutral-500 font-mono">OK</span>
+              <span className="text-[10px] text-emerald-600 font-bold">Ativo</span>
             </div>
 
           </div>
 
           {/* ---------------------------------------------------------------------
-              3.3 LISTA DE MENSAGENS / PROPOSTAS (Pane 2 - Outlook Style)
+              COLUNA 2: LISTA DE MENSAGENS / PROPOSTAS (w-72 a w-80, Fundo Branco)
              --------------------------------------------------------------------- */}
-          <div className="w-80 sm:w-96 bg-[#212121] border-r border-[#2E2E2E] flex flex-col shrink-0 min-h-0 overflow-hidden text-xs">
+          <div className="w-72 sm:w-80 bg-white border-r border-slate-200 flex flex-col shrink-0 min-h-0 overflow-hidden text-xs">
             
-            {/* Header da Lista: Abas 'Todas' | 'Não lidos' | 'Propostas' */}
-            <div className="p-2.5 border-b border-[#2E2E2E] bg-[#1F1F1F] flex items-center justify-between shrink-0">
-              <div className="flex items-center space-x-2 text-xs font-semibold">
+            {/* Header com Abas Limpas */}
+            <div className="px-4 py-2.5 border-b border-slate-200 flex items-center justify-between shrink-0 bg-white">
+              <div className="flex items-center space-x-3 text-xs font-semibold">
                 <button
                   type="button"
                   onClick={() => setMessageFilterTab('all')}
-                  className={`pb-1 border-b-2 transition ${
+                  className={`pb-1 border-b-2 transition cursor-pointer ${
                     messageFilterTab === 'all'
-                      ? 'border-[#0078D4] text-white'
-                      : 'border-transparent text-neutral-400 hover:text-white'
+                      ? 'border-[#0078D4] text-[#0078D4]'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
                   }`}
                 >
                   Todas
@@ -1041,10 +725,10 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setMessageFilterTab('unread')}
-                  className={`pb-1 border-b-2 transition ${
+                  className={`pb-1 border-b-2 transition cursor-pointer ${
                     messageFilterTab === 'unread'
-                      ? 'border-[#0078D4] text-white'
-                      : 'border-transparent text-neutral-400 hover:text-white'
+                      ? 'border-[#0078D4] text-[#0078D4]'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
                   }`}
                 >
                   Não lidos
@@ -1053,29 +737,26 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setMessageFilterTab('proposals')}
-                  className={`pb-1 border-b-2 transition ${
+                  className={`pb-1 border-b-2 transition cursor-pointer ${
                     messageFilterTab === 'proposals'
-                      ? 'border-[#0078D4] text-white'
-                      : 'border-transparent text-neutral-400 hover:text-white'
+                      ? 'border-[#0078D4] text-[#0078D4]'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
                   }`}
                 >
                   Propostas
                 </button>
               </div>
 
-              <div className="flex items-center space-x-1 text-[11px] text-neutral-400 font-medium">
-                <span>Por Data</span>
-                <ChevronDown size={12} />
-              </div>
+              <span className="text-[11px] text-slate-400 font-medium">Por Data</span>
             </div>
 
-            {/* Lista com Scroll */}
-            <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-[#2B2B2B]">
+            {/* Lista de Mensagens */}
+            <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-slate-100">
               {filteredMessages.length === 0 ? (
-                <div className="p-8 text-center text-neutral-500">
-                  <Mail size={32} className="mx-auto mb-2 opacity-40" />
-                  <p className="font-semibold text-neutral-400 text-xs">Não encontramos nada para mostrar aqui.</p>
-                  <p className="text-[11px] mt-1">Selecione outra pasta ou crie uma nova proposta.</p>
+                <div className="p-8 text-center text-slate-400">
+                  <Mail size={32} className="mx-auto mb-2 opacity-30 text-slate-400" />
+                  <p className="font-semibold text-slate-600 text-xs">Nenhuma mensagem nesta pasta</p>
+                  <p className="text-[11px] mt-1 text-slate-400">Envie um e-mail ou crie uma proposta.</p>
                 </div>
               ) : (
                 filteredMessages.map(msg => {
@@ -1087,49 +768,47 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
                         setSelectedItemId(msg.id);
                         if (!msg.isRead) handleToggleRead(msg.id);
                       }}
-                      className={`p-3 cursor-pointer transition relative group ${
+                      className={`p-3.5 cursor-pointer transition relative ${
                         isSelected
-                          ? 'bg-[#333333] border-l-4 border-[#0078D4]'
-                          : 'hover:bg-[#282828] border-l-4 border-transparent'
+                          ? 'bg-[#F2F7FD] border-l-4 border-[#0078D4]'
+                          : 'hover:bg-slate-50 border-l-4 border-transparent'
                       }`}
                     >
                       {/* Remetente & Data */}
-                      <div className="flex items-center justify-between mb-0.5">
+                      <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-1.5 truncate">
                           {!msg.isRead && (
                             <span className="w-2 h-2 rounded-full bg-[#0078D4] shrink-0" />
                           )}
-                          <span className={`text-xs truncate ${!msg.isRead ? 'font-bold text-white' : 'font-medium text-neutral-200'}`}>
+                          <span className={`text-xs truncate ${!msg.isRead ? 'font-bold text-slate-900' : 'font-semibold text-slate-700'}`}>
                             {truncate45(msg.clientName || msg.from, 28)}
                           </span>
                         </div>
-                        <span className="text-[10px] text-neutral-400 shrink-0 font-mono ml-2">
+                        <span className="text-[11px] text-slate-400 shrink-0 font-mono ml-2">
                           {formatOutlookDate(msg.date)}
                         </span>
                       </div>
 
                       {/* Assunto */}
-                      <div className="flex items-center gap-1 mb-1">
-                        <p className={`text-xs truncate leading-snug ${!msg.isRead ? 'font-bold text-white' : 'text-neutral-300'}`}>
-                          {truncate45(msg.subject, 42)}
-                        </p>
-                      </div>
-
-                      {/* Snippet do Corpo */}
-                      <p className="text-[11px] text-neutral-400 line-clamp-2 leading-relaxed">
-                        {truncate45(msg.body.replace(/\n+/g, ' '), 80)}
+                      <p className={`text-xs truncate mb-1 ${!msg.isRead ? 'font-semibold text-slate-900' : 'text-slate-600'}`}>
+                        {truncate45(msg.subject, 38)}
                       </p>
 
-                      {/* Tags & Propostas Anexas */}
+                      {/* Snippet do Texto */}
+                      <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
+                        {truncate45(msg.body.replace(/\n+/g, ' '), 70)}
+                      </p>
+
+                      {/* Tag de Proposta Comercial Anexa */}
                       {msg.attachedProposalId && (
-                        <div className="mt-2 flex items-center justify-between pt-1 border-t border-[#353535] text-[10px]">
-                          <span className="inline-flex items-center gap-1 text-orange-400 font-semibold">
-                            <FileSpreadsheet size={11} />
+                        <div className="mt-2.5 flex items-center justify-between pt-1.5 border-t border-slate-100 text-[10px]">
+                          <span className="inline-flex items-center gap-1 text-[#FF8000] font-semibold bg-orange-50 px-2 py-0.5 rounded border border-orange-200">
+                            <FileSpreadsheet size={12} />
                             <span>Proposta #{msg.attachedProposalId}</span>
                           </span>
 
                           {msg.attachedProposalAmount && (
-                            <span className="font-mono text-emerald-400 font-bold">
+                            <span className="font-mono text-emerald-700 font-bold text-[11px]">
                               {formatMZN(msg.attachedProposalAmount)}
                             </span>
                           )}
@@ -1142,127 +821,136 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
             </div>
 
             {/* Contador de Itens */}
-            <div className="p-2 bg-[#1A1A1A] border-t border-[#2E2E2E] text-[10px] text-neutral-400 flex items-center justify-between shrink-0">
+            <div className="p-2.5 bg-slate-50 border-t border-slate-200 text-[11px] text-slate-500 flex items-center justify-between shrink-0">
               <span>{filteredMessages.length} mensagem(ns)</span>
-              <span>Outlook Sync: Ativo</span>
+              <span>Sincronizado</span>
             </div>
 
           </div>
 
           {/* ---------------------------------------------------------------------
-              3.4 PAINEL DE LEITURA & AÇÃO (Pane 3 - Visualizador de E-mail / Proposta)
+              COLUNA 3: PAINEL DE LEITURA & PROPOSTA (Espaçoso, Visual Limpo)
              --------------------------------------------------------------------- */}
-          <div className="flex-1 bg-[#1C1C1C] flex flex-col min-h-0 overflow-y-auto">
+          <div className="flex-1 bg-slate-50/40 flex flex-col min-h-0 overflow-y-auto">
             {currentItem ? (
-              <div className="p-6 space-y-6 max-w-4xl mx-auto w-full">
+              <div className="p-6 md:p-8 space-y-5 max-w-4xl mx-auto w-full">
                 
-                {/* Header do E-mail (Outlook Style) */}
-                <div className="bg-[#242424] p-5 rounded-xl border border-[#333333] shadow-sm space-y-4">
+                {/* Header do E-mail */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
                   
-                  {/* Top Subject & Quick Buttons */}
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-[#333333] pb-4">
+                  {/* Subject Title & Actions */}
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-slate-100 pb-4">
                     <div>
-                      <h2 className="text-base font-bold text-white tracking-wide leading-tight">
+                      <h2 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
                         {currentItem.subject}
                       </h2>
-                      <div className="flex items-center gap-2 mt-1.5 text-xs text-neutral-400">
-                        <span>Pasta: <strong className="text-neutral-200 capitalize">{currentItem.folder}</strong></span>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">
+                        <span>Pasta: <strong className="text-slate-700 capitalize">{currentItem.folder}</strong></span>
                         <span>•</span>
                         <span>{new Date(currentItem.date).toLocaleString('pt-MZ')}</span>
                       </div>
                     </div>
 
-                    {/* Quick Action Ribbon inside header */}
-                    <div className="flex items-center space-x-1.5 shrink-0">
+                    {/* Quick Action Buttons */}
+                    <div className="flex items-center space-x-2 shrink-0">
                       <button
                         type="button"
                         onClick={() => handleOpenCompose(clients.find(c => c.id === currentItem.clientId))}
-                        className="px-3 py-1.5 bg-[#0078D4] hover:bg-[#106EBE] text-white font-semibold rounded text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+                        className="px-3 py-1.5 bg-[#0078D4] hover:bg-[#106EBE] text-white font-semibold rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
                         title="Responder"
                       >
-                        <Reply size={13} />
+                        <Reply size={14} />
                         <span>Responder</span>
                       </button>
 
                       <button
                         type="button"
-                        onClick={() => handleDeleteItem(currentItem.id)}
-                        className="p-1.5 text-neutral-400 hover:text-rose-400 rounded hover:bg-neutral-800 transition"
-                        title="Excluir mensagem"
+                        onClick={() => addToast('info', 'Encaminhar', 'Selecione o destinatário para encaminhar.')}
+                        className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs flex items-center gap-1 transition cursor-pointer"
+                        title="Encaminhar"
                       >
-                        <Trash2 size={15} />
+                        <Forward size={14} />
+                        <span className="hidden sm:inline">Encaminhar</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteItem(currentItem.id)}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition cursor-pointer"
+                        title="Excluir"
+                      >
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </div>
 
-                  {/* Sender Details */}
+                  {/* Sender & Recipient Details */}
                   <div className="flex items-center space-x-3 text-xs">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-orange-600 to-amber-500 text-white font-bold flex items-center justify-center text-sm shadow-sm shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-slate-100 text-[#0078D4] border border-slate-200 font-bold flex items-center justify-center text-sm shadow-2xs shrink-0">
                       {(currentItem.clientName || currentItem.from).substring(0, 2).toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-bold text-white text-xs truncate">
+                      <p className="font-bold text-slate-900 text-xs">
                         {currentItem.clientName || currentItem.from}
                       </p>
-                      <p className="text-[11px] text-neutral-400 font-mono truncate">
-                        De: <span className="text-neutral-300">{currentItem.from}</span>
+                      <p className="text-slate-500 font-mono text-[11px] truncate">
+                        De: <span className="text-slate-700">{currentItem.from}</span>
                       </p>
-                      <p className="text-[11px] text-neutral-400 font-mono truncate">
-                        Para: <span className="text-neutral-300">{currentItem.to}</span>
+                      <p className="text-slate-500 font-mono text-[11px] truncate">
+                        Para: <span className="text-slate-700">{currentItem.to}</span>
                       </p>
                     </div>
                   </div>
 
                 </div>
 
-                {/* Banner de Proposta Comercial Anexa */}
+                {/* Card de Proposta Comercial Anexa */}
                 {currentItem.attachedProposalId && (
-                  <div className="bg-[#262D38] p-5 rounded-xl border border-[#0078D4]/50 shadow-md space-y-4 animate-in fade-in">
-                    <div className="flex items-center justify-between border-b border-[#354354] pb-3">
-                      <div className="flex items-center space-x-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-orange-500/20 text-orange-400 border border-orange-500/30 flex items-center justify-center font-bold">
-                          <FileSpreadsheet size={18} />
+                  <div className="bg-white p-5 rounded-2xl border border-orange-200 shadow-xs space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-orange-100 pb-3.5">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-9 h-9 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold">
+                          <FileSpreadsheet size={20} />
                         </div>
                         <div>
-                          <h3 className="text-sm font-bold text-white">
+                          <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-orange-50 text-orange-700 border border-orange-200 uppercase mb-0.5">
                             Proposta Comercial #{currentItem.attachedProposalId}
-                          </h3>
-                          <p className="text-[11px] text-sky-300 font-medium">
+                          </span>
+                          <h3 className="text-sm font-bold text-slate-900">
                             {currentItem.attachedProposalTitle}
-                          </p>
+                          </h3>
                         </div>
                       </div>
 
                       {currentItem.attachedProposalAmount && (
-                        <div className="text-right">
-                          <span className="text-[10px] uppercase font-semibold text-neutral-400 block">Valor da Proposta</span>
-                          <span className="text-base font-bold font-mono text-emerald-400">
+                        <div className="text-left sm:text-right">
+                          <span className="text-[10px] uppercase font-semibold text-slate-400 block">Valor Global da Proposta</span>
+                          <span className="text-lg font-bold font-mono text-emerald-600">
                             {formatMZN(currentItem.attachedProposalAmount)}
                           </span>
                         </div>
                       )}
                     </div>
 
-                    {/* Quick Actions for this Proposal */}
+                    {/* Ações da Proposta */}
                     <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                      <div className="flex items-center space-x-2 text-xs">
-                        <span className="px-2.5 py-1 rounded bg-[#1C222C] border border-[#38485C] text-neutral-300 flex items-center gap-1.5 font-mono text-[11px]">
-                          <Paperclip size={12} className="text-orange-400" />
+                      <div className="flex items-center space-x-2">
+                        <span className="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 flex items-center gap-2 text-xs font-mono">
+                          <Paperclip size={13} className="text-[#FF8000]" />
                           <span>Proposta_LECASU_{currentItem.attachedProposalId}.pdf</span>
                         </span>
                       </div>
 
-                      <div className="flex items-center space-x-2">
-                        {/* Botão Aprovar e Gerar Projeto */}
+                      <div className="flex items-center space-x-2.5">
                         <button
                           type="button"
                           onClick={() => {
                             const p = allProposals.find(item => item.proposal.id === currentItem.attachedProposalId);
                             if (p) handleConvertToProject(p.proposal);
                           }}
-                          className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
                         >
-                          <Check size={14} />
+                          <Check size={15} />
                           <span>Aprovar & Gerar Projeto</span>
                         </button>
                       </div>
@@ -1271,23 +959,23 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
                 )}
 
                 {/* Email Body Message */}
-                <div className="bg-[#242424] p-6 rounded-xl border border-[#333333] shadow-sm text-xs text-neutral-200 leading-relaxed font-sans space-y-4 whitespace-pre-line">
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs text-xs text-slate-800 leading-relaxed font-sans space-y-4 whitespace-pre-line">
                   {currentItem.body}
                 </div>
 
-                {/* Corporate Signature of LECASU */}
-                <div className="p-4 bg-[#202020] rounded-xl border border-[#2D2D2D] text-[11px] text-neutral-400 space-y-1">
-                  <p className="font-bold text-white text-xs">LECASU - Engenharia & Prestação de Serviços</p>
+                {/* Corporate Signature */}
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500 space-y-1">
+                  <p className="font-bold text-slate-800 text-xs">LECASU - Engenharia & Prestação de Serviços</p>
                   <p>Departamento de Relações com Clientes & Gestão de Contratos</p>
-                  <p className="text-neutral-500">Maputo, Moçambique • Email: {emailConfig.email}</p>
+                  <p className="text-slate-400">Maputo, Moçambique • Email: {emailConfig.email}</p>
                 </div>
 
               </div>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-neutral-500">
-                <Mail size={48} className="opacity-30 mb-3" />
-                <h3 className="text-sm font-bold text-neutral-300">Selecione uma mensagem para ler</h3>
-                <p className="text-xs text-neutral-500 mt-1 max-w-sm">
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-400">
+                <Mail size={48} className="opacity-30 mb-3 text-slate-400" />
+                <h3 className="text-sm font-bold text-slate-700">Selecione uma mensagem para ler</h3>
+                <p className="text-xs text-slate-500 mt-1 max-w-sm">
                   Escolha um e-mail ou proposta comercial na lista ao lado para visualizar os detalhes completos.
                 </p>
               </div>
@@ -1297,9 +985,9 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
         </div>
       ) : (
         /* =====================================================================
-           MODO TRADICIONAL CRM / TABELA (Para quem prefere a visão de tabela)
+           MODO TRADICIONAL CRM / TABELA
            ===================================================================== */
-        <div className="flex-1 p-5 overflow-y-auto bg-white text-slate-800 space-y-4">
+        <div className="flex-1 p-6 overflow-y-auto bg-white text-slate-800 space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-200">
             <div>
               <h2 className="text-base font-bold text-slate-900">Carteira de Clientes & Propostas (Visão Tabela CRM)</h2>
@@ -1310,7 +998,7 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
               className="btn-primary btn-sm bg-[#0078D4] hover:bg-[#106EBE] text-white flex items-center gap-1.5"
             >
               <Mail size={14} />
-              <span>Voltar para o Modo Outlook</span>
+              <span>Voltar para o Modo Correio</span>
             </button>
           </div>
 
@@ -1367,30 +1055,29 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
       )}
 
       {/* =========================================================================
-          4. BARRA DE ESTADO INFERIOR (Outlook Bottom Status Bar)
+          3. BARRA DE ESTADO INFERIOR (Limpa & Minimalista)
          ========================================================================= */}
-      <div className="bg-[#1A1A1A] border-t border-[#2D2D2D] px-3 py-1 flex items-center justify-between text-[11px] text-neutral-400 shrink-0 font-sans">
+      <div className="bg-slate-50 border-t border-slate-200 px-4 py-2 flex items-center justify-between text-xs text-slate-500 shrink-0">
         <div className="flex items-center space-x-3">
-          <span>Itens: <strong>{filteredMessages.length}</strong></span>
+          <span>Itens: <strong className="text-slate-700">{filteredMessages.length}</strong></span>
           <span>•</span>
-          <span className="flex items-center gap-1.5 text-neutral-300">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            <span>Conectado a <strong>{emailConfig.smtpHost}</strong> ({emailConfig.smtpPort})</span>
+          <span className="flex items-center gap-1.5 text-slate-700">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span>Conectado a <strong>{emailConfig.smtpHost}</strong></span>
           </span>
-          <span>•</span>
-          <span className="text-neutral-500 font-mono">Última sincronização: {emailConfig.lastSync || 'Hoje'}</span>
+          <span className="hidden sm:inline">•</span>
+          <span className="text-slate-400 font-mono hidden sm:inline">Última sincronização: {emailConfig.lastSync || 'Hoje'}</span>
         </div>
 
-        <div className="flex items-center space-x-2 text-[10px]">
-          <span className="bg-[#2D2D2D] text-neutral-300 px-2 py-0.5 rounded font-mono">
+        <div className="flex items-center space-x-2 text-[11px]">
+          <span className="bg-white border border-slate-200 text-slate-600 px-2 py-0.5 rounded font-mono">
             SSL/TLS Criptografado
           </span>
-          <span>100%</span>
         </div>
       </div>
 
       {/* =========================================================================
-          5. MODAIS INTEGRADOS
+          4. MODAIS INTEGRADOS
          ========================================================================= */}
       
       {/* Modal: Novo Cliente */}

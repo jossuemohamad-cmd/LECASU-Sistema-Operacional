@@ -160,88 +160,88 @@ export const EmailConfigModal: React.FC<EmailConfigModalProps> = ({
 
   return (
     <div className="modal-overlay-erp animate-in fade-in select-none">
-      <div className="bg-[#242424] text-slate-100 rounded-xl border border-[#3C3C3C] shadow-2xl max-w-2xl w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-white text-slate-800 rounded-2xl border border-slate-200 shadow-2xl max-w-2xl w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         
-        {/* Top Window Bar (Outlook Style) */}
-        <div className="bg-[#1F1F1F] px-4 py-3 border-b border-[#3C3C3C] flex items-center justify-between">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded bg-[#0078D4] text-white flex items-center justify-center font-bold text-sm shadow-sm">
-              <Mail size={18} />
+        {/* Top Window Bar - Clean White & Professional */}
+        <div className="bg-slate-50/80 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-9 h-9 rounded-xl bg-[#0078D4]/10 text-[#0078D4] flex items-center justify-center font-bold text-base shadow-xs">
+              <Mail size={20} />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-white tracking-wide">Configurações de Conta de Correio</h2>
-              <p className="text-[11px] text-neutral-400">Microsoft Outlook / Protocolos de Envio & Recebimento</p>
+              <h2 className="text-sm font-bold text-slate-900 tracking-tight">Configurações de Conta de Correio</h2>
+              <p className="text-xs text-slate-500">Servidores SMTP (Envio), IMAP / POP3 e Contas Google</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-neutral-400 hover:text-white p-1.5 rounded-md hover:bg-neutral-800 transition"
+            className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition"
           >
-            <X size={16} />
+            <X size={18} />
           </button>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-[#3C3C3C] bg-[#1B1B1B] text-xs font-semibold">
+        <div className="flex border-b border-slate-200 bg-white px-4 text-xs font-semibold">
           <button
             type="button"
             onClick={() => setActiveTab('provider')}
-            className={`px-4 py-2.5 border-b-2 transition flex items-center space-x-2 ${
+            className={`px-4 py-3 border-b-2 transition flex items-center space-x-2 ${
               activeTab === 'provider'
-                ? 'border-[#0078D4] text-white bg-[#242424]'
-                : 'border-transparent text-neutral-400 hover:text-neutral-200'
+                ? 'border-[#0078D4] text-[#0078D4]'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Globe size={14} />
+            <Globe size={15} />
             <span>Provedor & Conta</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('outgoing')}
-            className={`px-4 py-2.5 border-b-2 transition flex items-center space-x-2 ${
+            className={`px-4 py-3 border-b-2 transition flex items-center space-x-2 ${
               activeTab === 'outgoing'
-                ? 'border-[#0078D4] text-white bg-[#242424]'
-                : 'border-transparent text-neutral-400 hover:text-neutral-200'
+                ? 'border-[#0078D4] text-[#0078D4]'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Server size={14} />
+            <Server size={15} />
             <span>Envio (SMTP)</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('incoming')}
-            className={`px-4 py-2.5 border-b-2 transition flex items-center space-x-2 ${
+            className={`px-4 py-3 border-b-2 transition flex items-center space-x-2 ${
               activeTab === 'incoming'
-                ? 'border-[#0078D4] text-white bg-[#242424]'
-                : 'border-transparent text-neutral-400 hover:text-neutral-200'
+                ? 'border-[#0078D4] text-[#0078D4]'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Layers size={14} />
+            <Layers size={15} />
             <span>Recebimento (IMAP / POP3)</span>
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSave} className="p-5 space-y-4 text-xs">
+        <form onSubmit={handleSave} className="p-6 space-y-4 text-xs">
           
           {/* TAB 1: PROVIDER & ACCOUNT */}
           {activeTab === 'provider' && (
             <div className="space-y-4">
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-300 uppercase tracking-wider mb-2">
+                <label className="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-2">
                   Selecione o Serviço de E-mail
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   
                   {/* Google Workspace */}
                   <div
                     onClick={() => handleProviderSelect('gmail')}
-                    className={`p-3 rounded-lg border cursor-pointer transition flex flex-col items-center justify-center text-center gap-1.5 ${
+                    className={`p-3.5 rounded-xl border cursor-pointer transition flex flex-col items-center justify-center text-center gap-2 ${
                       config.provider === 'gmail'
-                        ? 'border-[#0078D4] bg-[#0078D4]/15 text-white'
-                        : 'border-[#3C3C3C] bg-[#2A2A2A] text-neutral-300 hover:border-neutral-500'
+                        ? 'border-[#0078D4] bg-[#0078D4]/5 text-[#0078D4] font-bold shadow-xs'
+                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                     }`}
                   >
                     <svg className="w-6 h-6" viewBox="0 0 24 24">
@@ -250,56 +250,56 @@ export const EmailConfigModal: React.FC<EmailConfigModalProps> = ({
                       <path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3 0-.8.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15s.7 5.3 1.9 7.7l3.7-2.9c-.3-.7-.5-1.5-.5-2.3z"/>
                       <path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2-6.4-4.8L1.9 17.4C3.7 21.1 7.5 24 12 24z"/>
                     </svg>
-                    <span className="font-semibold text-[11px]">Google Workspace</span>
+                    <span className="text-xs">Google Workspace</span>
                   </div>
 
                   {/* Microsoft 365 */}
                   <div
                     onClick={() => handleProviderSelect('office365')}
-                    className={`p-3 rounded-lg border cursor-pointer transition flex flex-col items-center justify-center text-center gap-1.5 ${
+                    className={`p-3.5 rounded-xl border cursor-pointer transition flex flex-col items-center justify-center text-center gap-2 ${
                       config.provider === 'office365'
-                        ? 'border-[#0078D4] bg-[#0078D4]/15 text-white'
-                        : 'border-[#3C3C3C] bg-[#2A2A2A] text-neutral-300 hover:border-neutral-500'
+                        ? 'border-[#0078D4] bg-[#0078D4]/5 text-[#0078D4] font-bold shadow-xs'
+                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                     }`}
                   >
-                    <div className="w-6 h-6 rounded bg-[#0078D4] text-white flex items-center justify-center font-bold text-xs">
+                    <div className="w-6 h-6 rounded bg-[#0078D4] text-white flex items-center justify-center font-bold text-xs shadow-2xs">
                       O
                     </div>
-                    <span className="font-semibold text-[11px]">Microsoft 365</span>
+                    <span className="text-xs">Microsoft 365</span>
                   </div>
 
                   {/* cPanel / Webmail Corporativo */}
                   <div
                     onClick={() => handleProviderSelect('cpanel')}
-                    className={`p-3 rounded-lg border cursor-pointer transition flex flex-col items-center justify-center text-center gap-1.5 ${
+                    className={`p-3.5 rounded-xl border cursor-pointer transition flex flex-col items-center justify-center text-center gap-2 ${
                       config.provider === 'cpanel'
-                        ? 'border-[#0078D4] bg-[#0078D4]/15 text-white'
-                        : 'border-[#3C3C3C] bg-[#2A2A2A] text-neutral-300 hover:border-neutral-500'
+                        ? 'border-[#FF8000] bg-[#FFF2E5] text-[#FF8000] font-bold shadow-xs'
+                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                     }`}
                   >
-                    <Globe size={24} className="text-orange-500" />
-                    <span className="font-semibold text-[11px]">cPanel LECASU</span>
+                    <Globe size={24} className="text-[#FF8000]" />
+                    <span className="text-xs">cPanel LECASU</span>
                   </div>
 
                   {/* Personalizado */}
                   <div
                     onClick={() => handleProviderSelect('custom')}
-                    className={`p-3 rounded-lg border cursor-pointer transition flex flex-col items-center justify-center text-center gap-1.5 ${
+                    className={`p-3.5 rounded-xl border cursor-pointer transition flex flex-col items-center justify-center text-center gap-2 ${
                       config.provider === 'custom'
-                        ? 'border-[#0078D4] bg-[#0078D4]/15 text-white'
-                        : 'border-[#3C3C3C] bg-[#2A2A2A] text-neutral-300 hover:border-neutral-500'
+                        ? 'border-[#0078D4] bg-[#0078D4]/5 text-[#0078D4] font-bold shadow-xs'
+                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                     }`}
                   >
-                    <Server size={24} className="text-sky-400" />
-                    <span className="font-semibold text-[11px]">Personalizado</span>
+                    <Server size={24} className="text-sky-600" />
+                    <span className="text-xs">Personalizado</span>
                   </div>
                 </div>
               </div>
 
               {/* Informações da Conta */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
                 <div>
-                  <label className="block text-[11px] font-semibold text-neutral-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Nome de Exibição
                   </label>
                   <input
@@ -308,12 +308,12 @@ export const EmailConfigModal: React.FC<EmailConfigModalProps> = ({
                     value={config.displayName}
                     onChange={e => setConfig(prev => ({ ...prev, displayName: e.target.value }))}
                     placeholder="ex: LECASU Engenharia"
-                    className="w-full px-3 py-2 bg-[#1B1B1B] border border-[#3C3C3C] rounded text-white focus:outline-none focus:border-[#0078D4]"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#0078D4] focus:bg-white transition"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-neutral-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Endereço de E-mail
                   </label>
                   <input
@@ -322,15 +322,15 @@ export const EmailConfigModal: React.FC<EmailConfigModalProps> = ({
                     value={config.email}
                     onChange={e => setConfig(prev => ({ ...prev, email: e.target.value, username: e.target.value }))}
                     placeholder="comercial@lecasu.co.mz"
-                    className="w-full px-3 py-2 bg-[#1B1B1B] border border-[#3C3C3C] rounded text-white focus:outline-none focus:border-[#0078D4]"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#0078D4] focus:bg-white transition"
                   />
                 </div>
               </div>
 
               {/* Credenciais de Autenticação */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-[11px] font-semibold text-neutral-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Nome de Utilizador / Login
                   </label>
                   <input
@@ -338,30 +338,30 @@ export const EmailConfigModal: React.FC<EmailConfigModalProps> = ({
                     required
                     value={config.username}
                     onChange={e => setConfig(prev => ({ ...prev, username: e.target.value }))}
-                    className="w-full px-3 py-2 bg-[#1B1B1B] border border-[#3C3C3C] rounded text-white font-mono focus:outline-none focus:border-[#0078D4]"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#0078D4] focus:bg-white transition"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-neutral-300 mb-1 flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
                     <span>Palavra-passe / Token de App</span>
-                    <span className="text-neutral-500 font-normal text-[10px]">Criptografado</span>
+                    <span className="text-slate-400 font-normal text-[10px]">Criptografado</span>
                   </label>
                   <input
                     type="password"
                     value={config.password || ''}
                     onChange={e => setConfig(prev => ({ ...prev, password: e.target.value }))}
                     placeholder="Palavra-passe do e-mail"
-                    className="w-full px-3 py-2 bg-[#1B1B1B] border border-[#3C3C3C] rounded text-white font-mono focus:outline-none focus:border-[#0078D4]"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#0078D4] focus:bg-white transition"
                   />
                 </div>
               </div>
 
               {config.provider === 'gmail' && (
-                <div className="p-3 bg-blue-950/40 border border-blue-800/50 rounded-lg flex items-start gap-2.5 text-[11px] text-blue-200">
-                  <HelpCircle size={15} className="text-blue-400 shrink-0 mt-0.5" />
+                <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-2.5 text-xs text-blue-900">
+                  <HelpCircle size={16} className="text-blue-600 shrink-0 mt-0.5" />
                   <div>
-                    <strong className="text-white">Dica para Google Workspace / Gmail:</strong> Use uma <em>Senha de Aplicativo (App Password)</em> de 16 dígitos gerada em sua Conta Google para autenticação instantânea com SMTP e IMAP.
+                    <strong className="text-blue-950 font-bold">Dica para Google Workspace / Gmail:</strong> Use uma <em>Senha de Aplicativo (App Password)</em> de 16 dígitos gerada em sua Conta Google para autenticação instantânea com SMTP e IMAP.
                   </div>
                 </div>
               )}
@@ -371,19 +371,19 @@ export const EmailConfigModal: React.FC<EmailConfigModalProps> = ({
           {/* TAB 2: OUTGOING (SMTP) */}
           {activeTab === 'outgoing' && (
             <div className="space-y-4">
-              <div className="p-3 bg-[#1B1B1B] border border-[#3C3C3C] rounded-lg">
-                <h4 className="font-semibold text-white mb-1 flex items-center gap-1.5">
-                  <ShieldCheck size={14} className="text-emerald-400" />
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
+                <h4 className="font-semibold text-slate-900 mb-1 flex items-center gap-1.5">
+                  <ShieldCheck size={16} className="text-emerald-600" />
                   <span>Servidor de Envio de Mensagens (SMTP)</span>
                 </h4>
-                <p className="text-[11px] text-neutral-400">
+                <p className="text-xs text-slate-500">
                   Responsável pelo envio de propostas comerciais e respostas diretamente do ERP.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                 <div className="sm:col-span-2">
-                  <label className="block text-[11px] font-semibold text-neutral-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Servidor SMTP
                   </label>
                   <input
@@ -392,12 +392,12 @@ export const EmailConfigModal: React.FC<EmailConfigModalProps> = ({
                     value={config.smtpHost}
                     onChange={e => setConfig(prev => ({ ...prev, smtpHost: e.target.value }))}
                     placeholder="mail.lecasu.co.mz"
-                    className="w-full px-3 py-2 bg-[#1B1B1B] border border-[#3C3C3C] rounded text-white font-mono focus:outline-none focus:border-[#0078D4]"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#0078D4] focus:bg-white transition"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-neutral-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Porta SMTP
                   </label>
                   <input
@@ -406,18 +406,18 @@ export const EmailConfigModal: React.FC<EmailConfigModalProps> = ({
                     value={config.smtpPort}
                     onChange={e => setConfig(prev => ({ ...prev, smtpPort: parseInt(e.target.value, 10) || 587 }))}
                     placeholder="465 ou 587"
-                    className="w-full px-3 py-2 bg-[#1B1B1B] border border-[#3C3C3C] rounded text-white font-mono focus:outline-none focus:border-[#0078D4]"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#0078D4] focus:bg-white transition"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                   Tipo de Criptografia / Segurança
                 </label>
                 <div className="flex gap-4">
                   {(['ssl', 'tls', 'none'] as const).map(sec => (
-                    <label key={sec} className="flex items-center gap-2 cursor-pointer text-neutral-300 hover:text-white">
+                    <label key={sec} className="flex items-center gap-2 cursor-pointer text-slate-700 hover:text-slate-900 font-medium">
                       <input
                         type="radio"
                         name="smtpSecure"
@@ -425,7 +425,7 @@ export const EmailConfigModal: React.FC<EmailConfigModalProps> = ({
                         onChange={() => setConfig(prev => ({ ...prev, smtpSecure: sec }))}
                         className="text-[#0078D4]"
                       />
-                      <span className="uppercase font-mono text-[11px]">{sec === 'none' ? 'Nenhuma' : sec.toUpperCase()}</span>
+                      <span className="uppercase font-mono text-xs">{sec === 'none' ? 'Nenhuma' : sec.toUpperCase()}</span>
                     </label>
                   ))}
                 </div>
@@ -436,19 +436,19 @@ export const EmailConfigModal: React.FC<EmailConfigModalProps> = ({
           {/* TAB 3: INCOMING (IMAP / POP3) */}
           {activeTab === 'incoming' && (
             <div className="space-y-4">
-              <div className="p-3 bg-[#1B1B1B] border border-[#3C3C3C] rounded-lg">
-                <h4 className="font-semibold text-white mb-1 flex items-center gap-1.5">
-                  <ShieldCheck size={14} className="text-emerald-400" />
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
+                <h4 className="font-semibold text-slate-900 mb-1 flex items-center gap-1.5">
+                  <ShieldCheck size={16} className="text-emerald-600" />
                   <span>Servidor de Recebimento de Mensagens (IMAP / POP3)</span>
                 </h4>
-                <p className="text-[11px] text-neutral-400">
+                <p className="text-xs text-slate-500">
                   Sincroniza a Caixa de Entrada, respostas de clientes e propostas recebidas.
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-[11px] font-semibold text-neutral-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Protocolo de Recebimento
                   </label>
                   <select
@@ -461,15 +461,15 @@ export const EmailConfigModal: React.FC<EmailConfigModalProps> = ({
                         incomingPort: type === 'imap' ? 993 : 995
                       }));
                     }}
-                    className="w-full px-3 py-2 bg-[#1B1B1B] border border-[#3C3C3C] rounded text-white focus:outline-none focus:border-[#0078D4]"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#0078D4] focus:bg-white transition"
                   >
-                    <option value="imap">IMAP (Recomendado - Sincronização em tempo real)</option>
-                    <option value="pop3">POP3 (Download de mensagens)</option>
+                    <option value="imap">IMAP (Recomendado - Tempo Real)</option>
+                    <option value="pop3">POP3 (Download)</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-neutral-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Porta de Recebimento
                   </label>
                   <input
@@ -478,13 +478,13 @@ export const EmailConfigModal: React.FC<EmailConfigModalProps> = ({
                     value={config.incomingPort}
                     onChange={e => setConfig(prev => ({ ...prev, incomingPort: parseInt(e.target.value, 10) || 993 }))}
                     placeholder="993"
-                    className="w-full px-3 py-2 bg-[#1B1B1B] border border-[#3C3C3C] rounded text-white font-mono focus:outline-none focus:border-[#0078D4]"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#0078D4] focus:bg-white transition"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Servidor {config.incomingType.toUpperCase()}
                 </label>
                 <input
@@ -493,17 +493,17 @@ export const EmailConfigModal: React.FC<EmailConfigModalProps> = ({
                   value={config.incomingHost}
                   onChange={e => setConfig(prev => ({ ...prev, incomingHost: e.target.value }))}
                   placeholder="mail.lecasu.co.mz"
-                  className="w-full px-3 py-2 bg-[#1B1B1B] border border-[#3C3C3C] rounded text-white font-mono focus:outline-none focus:border-[#0078D4]"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#0078D4] focus:bg-white transition"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-neutral-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                   Criptografia de Recebimento
                 </label>
                 <div className="flex gap-4">
                   {(['ssl', 'tls', 'none'] as const).map(sec => (
-                    <label key={sec} className="flex items-center gap-2 cursor-pointer text-neutral-300 hover:text-white">
+                    <label key={sec} className="flex items-center gap-2 cursor-pointer text-slate-700 hover:text-slate-900 font-medium">
                       <input
                         type="radio"
                         name="incomingSecure"
@@ -511,7 +511,7 @@ export const EmailConfigModal: React.FC<EmailConfigModalProps> = ({
                         onChange={() => setConfig(prev => ({ ...prev, incomingSecure: sec }))}
                         className="text-[#0078D4]"
                       />
-                      <span className="uppercase font-mono text-[11px]">{sec === 'none' ? 'Nenhuma' : sec.toUpperCase()}</span>
+                      <span className="uppercase font-mono text-xs">{sec === 'none' ? 'Nenhuma' : sec.toUpperCase()}</span>
                     </label>
                   ))}
                 </div>
@@ -521,52 +521,52 @@ export const EmailConfigModal: React.FC<EmailConfigModalProps> = ({
 
           {/* Test Connection Results Banner */}
           {testResult && (
-            <div className={`p-3 rounded-lg border flex items-start gap-2.5 text-xs ${
+            <div className={`p-3.5 rounded-xl border flex items-start gap-2.5 text-xs ${
               testResult.success 
-                ? 'bg-emerald-950/40 border-emerald-600/50 text-emerald-200' 
-                : 'bg-rose-950/40 border-rose-600/50 text-rose-200'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-900' 
+                : 'bg-rose-50 border-rose-200 text-rose-900'
             }`}>
               {testResult.success ? (
-                <CheckCircle2 size={16} className="text-emerald-400 shrink-0 mt-0.5" />
+                <CheckCircle2 size={18} className="text-emerald-600 shrink-0 mt-0.5" />
               ) : (
-                <AlertCircle size={16} className="text-rose-400 shrink-0 mt-0.5" />
+                <AlertCircle size={18} className="text-rose-600 shrink-0 mt-0.5" />
               )}
               <div>
-                <strong>{testResult.success ? 'Conexão Estabelecida:' : 'Erro na Verificação:'}</strong>
+                <strong className="font-bold">{testResult.success ? 'Conexão Estabelecida:' : 'Erro na Verificação:'}</strong>
                 <p className="mt-0.5">{testResult.message}</p>
               </div>
             </div>
           )}
 
           {/* Modal Footer Actions */}
-          <div className="pt-4 border-t border-[#3C3C3C] flex items-center justify-between">
+          <div className="pt-4 border-t border-slate-200 flex items-center justify-between">
             <button
               type="button"
               onClick={handleTestConnection}
               disabled={isTesting}
-              className="px-3 py-1.5 rounded bg-[#333333] hover:bg-[#3D3D3D] text-white font-medium border border-[#4C4C4C] transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              className="px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold border border-slate-300 transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               {isTesting ? (
                 <Loader2 size={14} className="animate-spin text-[#0078D4]" />
               ) : (
-                <RefreshCw size={14} className="text-neutral-400" />
+                <RefreshCw size={14} className="text-slate-600" />
               )}
               <span>{isTesting ? 'A testar portas...' : 'Testar Conexão'}</span>
             </button>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2.5">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-3.5 py-1.5 rounded bg-transparent hover:bg-neutral-800 text-neutral-300 font-medium transition cursor-pointer"
+                className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-medium transition cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                className="px-4 py-1.5 rounded bg-[#0078D4] hover:bg-[#106EBE] text-white font-semibold shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+                className="px-5 py-2 rounded-lg bg-[#0078D4] hover:bg-[#106EBE] text-white font-semibold shadow-xs transition flex items-center gap-1.5 cursor-pointer"
               >
-                <CheckCircle2 size={14} />
+                <CheckCircle2 size={15} />
                 <span>Salvar Configuração</span>
               </button>
             </div>
