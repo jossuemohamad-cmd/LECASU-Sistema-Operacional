@@ -967,3 +967,48 @@ export async function deleteEmail(id: string): Promise<any> {
   return handleResponse<any>(res);
 }
 
+export async function fetchEmailAccounts(): Promise<Array<{
+  id: number;
+  email: string;
+  displayName: string;
+  provider: string;
+  incomingType: string;
+  incomingHost: string;
+  smtpHost: string;
+  isActive: boolean;
+  lastSync?: string;
+}>> {
+  const res = await fetch(`${API_BASE_URL}/emails/accounts`, {
+    headers: getAuthHeaders()
+  });
+  return handleResponse<any>(res);
+}
+
+export async function switchEmailAccount(payload: { accountId?: number; email?: string }): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/emails/accounts/switch`, {
+    method: 'POST',
+    headers: {
+      ...getAuthHeaders(),
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  return handleResponse<any>(res);
+}
+
+export async function logoutEmailAccount(): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/emails/accounts/logout`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  return handleResponse<any>(res);
+}
+
+export async function deleteEmailAccount(accountId: number): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/emails/accounts/${accountId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  return handleResponse<any>(res);
+}
+

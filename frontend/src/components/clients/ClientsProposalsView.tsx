@@ -29,6 +29,7 @@ import {
   Download,
   Settings,
   Users,
+  Check,
   File as FileIcon 
 } from 'lucide-react';
 import type { Client, ClientCreateInput, Proposal, ProposalCreateInput, ToastMessage, EmailAccountConfig, EmailMessage } from '../../types';
@@ -42,8 +43,10 @@ import {
   syncEmails,
   toggleEmailRead,
   deleteEmail,
-  fetchEmailConfig,
-  saveEmailConfig
+  saveEmailConfig,
+  fetchEmailAccounts,
+  switchEmailAccount,
+  logoutEmailAccount
 } from '../../services/api';
 import { ClientModal } from './ClientModal';
 import { ProposalModal } from './ProposalModal';
@@ -131,6 +134,19 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
     return [];
   });
 
+  // Multi-Account Management State
+  const [emailAccounts, setEmailAccounts] = useState<Array<{
+    id: number;
+    email: string;
+    displayName: string;
+    provider: string;
+    incomingType: string;
+    incomingHost: string;
+    smtpHost: string;
+    isActive: boolean;
+    lastSync?: string;
+  }>>([]);
+  const [showAccountDropdown, setShowAccountDropdown] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
   // Save changes to localStorage as offline cache
@@ -157,7 +173,68 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
     setToasts(prev => prev.filter(t => t.id !== id));
   };
 
-  // Load emails from backend database
+  // Load all configured email accounts from database
+  const loadAccounts = async () => {
+    try {
+      const accounts = await fetchEmailAccounts();
+      if (Array.isArray(accounts)) {
+        setEmailAccounts(accounts);
+        const active = accounts.find(a => a.isActive);
+        if (active) {
+          setEmailConfig(prev => ({
+            ...prev,
+            email: active.email,
+            username: active.email,
+            displayName: active.displayName || 'LECASU - Engenharia & Serviços',
+            provider: active.provider || 'cpanel',
+            incomingType: (active.incomingType || 'imap') as any,
+            incomingHost: active.incomingHost,
+            smtpHost: active.smtpHost,
+            isConnected: true,
+            lastSync: active.lastSync
+          }));
+        } else if (accounts.length === 0) {
+          setEmailConfig(prev => ({ ...prev, isConnected: false }));
+        }
+      }
+    } catch (e) {
+      console.warn('Erro ao carregar contas cadastradas:', e);
+    }
+  };
+
+  // Switch active email account (Multi-Account isolation)
+  const handleSwitchAccount = async (accountId: number, emailStr: string) => {
+    try {
+      setIsLoading(true);
+      await switchEmailAccount({ accountId });
+      await loadAccounts();
+      await loadEmails();
+      addToast('success', 'Conta Alterada', `Sessão ativa alterada para ${emailStr}.`);
+      setShowAccountDropdown(false);
+      handleSyncEmails(false);
+    } catch (e: any) {
+      addToast('error', 'Falha ao trocar conta', e.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Disconnect / Logout from active account
+  const handleLogoutAccount = async () => {
+    try {
+      await logoutEmailAccount();
+      setEmailConfig(prev => ({ ...prev, isConnected: false }));
+      setMessages([]);
+      setSelectedItemId(null);
+      await loadAccounts();
+      setShowAccountDropdown(false);
+      addToast('info', 'Conta Desconectada', 'Sessão de correio desconectada com sucesso.');
+    } catch (e: any) {
+      addToast('error', 'Erro ao sair', e.message);
+    }
+  };
+
+  // Load emails from backend database (strictly for active account)
   const loadEmails = async (targetFolder?: string) => {
     try {
       const emailList = await fetchEmails(targetFolder);
@@ -170,6 +247,9 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
         } else {
           setSelectedItemId(null);
         }
+      } else {
+        setMessages([]);
+        setSelectedItemId(null);
       }
     } catch (e) {
       console.warn('Usando mensagens em cache/locais:', e);
@@ -178,12 +258,13 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
 
   // Sync emails via real IMAP from mail server
   const handleSyncEmails = async (showToast = true) => {
+    if (!emailConfig.isConnected) return;
     try {
       setIsSyncing(true);
       const res = await syncEmails({ config: emailConfig });
       const emailList = await fetchEmails();
-      if (emailList && emailList.length > 0) {
-        setMessages(emailList);
+      if (emailList) {
+        setMessages(emailList.filter(m => !m.id?.startsWith('rc_')));
       }
       if (showToast) {
         if (res.incoming_connected || res.imap_connected) {
@@ -195,7 +276,7 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
       }
     } catch (err: any) {
       if (showToast) {
-        addToast('error', 'Falha na Sincronização', err.message || 'Erro ao sincronizar correio via IMAP.');
+        addToast('error', 'Falha na Sincronização', err.message || 'Erro ao sincronizar correio.');
       }
     } finally {
       setIsSyncing(false);
@@ -210,15 +291,8 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
       const data = await fetchClients();
       setClients(data);
 
-      // Load email account config from backend
-      try {
-        const savedConfig = await fetchEmailConfig();
-        if (savedConfig && savedConfig.email) {
-          setEmailConfig(savedConfig);
-        }
-      } catch (err) {
-        // fallback to existing emailConfig
-      }
+      // Load active accounts
+      await loadAccounts();
 
       // Load emails from backend database
       await loadEmails();
@@ -234,6 +308,13 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
       setIsLoading(false);
     }
   };
+
+  // Auto-sync emails whenever an account is connected
+  useEffect(() => {
+    if (emailConfig.isConnected && emailConfig.email) {
+      handleSyncEmails(false);
+    }
+  }, [emailConfig.email, emailConfig.isConnected]);
 
   useEffect(() => {
     loadClients();
@@ -658,22 +739,95 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
             </button>
           </div>
 
-          {/* Outlook Account Status Pill Button */}
-          <button
-            type="button"
-            onClick={() => setIsAccountWizardOpen(true)}
-            className="hidden sm:flex items-center gap-2 px-2.5 py-1 text-slate-700 hover:text-[#0078D4] hover:border-[#0078D4] hover:bg-blue-50/50 rounded text-xs font-medium transition cursor-pointer border border-slate-300 bg-white shadow-2xs whitespace-nowrap shrink-0 ml-3"
-            title="Gerenciar conta conectada / Assistente de Login Outlook"
-          >
-            <div className="w-4 h-4 rounded bg-[#0078D4] flex items-center justify-center text-white text-[9px] font-black">
-              O
-            </div>
-            <div className="flex items-center gap-1.5 font-mono text-[11px]">
-              <span className={`w-2 h-2 rounded-full ${emailConfig.isConnected ? 'bg-emerald-500' : 'bg-amber-400'}`} />
-              <span className="font-semibold text-slate-800 truncate max-w-[130px]">{emailConfig.email || 'info@lecasu.co.mz'}</span>
-              <span className="text-[10px] text-slate-400 font-sans uppercase">({emailConfig.incomingType.toUpperCase()})</span>
-            </div>
-          </button>
+          {/* Multi-Account Dropdown & Switcher */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowAccountDropdown(!showAccountDropdown)}
+              className="hidden sm:flex items-center gap-2 px-2.5 py-1 text-slate-700 hover:text-[#0078D4] hover:border-[#0078D4] hover:bg-blue-50/50 rounded text-xs font-medium transition cursor-pointer border border-slate-300 bg-white shadow-2xs whitespace-nowrap shrink-0 ml-3"
+              title="Gerenciar contas / Alternar usuário de correio"
+            >
+              <div className="w-4 h-4 rounded bg-[#0078D4] flex items-center justify-center text-white text-[9px] font-black">
+                O
+              </div>
+              <div className="flex items-center gap-1.5 font-mono text-[11px]">
+                <span className={`w-2 h-2 rounded-full ${emailConfig.isConnected ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+                <span className="font-semibold text-slate-800 truncate max-w-[130px]">
+                  {emailConfig.isConnected ? emailConfig.email : 'Nenhuma conta'}
+                </span>
+                <span className="text-[10px] text-slate-400 font-sans uppercase">
+                  ({emailConfig.isConnected ? emailConfig.incomingType.toUpperCase() : 'OFFLINE'})
+                </span>
+              </div>
+              <ChevronDown size={12} className="text-slate-400" />
+            </button>
+
+            {showAccountDropdown && (
+              <div className="absolute right-0 top-full mt-1.5 w-72 bg-white border border-slate-200 rounded-lg shadow-xl z-50 p-2 text-xs divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
+                <div className="pb-2">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 px-2 block mb-1">
+                    Contas Conectadas ({emailAccounts.length})
+                  </span>
+                  {emailAccounts.length === 0 ? (
+                    <p className="text-slate-500 px-2 py-1 text-[11px]">Nenhuma conta ativa no momento</p>
+                  ) : (
+                    emailAccounts.map(acc => {
+                      const isCurActive = acc.isActive && emailConfig.isConnected;
+                      return (
+                        <div
+                          key={acc.id}
+                          onClick={() => handleSwitchAccount(acc.id, acc.email)}
+                          className={`flex items-center justify-between p-2 rounded cursor-pointer transition ${
+                            isCurActive
+                              ? 'bg-blue-50 text-[#0078D4] font-semibold'
+                              : 'hover:bg-slate-50 text-slate-700'
+                          }`}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className={`w-2 h-2 rounded-full ${isCurActive ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                              <span className="truncate text-xs font-mono">{acc.email}</span>
+                            </div>
+                            <span className="text-[10px] text-slate-400 block pl-3.5">
+                              {acc.incomingType.toUpperCase()} • {acc.displayName}
+                            </span>
+                          </div>
+                          {isCurActive && (
+                            <Check size={14} className="text-[#0078D4] shrink-0 ml-1" />
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                <div className="pt-2 space-y-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAccountDropdown(false);
+                      setIsAccountWizardOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2 p-2 rounded hover:bg-slate-50 text-slate-700 font-medium transition cursor-pointer text-left"
+                  >
+                    <Plus size={14} className="text-[#0078D4]" />
+                    <span>+ Adicionar Outra Conta (Outlook)</span>
+                  </button>
+
+                  {emailConfig.isConnected && (
+                    <button
+                      type="button"
+                      onClick={handleLogoutAccount}
+                      className="w-full flex items-center gap-2 p-2 rounded hover:bg-rose-50 text-rose-600 font-medium transition cursor-pointer text-left"
+                    >
+                      <X size={14} className="text-rose-500" />
+                      <span>Desconectar Conta Atual</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Right toggle: CRM Mode */}
           <button
@@ -808,14 +962,36 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
 
         {/* ================= ACTIVE VIEW CONTENT ================= */}
         {activeSidebarTab === 'compose' ? (
-          <EmailComposeView
-            clients={clients}
-            initialClient={composeInitialClient}
-            initialProposal={composeInitialProposal}
-            senderEmail={emailConfig.email}
-            onSend={handleSendEmailMessage}
-            onCancel={() => setActiveSidebarTab('messages')}
-          />
+          !emailConfig.isConnected ? (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 bg-slate-50 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mb-4 shadow-sm">
+                <AlertCircle size={32} />
+              </div>
+              <h2 className="text-lg font-bold text-slate-900 mb-1">Conecte uma Conta para Compor Mensagens</h2>
+              <p className="text-xs text-slate-500 max-w-md mb-6 leading-relaxed">
+                Você precisa estar autenticado com uma conta de correio corporativo ativa para redigir e enviar propostas ou mensagens aos seus clientes.
+              </p>
+              <button
+                type="button"
+                onClick={() => setIsAccountWizardOpen(true)}
+                className="py-2.5 px-6 bg-[#0078D4] hover:bg-[#0082E6] text-white font-semibold text-xs rounded-lg transition cursor-pointer shadow-sm flex items-center gap-2"
+              >
+                <div className="w-4 h-4 rounded bg-white text-[#0078D4] flex items-center justify-center text-[10px] font-black">
+                  O
+                </div>
+                <span>Conectar Conta Agora (Outlook)</span>
+              </button>
+            </div>
+          ) : (
+            <EmailComposeView
+              clients={clients}
+              initialClient={composeInitialClient}
+              initialProposal={composeInitialProposal}
+              senderEmail={emailConfig.email}
+              onSend={handleSendEmailMessage}
+              onCancel={() => setActiveSidebarTab('messages')}
+            />
+          )
         ) : activeSidebarTab === 'proposals' ? (
           <ProposalsManagerView
             clients={clients}
@@ -866,6 +1042,8 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
                   initialConfig={emailConfig}
                   onSuccess={(cfg) => {
                     setEmailConfig(cfg);
+                    loadAccounts();
+                    loadEmails();
                     handleSyncEmails(true);
                     addToast('success', 'Conta Conectada', `Conta ${cfg.email} conectada com êxito!`);
                     setActiveSidebarTab('messages');
@@ -940,6 +1118,37 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        ) : !emailConfig.isConnected ? (
+          /* ================= ESTADO DESLOGADO (ZERO MENSAGENS) ================= */
+          <div className="flex-1 flex flex-col items-center justify-center p-8 bg-slate-50 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-200 text-[#0078D4] flex items-center justify-center mb-4 shadow-sm">
+              <Mail size={32} />
+            </div>
+            <h2 className="text-lg font-bold text-slate-900 mb-1">Nenhuma Conta de Correio Conectada</h2>
+            <p className="text-xs text-slate-500 max-w-md mb-6 leading-relaxed">
+              Para visualizar, sincronizar e enviar mensagens reais aos seus clientes diretamente pelo sistema, conecte sua conta corporativa (ex: <code className="font-mono text-slate-700 bg-slate-200/70 px-1 py-0.5 rounded">info@lecasu.co.mz</code>).
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsAccountWizardOpen(true)}
+                className="py-2.5 px-6 bg-[#0078D4] hover:bg-[#0082E6] text-white font-semibold text-xs rounded-lg transition cursor-pointer shadow-sm flex items-center gap-2"
+              >
+                <div className="w-4 h-4 rounded bg-white text-[#0078D4] flex items-center justify-center text-[10px] font-black">
+                  O
+                </div>
+                <span>Conectar Conta de E-mail (Outlook)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveSidebarTab('settings')}
+                className="py-2.5 px-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-lg transition cursor-pointer"
+              >
+                Parâmetros Manuais
+              </button>
             </div>
           </div>
         ) : (
@@ -1464,6 +1673,8 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
           onSuccess={(cfg) => {
             setEmailConfig(cfg);
             setIsAccountWizardOpen(false);
+            loadAccounts();
+            loadEmails();
             handleSyncEmails(true);
             addToast('success', 'Conta Conectada', `Conta ${cfg.email} conectada com êxito!`);
           }}

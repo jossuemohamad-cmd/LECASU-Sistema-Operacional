@@ -211,30 +211,74 @@ def send_email_smtp(
     attachments: Optional[List[Dict[str, Any]]] = None,
     timeout: int = 15
 ) -> Tuple[bool, str, str]:
-    """Envia um email real através do servidor SMTP configurado."""
+    """Envia um email real através do servidor SMTP configurado com suporte anti-spam e MIME completo."""
     try:
-        msg = MIMEMultipart('alternative')
+        from email.utils import formatdate, make_msgid
+        import html
+
+        # Se houver anexos, container externo DEVE ser 'mixed'
+        # Se não houver anexos, pode ser diretamente 'alternative'
+        has_attachments = bool(attachments and len(attachments) > 0)
+        if has_attachments:
+            msg = MIMEMultipart('mixed')
+            alt_container = MIMEMultipart('alternative')
+            msg.attach(alt_container)
+        else:
+            msg = MIMEMultipart('alternative')
+            alt_container = msg
+
         msg['Subject'] = Header(subject, 'utf-8')
         from_display = f"{display_name} <{from_email}>" if display_name else from_email
         msg['From'] = from_display
         msg['To'] = to_email
         msg['Date'] = formatdate(localtime=True)
-        message_id = make_msgid(domain='lecasu.co.mz')
+        msg['Reply-To'] = from_display
+        msg['Organization'] = 'LECASU - Engenharia & Servicos'
+        msg['X-Mailer'] = 'LECASU-ERP-v2.0 (Mozilla Compatible)'
+        msg['User-Agent'] = 'LECASU Mail Client v2.0'
+        msg['MIME-Version'] = '1.0'
+
+        domain = from_email.split('@')[-1] if '@' in from_email else 'lecasu.co.mz'
+        message_id = make_msgid(domain=domain)
         msg['Message-ID'] = message_id
 
         if cc:
             msg['Cc'] = cc
 
-        # Partes do corpo
-        part_text = MIMEText(body_text or '', 'plain', 'utf-8')
-        msg.attach(part_text)
+        # Versão texto simples
+        clean_text = (body_text or '').strip()
+        part_text = MIMEText(clean_text, 'plain', 'utf-8')
+        alt_container.attach(part_text)
 
-        if body_html:
-            part_html = MIMEText(body_html, 'html', 'utf-8')
-            msg.attach(part_html)
+        # Versão HTML estruturada (evita bloqueio antispam MailChannels por mensagem curta)
+        if not body_html:
+            escaped_body = html.escape(clean_text).replace('\n', '<br>')
+            body_html = f"""<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; color: #1e293b; line-height: 1.6; margin: 0; padding: 20px; background-color: #f8fafc;">
+  <div style="max-width: 620px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+    <div style="background: #0f172a; padding: 20px 24px; border-bottom: 3px solid #ff8000;">
+      <h2 style="color: #ffffff; margin: 0; font-size: 18px; font-weight: 700; letter-spacing: 0.3px;">LECASU - Engenharia &amp; Serviços</h2>
+      <p style="color: #94a3b8; margin: 4px 0 0 0; font-size: 12px;">Comunicação Corporativa Integrada</p>
+    </div>
+    <div style="padding: 28px 24px; color: #1e293b; font-size: 14px; line-height: 1.65;">
+      {escaped_body}
+    </div>
+    <div style="background: #f1f5f9; padding: 16px 24px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b;">
+      <p style="margin: 0 0 4px 0; font-weight: 700; color: #0f172a;">LECASU Engenharia &amp; Serviços, Lda.</p>
+      <p style="margin: 0 0 2px 0;">Av. 24 de Julho, Maputo - Moçambique</p>
+      <p style="margin: 0;">E-mail: <a href="mailto:{from_email}" style="color: #ff8000; text-decoration: none;">{from_email}</a> | Web: www.lecasu.co.mz</p>
+    </div>
+  </div>
+</body>
+</html>"""
 
-        # Anexos se houver
-        if attachments:
+        part_html = MIMEText(body_html, 'html', 'utf-8')
+        alt_container.attach(part_html)
+
+        # Anexos anexados ao container mixed
+        if has_attachments and attachments:
             for att in attachments:
                 fn = att.get('filename', 'anexo.pdf')
                 content = att.get('content') # bytes
@@ -244,11 +288,11 @@ def send_email_smtp(
                     msg.attach(part_att)
 
         # Destinatários totais
-        recipients = [to_email]
+        recipients = [to_email.strip()]
         if cc:
             for c in cc.split(','):
                 c_clean = c.strip()
-                if c_clean:
+                if c_clean and c_clean not in recipients:
                     recipients.append(c_clean)
 
         context = ssl.create_default_context()
@@ -262,7 +306,7 @@ def send_email_smtp(
             if smtp_secure.lower() == 'tls' or smtp_port == 587:
                 server.starttls(context=context)
 
-        server.ehlo()
+        server.ehlo(domain)
         if password:
             server.login(username, password)
 

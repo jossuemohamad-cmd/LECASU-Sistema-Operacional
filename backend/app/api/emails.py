@@ -30,8 +30,10 @@ def get_email_config(db: Session = Depends(get_db)):
     """Obtém a configuração ativa de correio da LECASU."""
     account = db.query(EmailAccount).filter(EmailAccount.is_active == True).first()
     if not account:
-        # Retorna padrão oficial cPanel LECASU
-        return EmailAccountConfigSchema()
+        # Se nenhuma conta ativa, retorna isConnected=False
+        cfg = EmailAccountConfigSchema()
+        cfg.isConnected = False
+        return cfg
     
     return EmailAccountConfigSchema(
         provider=account.provider,
@@ -50,6 +52,77 @@ def get_email_config(db: Session = Depends(get_db)):
         lastSync=account.last_sync.strftime('%d/%m/%Y às %H:%M') if account.last_sync else None
     )
 
+@router.get("/accounts")
+def list_email_accounts(db: Session = Depends(get_db)):
+    """Lista todas as contas de e-mail cadastradas no ERP."""
+    accounts = db.query(EmailAccount).order_by(EmailAccount.id.asc()).all()
+    return [
+        {
+            "id": a.id,
+            "email": a.email,
+            "displayName": a.display_name,
+            "provider": a.provider,
+            "incomingType": a.incoming_type,
+            "incomingHost": a.incoming_host,
+            "smtpHost": a.smtp_host,
+            "isActive": bool(a.is_active),
+            "lastSync": a.last_sync.strftime('%d/%m/%Y às %H:%M') if a.last_sync else None
+        }
+        for a in accounts
+    ]
+
+@router.post("/accounts/switch")
+def switch_email_account(payload: Dict[str, Any], db: Session = Depends(get_db)):
+    """Ativa uma conta específica como corrente e desativa as outras."""
+    account_id = payload.get("accountId")
+    email = payload.get("email")
+
+    query = db.query(EmailAccount)
+    if account_id:
+        target = query.filter(EmailAccount.id == account_id).first()
+    elif email:
+        target = query.filter(EmailAccount.email == email).first()
+    else:
+        raise HTTPException(status_code=400, detail="accountId ou email obrigatório.")
+
+    if not target:
+        raise HTTPException(status_code=404, detail="Conta de e-mail não encontrada.")
+
+    # Desativar todas e ativar a selecionada
+    db.query(EmailAccount).update({"is_active": False})
+    target.is_active = True
+    db.commit()
+    db.refresh(target)
+    return {
+        "success": True,
+        "message": f"Conta {target.email} ativada com sucesso.",
+        "account": {
+            "id": target.id,
+            "email": target.email,
+            "displayName": target.display_name,
+            "incomingType": target.incoming_type,
+            "isActive": True
+        }
+    }
+
+@router.post("/accounts/logout")
+def logout_email_account(db: Session = Depends(get_db)):
+    """Desconecta a conta ativa, retornando o correio ao estado deslogado / vazio."""
+    db.query(EmailAccount).update({"is_active": False})
+    db.commit()
+    return {"success": True, "message": "Conta desconectada com sucesso."}
+
+@router.delete("/accounts/{account_id}")
+def delete_email_account(account_id: int, db: Session = Depends(get_db)):
+    """Remove uma conta e suas mensagens associadas."""
+    acc = db.query(EmailAccount).filter(EmailAccount.id == account_id).first()
+    if not acc:
+        raise HTTPException(status_code=404, detail="Conta não encontrada.")
+    db.query(EmailMessageModel).filter(EmailMessageModel.account_id == account_id).delete()
+    db.delete(acc)
+    db.commit()
+    return {"success": True, "message": "Conta removida com sucesso."}
+
 @router.post("/config", response_model=EmailAccountConfigSchema)
 def save_email_config(config: EmailAccountConfigSchema, db: Session = Depends(get_db)):
     """Salva ou atualiza a conta de correio ativa no banco de dados."""
@@ -57,6 +130,9 @@ def save_email_config(config: EmailAccountConfigSchema, db: Session = Depends(ge
     if not account:
         account = EmailAccount(email=config.email)
         db.add(account)
+
+    # Desativar outras contas para ativar esta
+    db.query(EmailAccount).update({"is_active": False})
 
     account.display_name = config.displayName
     account.provider = config.provider
@@ -75,6 +151,7 @@ def save_email_config(config: EmailAccountConfigSchema, db: Session = Depends(ge
 
     db.commit()
     db.refresh(account)
+    config.isConnected = True
     return config
 
 # ================= TESTE DE CONECTIVIDADE =================
@@ -216,6 +293,7 @@ def send_email(req: EmailSendRequest, db: Session = Depends(get_db)):
 
     email_record = EmailMessageModel(
         external_id=msg_id,
+        account_id=saved_account.id if saved_account else None,
         client_id=client.id if client else None,
         proposal_id=req.proposalId,
         folder='sent',
@@ -321,6 +399,7 @@ def sync_emails(req: EmailSyncRequest, db: Session = Depends(get_db)):
                     client = db.query(Client).filter(Client.email == item["from"]).first()
                     new_email = EmailMessageModel(
                         external_id=ext_id,
+                        account_id=saved_account.id if saved_account else None,
                         client_id=client.id if client else None,
                         folder='inbox',
                         from_email=item["from"],
@@ -356,96 +435,28 @@ def sync_emails(req: EmailSyncRequest, db: Session = Depends(get_db)):
         "new_messages_count": synced_count
     }
 
-# ================= LISTAGEM DE MENSAGENS =================
-
-def seed_initial_emails_if_empty(db: Session):
-    count = db.query(EmailMessageModel).count()
-    if count == 0:
-        c1 = db.query(Client).first()
-        p1 = db.query(Proposal).first()
-        initial = [
-            EmailMessageModel(
-                external_id="rc_wo_01914318",
-                client_id=c1.id if c1 else None,
-                proposal_id=p1.id if p1 else None,
-                folder="inbox",
-                from_email="sualehe@lecasu.co.mz",
-                from_name="Sualehe S. Sualehe",
-                to_email="comercial@lecasu.co.mz",
-                subject="RE: WO 01914318 Matendene 83830.32",
-                body_text="""Prezados Senhores,
-
-Espero que se encontrem bem.
-
-Escrevemos para informar que a obra referente à Montagem e desmontagem de painéis solares na capela de Matendene (5023169-01) foi concluída e entregue com sucesso. Em anexo seguem os documentos necessários:
-  • Fatura
-  • Cotação
-  • Goods and Services Verification – Matendene 2
-  • Relatório Fotográfico
-
-Caso seja necessária alguma informação adicional, por favor, não hesitem em contactar-nos. Permanecemos inteiramente à disposição para quaisquer esclarecimentos.
-
-Agradecemos, mais uma vez, a confiança e a parceria.
-
-Com os melhores cumprimentos,""",
-                is_read=True,
-                has_attachment=True,
-                attachments_json=json.dumps([
-                    {"filename": "Processo_2_WO_01914318_Matendene_83830.32.pdf", "size_bytes": 826368},
-                    {"filename": "Relatorio_Fotografico_Viabilidade_LECASU.pdf", "size_bytes": 1363148}
-                ]),
-                date=datetime.utcnow()
-            ),
-            EmailMessageModel(
-                external_id="rc_ronil_h100",
-                client_id=c1.id if c1 else None,
-                folder="inbox",
-                from_email="vladmir.naiene@ronil.co.mz",
-                from_name="Vladmir Naiene",
-                to_email="comercial@lecasu.co.mz",
-                subject="A Ronil, Lda. Apresenta Viaturas da Marca Hyundai H100",
-                body_text="""Exmos. Senhores da LECASU,
-
-Temos o prazer de apresentar a nova linha de viaturas comerciais para a vossa frota de engenharia. Segue portfólio em anexo.
-
-Cumprimentos,
-Vladmir Naiene""",
-                is_read=True,
-                has_attachment=True,
-                attachments_json=json.dumps([
-                    {"filename": "Catalogo_Hyundai_H100_LECASU.pdf", "size_bytes": 826368}
-                ]),
-                date=datetime.utcnow()
-            ),
-            EmailMessageModel(
-                external_id="rc_jeremias_diag",
-                folder="inbox",
-                from_email="jeremias.como@gmail.com",
-                from_name="Jeremias Heigar Como",
-                to_email="comercial@lecasu.co.mz",
-                subject="Re: [Ext] Autorização para Diagnóstico Técnico de Sistema Solar",
-                body_text="""Boa tarde equipa técnica,
-
-Conforme solicitado, autorizamos a deslocação da vossa equipa para o diagnóstico técnico na nossa instalação na Matola.
-
-Obrigado,
-Jeremias Como""",
-                is_read=True,
-                has_attachment=False,
-                date=datetime.utcnow()
-            )
-        ]
-        db.add_all(initial)
-        db.commit()
-
 @router.get("")
 def list_emails(
     folder: Optional[str] = Query(None),
     client_id: Optional[int] = Query(None),
+    account_email: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
-    """Lista e-mails registrados no banco de dados."""
-    query = db.query(EmailMessageModel)
+    """Lista e-mails registrados no banco de dados para a conta ativa. Se não houver conta ativa, retorna lista vazia."""
+    if account_email:
+        active_account = db.query(EmailAccount).filter(EmailAccount.email == account_email).first()
+    else:
+        active_account = db.query(EmailAccount).filter(EmailAccount.is_active == True).first()
+
+    # Se não houver conta ativa conectada, retorna vazio imediatamente
+    if not active_account:
+        return []
+
+    query = db.query(EmailMessageModel).filter(
+        (EmailMessageModel.account_id == active_account.id) |
+        (EmailMessageModel.to_email == active_account.email) |
+        (EmailMessageModel.from_email == active_account.email)
+    )
     if folder and folder != 'all':
         query = query.filter(EmailMessageModel.folder == folder)
     if client_id:
