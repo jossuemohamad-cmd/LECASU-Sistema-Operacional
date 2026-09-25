@@ -258,11 +258,14 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
   const handleSyncEmails = async (showToast = true) => {
     if (!emailConfig.isConnected) return;
     try {
-      setIsSyncing(true);
-      const res = await syncEmails({ config: emailConfig });
+      if (showToast) setIsSyncing(true);
+      const res = await syncEmails({ config: emailConfig, limit: showToast ? 50 : 15 });
       const emailList = await fetchEmails();
       if (emailList) {
         setMessages(emailList.filter(m => !m.id?.startsWith('rc_')));
+      }
+      if (res.new_messages_count > 0 && !showToast) {
+        addToast('success', 'Nova Mensagem Recebida!', `${res.new_messages_count} novo(s) e-mail(s) sincronizado(s) em tempo real.`);
       }
       if (showToast) {
         if (res.incoming_connected || res.imap_connected) {
@@ -277,7 +280,7 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
         addToast('error', 'Falha na Sincronização', err.message || 'Erro ao sincronizar correio.');
       }
     } finally {
-      setIsSyncing(false);
+      if (showToast) setIsSyncing(false);
     }
   };
 
@@ -307,11 +310,17 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
     }
   };
 
-  // Auto-sync emails whenever an account is connected
+  // Auto-sync e Polling automático em segundo plano a cada 20 segundos (tempo real sem precisar dar refresh)
   useEffect(() => {
-    if (emailConfig.isConnected && emailConfig.email) {
+    if (!emailConfig.isConnected || !emailConfig.email) return;
+
+    handleSyncEmails(false);
+
+    const intervalId = setInterval(() => {
       handleSyncEmails(false);
-    }
+    }, 20000);
+
+    return () => clearInterval(intervalId);
   }, [emailConfig.email, emailConfig.isConnected]);
 
   useEffect(() => {
@@ -414,27 +423,20 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
         config: emailConfig
       });
 
-      if (res && res.success) {
+      if (res && res.smtp_sent) {
         const updatedList = await fetchEmails();
         setMessages(updatedList);
         setSelectedItemId(res.email?.id || msg.id);
         setSelectedFolder('sent');
         setActiveSidebarTab('messages');
-
-        if (res.smtp_sent) {
-          addToast('success', 'E-mail Enviado!', `Mensagem enviada com sucesso para ${msg.to} via servidor SMTP.`);
-        } else {
-          addToast('info', 'E-mail Registado nos Enviados', res.smtp_warning || 'Guardado no sistema LECASU.');
-        }
+        addToast('success', 'E-mail Enviado!', `Mensagem enviada com sucesso para ${msg.to} via servidor SMTP.`);
+      } else {
+        const errorMsg = res?.message || res?.smtp_warning || 'O servidor SMTP rejeitou o envio da mensagem.';
+        addToast('error', 'Falha no Envio via SMTP', errorMsg);
       }
     } catch (err: any) {
       console.error('Erro ao enviar e-mail:', err);
       addToast('error', 'Erro no Envio de E-mail', err.message || 'Falha ao processar envio no servidor.');
-      // Fallback otimista para não perder a mensagem na interface
-      setMessages(prev => [msg, ...prev]);
-      setSelectedItemId(msg.id);
-      setSelectedFolder('sent');
-      setActiveSidebarTab('messages');
     }
   };
 

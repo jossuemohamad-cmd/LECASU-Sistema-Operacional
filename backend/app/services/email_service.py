@@ -368,9 +368,10 @@ def fetch_imap_emails(
     password: str,
     folder: str = 'INBOX',
     limit: int = 150,
+    known_external_ids: Optional[Any] = None,
     timeout: int = 30
 ) -> Tuple[bool, List[Dict[str, Any]], str]:
-    """Busca e-mails reais do servidor IMAP."""
+    """Busca e-mails reais do servidor IMAP com suporte a sincronização incremental rápida."""
     if not host or not username or not password:
         return False, [], "Credenciais IMAP incompletas."
 
@@ -406,6 +407,15 @@ def fetch_imap_emails(
 
         for msg_id in recent_ids:
             try:
+                # Otimização ultrarrápida: se já conhecemos os Message-IDs, conferir antes de baixar o RFC822 completo
+                if known_external_ids is not None:
+                    res_h, hdata = mail.fetch(msg_id, '(BODY.PEEK[HEADER.FIELDS (MESSAGE-ID)])')
+                    if res_h == 'OK' and hdata and hdata[0] and isinstance(hdata[0], tuple):
+                        hmsg = email.message_from_bytes(hdata[0][1])
+                        peek_id = clean_header_str(hmsg.get("Message-ID"))
+                        if peek_id and peek_id in known_external_ids:
+                            continue
+
                 res, msg_data = mail.fetch(msg_id, '(RFC822)')
                 if res != 'OK' or not msg_data or not msg_data[0]:
                     continue

@@ -339,9 +339,9 @@ def send_email(req: EmailSendRequest, db: Session = Depends(get_db)):
     db.refresh(email_record)
 
     return {
-        "success": True,
+        "success": smtp_sent,
         "smtp_sent": smtp_sent,
-        "message": "E-mail enviado com sucesso via servidor SMTP!" if smtp_sent else "E-mail registrado nos Enviados com sucesso!",
+        "message": "E-mail enviado com sucesso via servidor SMTP!" if smtp_sent else f"Falha no envio via SMTP: {smtp_error}",
         "smtp_warning": smtp_error if not smtp_sent else None,
         "email": {
             "id": f"msg_{email_record.id}",
@@ -406,6 +406,9 @@ def sync_emails(req: EmailSyncRequest, db: Session = Depends(get_db)):
     incoming_type = (cfg.incomingType or (target_account.incoming_type if target_account else 'imap') or 'imap').lower() if cfg else 'imap'
 
     if cfg and cfg.incomingHost and cfg.username and password and password != '••••••••••••':
+        # Carregar Message-IDs já salvos no banco para busca incremental ultrarrápida
+        existing_ids = {r[0] for r in db.query(EmailMessageModel.external_id).all() if r[0]}
+
         if incoming_type == 'pop3':
             success, fetched_list, msg = fetch_pop3_emails(
                 host=cfg.incomingHost,
@@ -423,7 +426,8 @@ def sync_emails(req: EmailSyncRequest, db: Session = Depends(get_db)):
                 username=cfg.username,
                 password=password,
                 folder=req.folder or 'INBOX',
-                limit=req.limit or 150
+                limit=req.limit or 150,
+                known_external_ids=existing_ids
             )
         incoming_connected = success
         incoming_message = msg
@@ -434,7 +438,6 @@ def sync_emails(req: EmailSyncRequest, db: Session = Depends(get_db)):
             except Exception:
                 pass
 
-            existing_ids = {r[0] for r in db.query(EmailMessageModel.external_id).all() if r[0]}
             target_account_id = target_account.id if target_account else None
 
             for item in fetched_list:
