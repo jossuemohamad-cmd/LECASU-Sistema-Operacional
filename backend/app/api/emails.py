@@ -445,7 +445,6 @@ def list_emails(
     db: Session = Depends(get_db)
 ):
     """Lista e-mails registrados no banco de dados."""
-    seed_initial_emails_if_empty(db)
     query = db.query(EmailMessageModel)
     if folder and folder != 'all':
         query = query.filter(EmailMessageModel.folder == folder)

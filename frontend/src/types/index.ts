@@ -495,7 +495,7 @@ export interface FinanceOverviewKPIs {
 }
 
 export interface EmailAccountConfig {
-  provider: 'gmail' | 'office365' | 'cpanel' | 'custom';
+  provider: string;
   displayName: string;
   email: string;
   smtpHost: string;

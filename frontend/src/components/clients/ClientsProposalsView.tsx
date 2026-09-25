@@ -27,6 +27,8 @@ import {
   ExternalLink, 
   SlidersHorizontal, 
   Download,
+  Settings,
+  Users,
   File as FileIcon 
 } from 'lucide-react';
 import type { Client, ClientCreateInput, Proposal, ProposalCreateInput, ToastMessage, EmailAccountConfig, EmailMessage } from '../../types';
@@ -48,6 +50,10 @@ import { ProposalModal } from './ProposalModal';
 import { ClientDetailsModal } from './ClientDetailsModal';
 import { EmailConfigModal, DEFAULT_EMAIL_CONFIG } from './EmailConfigModal';
 import { EmailComposeModal } from './EmailComposeModal';
+import { EmailComposeView } from './EmailComposeView';
+import { EmailConfigView } from './EmailConfigView';
+import { ProposalsManagerView } from './ProposalsManagerView';
+import { OutlookAccountWizard } from './OutlookAccountWizard';
 import { Toast } from '../common/Toast';
 import { formatMZN } from '../../utils/formatters';
 
@@ -68,8 +74,13 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // View Mode: 'roundcube' (default, Roundcube structure with white system palette) or 'crm' (tabular CRM)
-  const [viewMode, setViewMode] = useState<'roundcube' | 'crm'>('roundcube');
+  // Active Sidebar Navigation Tab (Roundcube Vertical Navigation)
+  // 'messages' (3-pane Correio) | 'compose' (Inline Escrever) | 'proposals' (Propostas) | 'settings' (Configurações) | 'clients' (Tabela Clientes)
+  const [activeSidebarTab, setActiveSidebarTab] = useState<'messages' | 'compose' | 'proposals' | 'settings' | 'clients'>('messages');
+
+  // Outlook Account Wizard State
+  const [isAccountWizardOpen, setIsAccountWizardOpen] = useState(false);
+  const [showAdvancedConfig, setShowAdvancedConfig] = useState(false);
 
   // Selected Folder in Tree
   // 'inbox' (A receber) | 'drafts' (Rascunhos) | 'sent' (Enviados) | 'spam' (Spam) | 'trash' (Reciclagem) | 'archive' (Arquivo) | 'proposals_all' | 'client_[id]'
@@ -109,7 +120,10 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
       const saved = localStorage.getItem('lecasu_outlook_emails');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) {
+          // Remove any previous fictitious mock emails
+          return parsed.filter((m: any) => !m.id?.startsWith('rc_') && !m.id?.startsWith('msg_1') && !m.id?.startsWith('msg_2') && !m.id?.startsWith('msg_3'));
+        }
       }
     } catch (e) {
       console.error(e);
@@ -147,9 +161,15 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
   const loadEmails = async (targetFolder?: string) => {
     try {
       const emailList = await fetchEmails(targetFolder);
-      if (emailList && emailList.length > 0) {
-        setMessages(emailList);
-        setSelectedItemId(prev => prev || emailList[0].id);
+      if (emailList) {
+        // Filter out any lingering fake mock emails
+        const cleanList = emailList.filter(m => !m.id?.startsWith('rc_'));
+        setMessages(cleanList);
+        if (cleanList.length > 0) {
+          setSelectedItemId(prev => prev && cleanList.some(m => m.id === prev) ? prev : cleanList[0].id);
+        } else {
+          setSelectedItemId(null);
+        }
       }
     } catch (e) {
       console.warn('Usando mensagens em cache/locais:', e);
@@ -295,11 +315,11 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
     setIsDetailsModalOpen(true);
   };
 
-  // Open compose email modal
+  // Open compose email inline (instead of popup)
   const handleOpenCompose = (client?: Client | null, proposal?: Proposal | null) => {
     setComposeInitialClient(client || null);
     setComposeInitialProposal(proposal || null);
-    setIsEmailComposeModalOpen(true);
+    setActiveSidebarTab('compose');
   };
 
   // Send Email Handler with real backend SMTP & database persistence
@@ -319,6 +339,8 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
         const updatedList = await fetchEmails();
         setMessages(updatedList);
         setSelectedItemId(res.email?.id || msg.id);
+        setSelectedFolder('sent');
+        setActiveSidebarTab('messages');
 
         if (res.smtp_sent) {
           addToast('success', 'E-mail Enviado!', `Mensagem enviada com sucesso para ${msg.to} via servidor SMTP.`);
@@ -332,6 +354,8 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
       // Fallback otimista para não perder a mensagem na interface
       setMessages(prev => [msg, ...prev]);
       setSelectedItemId(msg.id);
+      setSelectedFolder('sent');
+      setActiveSidebarTab('messages');
     }
   };
 
@@ -496,7 +520,7 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
           </div>
           <button
             type="button"
-            onClick={() => setIsEmailConfigModalOpen(true)}
+            onClick={() => setActiveSidebarTab('settings')}
             className="text-slate-500 hover:text-slate-800 p-1 rounded hover:bg-slate-200 transition cursor-pointer shrink-0"
             title="Configurações da Conta"
           >
@@ -519,9 +543,9 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
 
             <button
               type="button"
-              onClick={() => setIsProposalModalOpen(true)}
+              onClick={() => setActiveSidebarTab('proposals')}
               className="flex items-center gap-1.5 text-[#FF8000] hover:text-[#E67300] transition font-medium cursor-pointer whitespace-nowrap shrink-0"
-              title="Criar Proposta Comercial"
+              title="Gerir e Criar Propostas Comerciais"
             >
               <FileSpreadsheet size={13} className="shrink-0" />
               <span className="whitespace-nowrap">+ Proposta</span>
@@ -634,30 +658,298 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
             </button>
           </div>
 
+          {/* Outlook Account Status Pill Button */}
+          <button
+            type="button"
+            onClick={() => setIsAccountWizardOpen(true)}
+            className="hidden sm:flex items-center gap-2 px-2.5 py-1 text-slate-700 hover:text-[#0078D4] hover:border-[#0078D4] hover:bg-blue-50/50 rounded text-xs font-medium transition cursor-pointer border border-slate-300 bg-white shadow-2xs whitespace-nowrap shrink-0 ml-3"
+            title="Gerenciar conta conectada / Assistente de Login Outlook"
+          >
+            <div className="w-4 h-4 rounded bg-[#0078D4] flex items-center justify-center text-white text-[9px] font-black">
+              O
+            </div>
+            <div className="flex items-center gap-1.5 font-mono text-[11px]">
+              <span className={`w-2 h-2 rounded-full ${emailConfig.isConnected ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+              <span className="font-semibold text-slate-800 truncate max-w-[130px]">{emailConfig.email || 'info@lecasu.co.mz'}</span>
+              <span className="text-[10px] text-slate-400 font-sans uppercase">({emailConfig.incomingType.toUpperCase()})</span>
+            </div>
+          </button>
+
           {/* Right toggle: CRM Mode */}
           <button
             type="button"
-            onClick={() => setViewMode(viewMode === 'roundcube' ? 'crm' : 'roundcube')}
+            onClick={() => {
+              if (activeSidebarTab === 'clients') {
+                setActiveSidebarTab('messages');
+              } else {
+                setActiveSidebarTab('clients');
+              }
+            }}
             className="px-2.5 py-1 text-slate-700 hover:text-[#FF8000] hover:border-[#FF8000] hover:bg-orange-50/50 rounded text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer border border-slate-300 bg-white shadow-2xs whitespace-nowrap shrink-0 ml-3"
             title="Alternar entre visualização de Correio e Tabela CRM"
           >
             <LayoutGrid size={13} className="text-[#FF8000] shrink-0" />
-            <span className="whitespace-nowrap">{viewMode === 'roundcube' ? 'Tabela CRM' : 'Correio'}</span>
+            <span className="whitespace-nowrap">{activeSidebarTab === 'clients' ? 'Modo Correio' : 'Tabela CRM'}</span>
           </button>
         </div>
 
       </div>
 
       {/* =========================================================================
-          ROUNDCUBE 3-PANE WORKSPACE
+          ROUNDCUBE WORKSPACE WITH VERTICAL MINI-SIDEBAR
          ========================================================================= */}
-      {viewMode === 'roundcube' ? (
-        <div className="flex flex-1 min-h-0 overflow-hidden bg-white">
-          
-          {/* ---------------------------------------------------------------------
-              PANE 1: ROUNDCUBE FOLDERS (A receber, Rascunhos, Enviados, etc.)
-             --------------------------------------------------------------------- */}
-          <div className="w-52 sm:w-56 bg-[#F8F9FA] border-r border-slate-200 flex flex-col shrink-0 min-h-0 overflow-y-auto text-xs">
+      <div className="flex flex-1 min-h-0 overflow-hidden bg-white">
+        
+        {/* ---------------------------------------------------------------------
+            ROUNDCUBE VERTICAL MINI-SIDEBAR (Correio, Escrever, Propostas, Clientes, Ajustes)
+           --------------------------------------------------------------------- */}
+        <div className="w-14 sm:w-16 bg-[#F8F9FA] border-r border-slate-200 flex flex-col items-center py-3 shrink-0 justify-between select-none">
+          {/* Top Navigation Icons */}
+          <div className="flex flex-col items-center space-y-2.5 w-full px-1.5">
+            
+            {/* 1. Mensagens / Correio */}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveSidebarTab('messages');
+              }}
+              className={`w-11 h-11 rounded-xl flex flex-col items-center justify-center transition cursor-pointer group ${
+                activeSidebarTab === 'messages'
+                  ? 'bg-[#FF8000] text-white shadow-xs font-bold'
+                  : 'text-slate-600 hover:bg-slate-200/70 hover:text-slate-900'
+              }`}
+              title="Caixa de Mensagens & Correio"
+            >
+              <Mail size={17} />
+              <span className="text-[9px] mt-0.5 font-semibold leading-none">Correio</span>
+            </button>
+
+            {/* 2. Escrever (Inline Compose!) */}
+            <button
+              type="button"
+              onClick={() => {
+                setComposeInitialClient(null);
+                setComposeInitialProposal(null);
+                setActiveSidebarTab('compose');
+              }}
+              className={`w-11 h-11 rounded-xl flex flex-col items-center justify-center transition cursor-pointer group ${
+                activeSidebarTab === 'compose'
+                  ? 'bg-[#FF8000] text-white shadow-xs font-bold'
+                  : 'text-slate-600 hover:bg-slate-200/70 hover:text-slate-900'
+              }`}
+              title="Escrever Novo E-mail (Sem popup)"
+            >
+              <Edit3 size={17} />
+              <span className="text-[9px] mt-0.5 font-semibold leading-none">Escrever</span>
+            </button>
+
+            {/* 3. Criar Propostas */}
+            <button
+              type="button"
+              onClick={() => setActiveSidebarTab('proposals')}
+              className={`w-11 h-11 rounded-xl flex flex-col items-center justify-center transition cursor-pointer group ${
+                activeSidebarTab === 'proposals'
+                  ? 'bg-[#FF8000] text-white shadow-xs font-bold'
+                  : 'text-slate-600 hover:bg-slate-200/70 hover:text-slate-900'
+              }`}
+              title="Propostas Comerciais"
+            >
+              <FileSpreadsheet size={17} />
+              <span className="text-[9px] mt-0.5 font-semibold leading-none">Propostas</span>
+            </button>
+
+            {/* 4. Clientes */}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveSidebarTab('clients');
+              }}
+              className={`w-11 h-11 rounded-xl flex flex-col items-center justify-center transition cursor-pointer group ${
+                activeSidebarTab === 'clients'
+                  ? 'bg-[#FF8000] text-white shadow-xs font-bold'
+                  : 'text-slate-600 hover:bg-slate-200/70 hover:text-slate-900'
+              }`}
+              title="Catálogo de Clientes"
+            >
+              <Users size={17} />
+              <span className="text-[9px] mt-0.5 font-semibold leading-none">Clientes</span>
+            </button>
+
+          </div>
+
+          {/* Bottom Navigation Icons */}
+          <div className="flex flex-col items-center space-y-2.5 w-full px-1.5">
+            {/* 5. Configurações de Conta */}
+            <button
+              type="button"
+              onClick={() => setActiveSidebarTab('settings')}
+              className={`w-11 h-11 rounded-xl flex flex-col items-center justify-center transition cursor-pointer group ${
+                activeSidebarTab === 'settings'
+                  ? 'bg-[#FF8000] text-white shadow-xs font-bold'
+                  : 'text-slate-600 hover:bg-slate-200/70 hover:text-slate-900'
+              }`}
+              title="Configurações de Login e Servidores de E-mail"
+            >
+              <Settings size={17} />
+              <span className="text-[9px] mt-0.5 font-semibold leading-none">Ajustes</span>
+            </button>
+
+            {/* Sincronização */}
+            <button
+              type="button"
+              onClick={() => handleSyncEmails(true)}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-200 hover:text-slate-800 transition cursor-pointer"
+              title="Atualizar correio via IMAP"
+            >
+              <RefreshCw size={13} className={isSyncing ? 'animate-spin text-[#FF8000]' : ''} />
+            </button>
+          </div>
+        </div>
+
+        {/* ================= ACTIVE VIEW CONTENT ================= */}
+        {activeSidebarTab === 'compose' ? (
+          <EmailComposeView
+            clients={clients}
+            initialClient={composeInitialClient}
+            initialProposal={composeInitialProposal}
+            senderEmail={emailConfig.email}
+            onSend={handleSendEmailMessage}
+            onCancel={() => setActiveSidebarTab('messages')}
+          />
+        ) : activeSidebarTab === 'proposals' ? (
+          <ProposalsManagerView
+            clients={clients}
+            onOpenCreateProposal={() => setIsProposalModalOpen(true)}
+            onSendProposalByEmail={(prop, client) => {
+              setComposeInitialProposal(prop);
+              setComposeInitialClient(client || null);
+              setActiveSidebarTab('compose');
+            }}
+          />
+        ) : activeSidebarTab === 'settings' ? (
+          <div className="flex-1 overflow-y-auto bg-slate-100 flex flex-col p-4 sm:p-6 min-h-0">
+            {/* Top Switcher Bar */}
+            <div className="w-full max-w-2xl mx-auto mb-4 flex items-center justify-between bg-white px-4 py-3 rounded-lg border border-slate-200 shadow-2xs">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded bg-[#0078D4] text-white flex items-center justify-center font-bold text-xs shadow-2xs">
+                  O
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-slate-800">Assistente de Conexão de E-mail Corporativo</h3>
+                  <p className="text-[11px] text-slate-500">Conecte sua conta info@lecasu.co.mz para enviar e receber mensagens reais no sistema</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAdvancedConfig(!showAdvancedConfig)}
+                className="text-xs font-semibold text-[#FF8000] hover:underline cursor-pointer whitespace-nowrap pl-3"
+              >
+                {showAdvancedConfig ? '← Voltar para Assistente Outlook' : 'Parâmetros Técnicos cPanel'}
+              </button>
+            </div>
+
+            {showAdvancedConfig ? (
+              <div className="w-full max-w-2xl mx-auto">
+                <EmailConfigView
+                  currentConfig={emailConfig}
+                  onConfigSaved={(saved) => {
+                    setEmailConfig(saved);
+                    addToast('success', 'Configuração Salva', 'Configurações de e-mail atualizadas.');
+                  }}
+                  onClose={() => setActiveSidebarTab('messages')}
+                />
+              </div>
+            ) : (
+              <div className="w-full max-w-2xl mx-auto flex items-center justify-center my-auto">
+                <OutlookAccountWizard
+                  isInline={true}
+                  initialConfig={emailConfig}
+                  onSuccess={(cfg) => {
+                    setEmailConfig(cfg);
+                    handleSyncEmails(true);
+                    addToast('success', 'Conta Conectada', `Conta ${cfg.email} conectada com êxito!`);
+                    setActiveSidebarTab('messages');
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        ) : activeSidebarTab === 'clients' ? (
+          <div className="flex-1 p-6 overflow-y-auto bg-white text-slate-800 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">Carteira de Clientes & Propostas (Visão Tabela CRM)</h2>
+                <p className="text-xs text-slate-500">Visão tabular executiva integrada aos dados do PostgreSQL</p>
+              </div>
+              <button
+                onClick={() => {
+                  setActiveSidebarTab('messages');
+                }}
+                className="btn-primary btn-sm bg-[#FF8000] hover:bg-[#E67300] text-white flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              >
+                <Mail size={14} />
+                <span>Voltar para o Modo Correio</span>
+              </button>
+            </div>
+
+            <div className="table-scroll-container">
+              <table className="table-erp">
+                <thead>
+                  <tr className="table-header-erp">
+                    <th className="px-4">Cliente</th>
+                    <th className="px-4">NUIT</th>
+                    <th className="px-4">E-mail</th>
+                    <th className="px-4">Telefone</th>
+                    <th className="px-4">Propostas</th>
+                    <th className="px-4 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-700">
+                  {clients.map(client => (
+                    <tr key={client.id} className="table-row-erp hover:bg-slate-50 transition cursor-pointer" onClick={() => handleOpenDetails(client)}>
+                      <td className="px-4 font-semibold text-slate-900">{client.name}</td>
+                      <td className="px-4 font-mono text-xs">{client.nuit || '—'}</td>
+                      <td className="px-4 text-xs">{client.email || '—'}</td>
+                      <td className="px-4 text-xs">{client.phone || '—'}</td>
+                      <td className="px-4 text-xs font-semibold text-orange-600">
+                        {client.proposals?.length || 0} propostas
+                      </td>
+                      <td className="px-4 text-right">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenCompose(client);
+                          }}
+                          className="px-2.5 py-1 bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900 border border-slate-300 rounded text-xs font-semibold mr-1.5 transition cursor-pointer"
+                        >
+                          Enviar E-mail
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenProposalForClient(client.id);
+                          }}
+                          className="px-2.5 py-1 bg-orange-50 text-orange-700 hover:bg-orange-100 rounded text-xs font-semibold"
+                        >
+                          + Proposta
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          /* ================= 3-PANE ROUNDCUBE WORKSPACE ================= */
+          <div className="flex flex-1 min-h-0 overflow-hidden bg-white">
+            
+            {/* ---------------------------------------------------------------------
+                PANE 1: ROUNDCUBE FOLDERS (A receber, Rascunhos, Enviados, etc.)
+               --------------------------------------------------------------------- */}
+            <div className="w-52 sm:w-56 bg-[#F8F9FA] border-r border-slate-200 flex flex-col shrink-0 min-h-0 overflow-y-auto text-xs">
             <div className="py-2 px-1.5 space-y-0.5">
               
               {/* A receber (Inbox) */}
@@ -1101,76 +1393,8 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
           </div>
 
         </div>
-      ) : (
-        /* =====================================================================
-           MODO TRADICIONAL CRM / TABELA
-           ===================================================================== */
-        <div className="flex-1 p-6 overflow-y-auto bg-white text-slate-800 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-            <div>
-              <h2 className="text-base font-bold text-slate-900">Carteira de Clientes & Propostas (Visão Tabela CRM)</h2>
-              <p className="text-xs text-slate-500">Visão tabular executiva integrada aos dados do PostgreSQL</p>
-            </div>
-            <button
-              onClick={() => setViewMode('roundcube')}
-              className="btn-primary btn-sm bg-[#FF8000] hover:bg-[#E67300] text-white flex items-center gap-1.5 cursor-pointer shadow-2xs"
-            >
-              <Mail size={14} />
-              <span>Voltar para o Modo Correio</span>
-            </button>
-          </div>
-
-          <div className="table-scroll-container">
-            <table className="table-erp">
-              <thead>
-                <tr className="table-header-erp">
-                  <th className="px-4">Cliente</th>
-                  <th className="px-4">NUIT</th>
-                  <th className="px-4">E-mail</th>
-                  <th className="px-4">Telefone</th>
-                  <th className="px-4">Propostas</th>
-                  <th className="px-4 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700">
-                {clients.map(client => (
-                  <tr key={client.id} className="table-row-erp hover:bg-slate-50 transition cursor-pointer" onClick={() => handleOpenDetails(client)}>
-                    <td className="px-4 font-semibold text-slate-900">{client.name}</td>
-                    <td className="px-4 font-mono text-xs">{client.nuit || '—'}</td>
-                    <td className="px-4 text-xs">{client.email || '—'}</td>
-                    <td className="px-4 text-xs">{client.phone || '—'}</td>
-                    <td className="px-4 text-xs font-semibold text-orange-600">
-                      {client.proposals?.length || 0} propostas
-                    </td>
-                    <td className="px-4 text-right">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenCompose(client);
-                        }}
-                        className="px-2.5 py-1 bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900 border border-slate-300 rounded text-xs font-semibold mr-1.5 transition cursor-pointer"
-                      >
-                        Enviar E-mail
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenProposalForClient(client.id);
-                        }}
-                        className="px-2.5 py-1 bg-orange-50 text-orange-700 hover:bg-orange-100 rounded text-xs font-semibold"
-                      >
-                        + Proposta
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
       )}
+      </div>
 
       {/* =========================================================================
           MODAIS INTEGRADOS
@@ -1229,6 +1453,22 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
         }}
         onSend={handleSendEmailMessage}
       />
+
+      {/* Modal: Assistente de Conta Outlook */}
+      {isAccountWizardOpen && (
+        <OutlookAccountWizard
+          isOpen={true}
+          isInline={false}
+          initialConfig={emailConfig}
+          onClose={() => setIsAccountWizardOpen(false)}
+          onSuccess={(cfg) => {
+            setEmailConfig(cfg);
+            setIsAccountWizardOpen(false);
+            handleSyncEmails(true);
+            addToast('success', 'Conta Conectada', `Conta ${cfg.email} conectada com êxito!`);
+          }}
+        />
+      )}
 
     </div>
   );
