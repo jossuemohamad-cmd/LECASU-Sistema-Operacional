@@ -59,12 +59,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       }
 
       const res = await loginUser({ email, password });
-      
-      // Transição suave para o painel ERP
-      setTimeout(() => {
-        onLoginSuccess(res.user);
-      }, 400);
-
+      onLoginSuccess(res.user);
     } catch (err: any) {
       console.error('Erro ao iniciar sessão:', err);
       setErrorMessage(err.message || 'Falha na autenticação. Verifique o seu e-mail e palavra-passe.');

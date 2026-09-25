@@ -421,21 +421,28 @@ export async function updateService(serviceId: number, payload: ServiceUpdateInp
 
 // ================= AUTHENTICATION & USERS =================
 export async function loginUser(credentials: LoginCredentials): Promise<AuthResponse> {
-  const res = await fetch(`${API_BASE_URL}/auth/login`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    },
-    body: JSON.stringify(credentials)
-  });
-  const data = await handleResponse<AuthResponse>(res);
-  if (data.access_token) {
-    setAuthToken(data.access_token);
-    localStorage.setItem('lecasu_auth_user', JSON.stringify(data.user));
-    clearApiCache();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(credentials),
+      signal: controller.signal
+    });
+    const data = await handleResponse<AuthResponse>(res);
+    if (data.access_token) {
+      setAuthToken(data.access_token);
+      localStorage.setItem('lecasu_auth_user', JSON.stringify(data.user));
+      clearApiCache();
+    }
+    return data;
+  } finally {
+    clearTimeout(timeoutId);
   }
-  return data;
 }
 
 export async function fetchCurrentUser(): Promise<User> {

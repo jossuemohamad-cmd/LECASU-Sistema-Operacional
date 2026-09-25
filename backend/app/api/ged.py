@@ -12,7 +12,7 @@ from sqlalchemy import func, extract
 from app.core.database import get_db
 from app.models.models import Document, Project, Client, User
 from app.core.security import get_current_user
-from app.schemas.schemas import DocumentResponse, GEDOverviewKPIs, GenericMessageResponse
+from app.schemas.schemas import DocumentResponse, DocumentUpdate, GEDOverviewKPIs, GenericMessageResponse
 from app.services.storage import (
     upload_file_to_s3,
     generate_presigned_url,

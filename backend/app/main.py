@@ -18,13 +18,21 @@ from app.api.finance import router as finance_router
 import asyncio
 import sqlalchemy
 
+def _ping_db():
+    try:
+        with SessionLocal() as db_session:
+            db_session.execute(sqlalchemy.text("SELECT 1"))
+    except Exception:
+        pass
+
 async def neon_keepalive_worker():
-    """Mantém o compute pool do Neon permanentemente ativo para eliminar cold starts"""
+    """Mantém o compute pool do Neon ativo sem bloquear o event loop"""
     while True:
         try:
-            await asyncio.sleep(45)  # Ping a cada 45 segundos
-            with SessionLocal() as db_session:
-                db_session.execute(sqlalchemy.text("SELECT 1"))
+            await asyncio.sleep(45)
+            await asyncio.to_thread(_ping_db)
+        except asyncio.CancelledError:
+            break
         except Exception:
             pass
 
