@@ -29,8 +29,26 @@ interface DashboardViewProps {
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
-  const [data, setData] = useState<DashboardOverview | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [data, setData] = useState<DashboardOverview | null>(() => {
+    try {
+      const saved = localStorage.getItem('lecasu_dashboard_cache');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+      // Check api cached entries
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.includes('dashboard/overview')) {
+          const entry = JSON.parse(localStorage.getItem(k) || '{}');
+          if (entry.data) return entry.data;
+        }
+      }
+    } catch {
+      // Ignore parse errors
+    }
+    return null;
+  });
+  const [isLoading, setIsLoading] = useState(!data);
   const [error, setError] = useState<string | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
@@ -48,10 +66,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
   const loadDashboardData = async (showToast = false) => {
     try {
-      setIsLoading(true);
+      if (!data) setIsLoading(true);
       setError(null);
       const res = await fetchDashboardOverview();
       setData(res);
+      try {
+        localStorage.setItem('lecasu_dashboard_cache', JSON.stringify(res));
+      } catch {}
       if (showToast) {
         addToast('success', 'Painel atualizado', 'Estatísticas consolidadas de todos os módulos.');
       }
@@ -171,10 +192,49 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
   if (isLoading && !data) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-[#FF8000] border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-xs text-neutral-500 font-medium">Carregando estatísticas do sistema...</span>
+      <div className="space-y-6 animate-pulse">
+        {/* Skeleton Top KPI Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="bg-white p-5 rounded-2xl border border-slate-200/70 shadow-2xs space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="w-10 h-10 bg-slate-100 rounded-xl" />
+                <div className="w-16 h-4 bg-slate-100 rounded-md" />
+              </div>
+              <div className="w-24 h-7 bg-slate-200 rounded-md" />
+              <div className="w-32 h-3 bg-slate-100 rounded-md" />
+            </div>
+          ))}
+        </div>
+
+        {/* Skeleton Secondary Modules Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="bg-white p-4 rounded-xl border border-slate-200/70 shadow-2xs space-y-2">
+              <div className="w-7 h-7 bg-slate-100 rounded-lg" />
+              <div className="w-14 h-5 bg-slate-200 rounded" />
+              <div className="w-20 h-3 bg-slate-100 rounded" />
+            </div>
+          ))}
+        </div>
+
+        {/* Skeleton Charts & Tables */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200/70 shadow-2xs space-y-4">
+            <div className="flex justify-between items-center">
+              <div className="w-40 h-5 bg-slate-200 rounded" />
+              <div className="w-20 h-4 bg-slate-100 rounded" />
+            </div>
+            <div className="h-56 bg-slate-50 rounded-xl border border-slate-100" />
+          </div>
+          <div className="bg-white p-6 rounded-2xl border border-slate-200/70 shadow-2xs space-y-4">
+            <div className="w-36 h-5 bg-slate-200 rounded" />
+            <div className="space-y-3">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="h-12 bg-slate-50 rounded-lg border border-slate-100" />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );

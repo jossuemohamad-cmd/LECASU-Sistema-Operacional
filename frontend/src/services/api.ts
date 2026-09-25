@@ -52,7 +52,7 @@ interface CacheEntry<T> {
 }
 
 const memoryCache = new Map<string, CacheEntry<any>>();
-const DEFAULT_CACHE_TTL = 45 * 1000; // 45 seconds fresh window
+const DEFAULT_CACHE_TTL = 3 * 1000; // 3 seconds window for fast re-renders without stale data delay
 
 function getStoredCache<T>(key: string): CacheEntry<T> | null {
   try {
@@ -965,6 +965,22 @@ export async function deleteEmail(id: string): Promise<any> {
     headers: getAuthHeaders()
   });
   return handleResponse<any>(res);
+}
+
+export async function moveEmailFolder(id: string, folder: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/emails/${id}/folder`, {
+    method: 'PATCH',
+    headers: {
+      ...getAuthHeaders(),
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ folder })
+  });
+  return handleResponse<any>(res);
+}
+
+export function getEmailAttachmentUrl(id: string, index: number): string {
+  return `${API_BASE_URL}/emails/${id}/attachments/${index}/download`;
 }
 
 export async function fetchEmailAccounts(): Promise<Array<{

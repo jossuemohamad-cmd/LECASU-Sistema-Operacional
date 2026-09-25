@@ -511,6 +511,15 @@ export interface EmailAccountConfig {
   lastSync?: string;
 }
 
+export interface EmailAttachment {
+  index?: number;
+  filename: string;
+  size_bytes?: number;
+  content_type?: string;
+  download_url?: string;
+  data_url?: string;
+}
+
 export interface EmailMessage {
   id: string;
   clientId?: number;
@@ -524,10 +533,11 @@ export interface EmailMessage {
   date: string;
   isRead: boolean;
   hasAttachment: boolean;
+  attachments?: EmailAttachment[];
   attachedProposalId?: number;
   attachedProposalTitle?: string;
   attachedProposalAmount?: number;
-  folder: 'inbox' | 'sent' | 'drafts' | 'trash' | 'spam' | string;
+  folder: 'inbox' | 'sent' | 'drafts' | 'trash' | 'spam' | 'archive' | string;
 }
 
 

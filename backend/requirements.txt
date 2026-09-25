@@ -9,3 +9,4 @@ passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
 pyjwt==2.8.0
 python-multipart>=0.0.9
+a2wsgi>=1.10.0

@@ -35,7 +35,7 @@ def clean_header_str(value: Optional[str]) -> str:
         return str(value)
 
 def parse_email_body(msg: email.message.Message) -> Tuple[str, str, List[Dict[str, Any]]]:
-    """Extrai texto simples, html e lista de anexos de uma mensagem MIME, convertendo imagens inline (CID) em Data URLs para renderização perfeita."""
+    """Extrai texto simples, html e lista de anexos de uma mensagem MIME, convertendo imagens inline (CID) em Data URLs para renderização perfeita e anexos com dados para download."""
     text_content = ""
     html_content = ""
     attachments: List[Dict[str, Any]] = []
@@ -59,21 +59,35 @@ def parse_email_body(msg: email.message.Message) -> Tuple[str, str, List[Dict[st
                         clean_cid = content_id.strip("<>").strip()
                         cid_images[clean_cid] = data_url
                         cid_images[clean_cid.lower()] = data_url
+                        cid_images[clean_cid.strip('"\'')] = data_url
                     
                     if filename:
-                        clean_fn = clean_header_str(filename)
+                        clean_fn = clean_header_str(filename).strip()
                         cid_images[clean_fn] = data_url
                         cid_images[clean_fn.lower()] = data_url
+                        cid_images[clean_fn.strip('"\'')] = data_url
 
-            # 2. Anexos normais para download
-            if (filename or "attachment" in content_disposition.lower()) and not (content_id and "inline" in content_disposition.lower()):
+                    content_loc = str(part.get("Content-Location") or "").strip()
+                    if content_loc:
+                        cid_images[content_loc] = data_url
+                        cid_images[content_loc.lower()] = data_url
+
+            # 2. Anexos normais para download (PDF, Excel, Imagens anexas, ZIP, etc.)
+            is_inline_img = content_type.startswith("image/") and content_id and ("inline" in content_disposition.lower() or not filename)
+            if (filename or "attachment" in content_disposition.lower()) and not is_inline_img:
                 fn = clean_header_str(filename) or "anexo_desconhecido"
                 payload = part.get_payload(decode=True)
                 size_bytes = len(payload) if payload else 0
+                b64_content = ""
+                # Incluir dados base64 se arquivo <= 10MB para download instantâneo
+                if payload and len(payload) <= 10 * 1024 * 1024:
+                    b64_content = base64.b64encode(payload).decode('ascii')
+
                 attachments.append({
                     "filename": fn,
                     "size_bytes": size_bytes,
-                    "content_type": content_type
+                    "content_type": content_type,
+                    "data": f"data:{content_type};base64,{b64_content}" if b64_content else None
                 })
             elif content_type == "text/plain" and not text_content:
                 charset = part.get_content_charset() or "utf-8"
@@ -108,20 +122,38 @@ def parse_email_body(msg: email.message.Message) -> Tuple[str, str, List[Dict[st
     # 3. Substituir referências cid: por Data URLs na versão HTML para renderização nativa
     if html_content and cid_images:
         for cid_key, data_url in cid_images.items():
-            pattern_quoted = re.compile(r'src=[\'"]cid:' + re.escape(cid_key) + r'[\'"]', re.IGNORECASE)
+            if not cid_key:
+                continue
+            escaped_key = re.escape(cid_key)
+            # Casos src="cid:xxx" e src='cid:xxx'
+            pattern_quoted = re.compile(r'src=[\'"]\s*cid:' + escaped_key + r'\s*[\'"]', re.IGNORECASE)
             html_content = pattern_quoted.sub(f'src="{data_url}"', html_content)
-            pattern_unquoted = re.compile(r'src=cid:' + re.escape(cid_key) + r'(?=[>\s])', re.IGNORECASE)
+            # Casos src=cid:xxx sem aspas
+            pattern_unquoted = re.compile(r'src=cid:' + escaped_key + r'(?=[>\s])', re.IGNORECASE)
             html_content = pattern_unquoted.sub(f'src="{data_url}"', html_content)
+            # Casos onde src aponta para o nome do anexo sem prefixo cid
+            pattern_fn = re.compile(r'src=[\'"]' + escaped_key + r'[\'"]', re.IGNORECASE)
+            html_content = pattern_fn.sub(f'src="{data_url}"', html_content)
 
-    # 4. Se não tiver HTML mas tiver texto simples, gerar uma versão HTML rica com quebras e links
+    # 4. Tratar CIDs quebrados ou inacessíveis para não exibir ícone de imagem partida no navegador
+    if html_content:
+        # Substitui qualquer cid: remanescente não encontrado por pixel transparente seguro com hidden styling
+        html_content = re.sub(
+            r'src=[\'"]cid:[^\'"]+[\'"]',
+            'src="data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'1\' height=\'1\'></svg>" style="display:none;"',
+            html_content,
+            flags=re.IGNORECASE
+        )
+
+    # 5. Se não tiver HTML mas tiver texto simples, gerar uma versão HTML rica com quebras e links
     if not html_content and text_content:
         escaped = html.escape(text_content)
         # Auto-link URLs
         url_pattern = re.compile(r'(https?://[^\s<>"]+|www\.[^\s<>"]+)')
         linked = url_pattern.sub(r'<a href="\1" target="_blank" rel="noopener noreferrer" style="color:#FF8000;text-decoration:underline;">\1</a>', escaped)
-        html_content = f'<div style="font-family:inherit;font-size:13px;line-height:1.6;color:#1e293b;">{linked.replace(chr(10), "<br/>")}</div>'
+        html_content = f'<div style="font-family:inherit;font-size:13.5px;line-height:1.7;color:#1e293b;word-break:break-word;">{linked.replace(chr(10), "<br/>")}</div>'
 
-    # 5. Garantir que links no HTML abram em nova aba
+    # 6. Garantir que links no HTML abram em nova aba
     if html_content:
         html_content = re.sub(r'<a\s+(?!.*?target=)([^>]+)>', r'<a target="_blank" rel="noopener noreferrer" \1>', html_content, flags=re.IGNORECASE)
 

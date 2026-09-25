@@ -22,15 +22,16 @@ import {
   ChevronDown, 
   ChevronLeft, 
   ChevronRight, 
-  ExternalLink, 
   SlidersHorizontal, 
   Download,
   Settings,
   Users,
   Check,
-  File as FileIcon 
+  File as FileIcon,
+  Image as ImageIcon,
+  FileText
 } from 'lucide-react';
-import type { Client, ClientCreateInput, Proposal, ProposalCreateInput, ToastMessage, EmailAccountConfig, EmailMessage } from '../../types';
+import type { Client, ClientCreateInput, Proposal, ProposalCreateInput, ToastMessage, EmailAccountConfig, EmailMessage, EmailAttachment } from '../../types';
 import { 
   fetchClients, 
   createClient, 
@@ -41,6 +42,8 @@ import {
   syncEmails,
   toggleEmailRead,
   deleteEmail,
+  moveEmailFolder,
+  getEmailAttachmentUrl,
   saveEmailConfig,
   fetchEmailAccounts,
   switchEmailAccount,
@@ -284,25 +287,53 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
     }
   };
 
-  // Fetch clients, configuration & emails from PostgreSQL backend
+  // Fetch clients, configuration & emails from PostgreSQL backend concurrently in parallel
   const loadClients = async (showSuccessToast = false) => {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await fetchClients();
-      setClients(data);
 
-      // Load active accounts
-      await loadAccounts();
+      // Carregamento ultrarrápido em paralelo (0ms de atraso sequencial)
+      const [clientsRes, accountsRes, emailsRes] = await Promise.allSettled([
+        fetchClients(),
+        fetchEmailAccounts(),
+        fetchEmails()
+      ]);
 
-      // Load emails from backend database
-      await loadEmails();
+      if (clientsRes.status === 'fulfilled') {
+        setClients(clientsRes.value);
+      }
+      if (accountsRes.status === 'fulfilled' && Array.isArray(accountsRes.value)) {
+        setEmailAccounts(accountsRes.value);
+        const active = accountsRes.value.find(a => a.isActive);
+        if (active) {
+          setEmailConfig(prev => ({
+            ...prev,
+            email: active.email,
+            username: active.email,
+            displayName: active.displayName || 'LECASU - Engenharia & Serviços',
+            provider: active.provider || 'cpanel',
+            incomingType: (active.incomingType || 'imap') as any,
+            incomingHost: active.incomingHost,
+            smtpHost: active.smtpHost,
+            isConnected: true,
+            lastSync: active.lastSync
+          }));
+        }
+      }
+      if (emailsRes.status === 'fulfilled' && Array.isArray(emailsRes.value)) {
+        const cleanList = emailsRes.value.filter(m => !m.id?.startsWith('rc_'));
+        setMessages(cleanList);
+        if (cleanList.length > 0) {
+          setSelectedItemId(prev => prev && cleanList.some(m => m.id === prev) ? prev : cleanList[0].id);
+        }
+      }
 
       if (showSuccessToast) {
         addToast('success', 'Atualizado com Sucesso', 'Clientes e correio sincronizados com a base de dados.');
       }
     } catch (err: any) {
-      console.error('Erro ao buscar clientes:', err);
+      console.error('Erro ao buscar dados:', err);
       setError(err.message || 'Falha ao conectar com o servidor API.');
       addToast('error', 'Falha na conexão', 'Não foi possível carregar os dados do servidor.');
     } finally {
@@ -440,25 +471,76 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
     }
   };
 
-  // Delete message / move to trash with backend sync
-  const handleDeleteItem = async (id: string) => {
-    try {
-      await deleteEmail(id);
-      setMessages(prev => prev.map(m => m.id === id ? { ...m, folder: 'trash' } : m));
-      addToast('info', 'Mensagem movida para a Reciclagem', 'Pode restaurar a qualquer momento.');
-    } catch (err) {
-      setMessages(prev => prev.map(m => m.id === id ? { ...m, folder: 'trash' } : m));
+  // Delete message / move to trash with optimistic update (0ms delay) + backend sync
+  const handleDeleteItem = (id: string) => {
+    // 1. Atualização Otimista Imediata na UI
+    setMessages(prev => prev.map(m => m.id === id ? { ...m, folder: 'trash' } : m));
+    addToast('info', 'Mensagem movida para a Reciclagem', 'Pode restaurar a qualquer momento.');
+    // 2. Sincronização assíncrona em segundo plano
+    deleteEmail(id).catch(err => {
+      console.warn('Erro ao sincronizar eliminação:', err);
+    });
+  };
+
+  // Move email to any folder with optimistic update (0ms delay) + backend sync
+  const handleMoveFolder = (id: string, targetFolder: string) => {
+    // 1. Atualização Otimista Imediata na UI
+    setMessages(prev => prev.map(m => m.id === id ? { ...m, folder: targetFolder } : m));
+    const folderLabels: Record<string, string> = {
+      inbox: 'A receber',
+      sent: 'Enviados',
+      drafts: 'Rascunhos',
+      spam: 'Spam',
+      trash: 'Reciclagem',
+      archive: 'Arquivo'
+    };
+    addToast('success', 'Pasta Alterada', `Mensagem movida para "${folderLabels[targetFolder] || targetFolder}".`);
+    // 2. Sincronização assíncrona em segundo plano
+    moveEmailFolder(id, targetFolder).catch(err => {
+      console.warn('Erro ao sincronizar movimentação de pasta:', err);
+      addToast('error', 'Falha ao sincronizar pasta', err.message || 'Erro de conexão.');
+    });
+  };
+
+  // Toggle Read Status with optimistic update (0ms delay) + backend sync
+  const handleToggleRead = (id: string) => {
+    // 1. Atualização Otimista Imediata na UI (0ms)
+    setMessages(prev => prev.map(m => m.id === id ? { ...m, isRead: !m.isRead } : m));
+    // 2. Sincronização assíncrona em segundo plano
+    toggleEmailRead(id).catch(err => {
+      console.warn('Erro ao sincronizar status de leitura:', err);
+    });
+  };
+
+  // Download attachment handler
+  const handleDownloadAttachment = (att: EmailAttachment, emailId: string) => {
+    if (att.data_url) {
+      const link = document.createElement('a');
+      link.href = att.data_url;
+      link.download = att.filename || 'anexo';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      addToast('success', 'Download Iniciado', `A transferir ${att.filename}...`);
+    } else {
+      const downloadEndpoint = getEmailAttachmentUrl(emailId, att.index ?? 0);
+      const link = document.createElement('a');
+      link.href = downloadEndpoint;
+      link.download = att.filename || 'anexo';
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      addToast('success', 'Download Iniciado', `A transferir ${att.filename}...`);
     }
   };
 
-  // Toggle Read Status with backend sync
-  const handleToggleRead = async (id: string) => {
-    try {
-      await toggleEmailRead(id);
-      setMessages(prev => prev.map(m => m.id === id ? { ...m, isRead: !m.isRead } : m));
-    } catch (err) {
-      setMessages(prev => prev.map(m => m.id === id ? { ...m, isRead: !m.isRead } : m));
-    }
+  // Format file size nicely
+  const formatFileSize = (bytes?: number): string => {
+    if (!bytes || bytes <= 0) return '—';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   // Save email configuration with backend persistence
@@ -485,13 +567,22 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
     return list;
   }, [clients]);
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 15;
+
+  // Reset page to 1 when folder or search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedFolder, searchQuery]);
+
   // Filtered Messages based on Folder and Search
   const filteredMessages = useMemo(() => {
     let result = messages;
 
     // Folder filtering (Roundcube folders)
     if (selectedFolder === 'inbox') {
-      result = result.filter(m => m.folder === 'inbox');
+      result = result.filter(m => m.folder === 'inbox' || !m.folder);
     } else if (selectedFolder === 'sent') {
       result = result.filter(m => m.folder === 'sent');
     } else if (selectedFolder === 'drafts') {
@@ -499,11 +590,11 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
     } else if (selectedFolder === 'trash') {
       result = result.filter(m => m.folder === 'trash');
     } else if (selectedFolder === 'spam') {
-      result = result.filter(m => m.folder === 'drafts'); // mock spam
+      result = result.filter(m => m.folder === 'spam');
     } else if (selectedFolder === 'archive') {
-      result = result.filter(m => m.folder === 'sent');
+      result = result.filter(m => m.folder === 'archive');
     } else if (selectedFolder === 'proposals_all') {
-      result = result.filter(m => m.hasAttachment || m.attachedProposalId);
+      result = result.filter(m => m.hasAttachment || m.attachedProposalId || (m.attachments && m.attachments.length > 0));
     } else if (selectedFolder.startsWith('client_')) {
       const cId = parseInt(selectedFolder.replace('client_', ''), 10);
       result = result.filter(m => m.clientId === cId);
@@ -513,16 +604,26 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       result = result.filter(m => 
-        m.subject.toLowerCase().includes(q) ||
-        m.from.toLowerCase().includes(q) ||
-        m.to.toLowerCase().includes(q) ||
+        (m.subject && m.subject.toLowerCase().includes(q)) ||
+        (m.from && m.from.toLowerCase().includes(q)) ||
+        (m.to && m.to.toLowerCase().includes(q)) ||
         (m.clientName && m.clientName.toLowerCase().includes(q)) ||
-        m.body.toLowerCase().includes(q)
+        (m.body && m.body.toLowerCase().includes(q))
       );
     }
 
     return result;
   }, [messages, selectedFolder, searchQuery]);
+
+  // Paginated slice
+  const totalPages = useMemo(() => {
+    return Math.max(1, Math.ceil(filteredMessages.length / pageSize));
+  }, [filteredMessages.length, pageSize]);
+
+  const paginatedMessages = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredMessages.slice(start, start + pageSize);
+  }, [filteredMessages, currentPage, pageSize]);
 
   // Selected item object (EmailMessage)
   const currentItem = useMemo(() => {
@@ -542,14 +643,169 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
   }, [selectedFolder, filteredMessages]);
 
   // Folder Counts
-  const inboxUnreadCount = useMemo(() => {
-    return messages.filter(m => m.folder === 'inbox' && !m.isRead).length;
+  const folderCounts = useMemo(() => {
+    return {
+      inboxUnread: messages.filter(m => (m.folder === 'inbox' || !m.folder) && !m.isRead).length,
+      inboxTotal: messages.filter(m => m.folder === 'inbox' || !m.folder).length,
+      sentTotal: messages.filter(m => m.folder === 'sent').length,
+      draftsTotal: messages.filter(m => m.folder === 'drafts').length,
+      trashTotal: messages.filter(m => m.folder === 'trash').length,
+      spamTotal: messages.filter(m => m.folder === 'spam').length,
+      archiveTotal: messages.filter(m => m.folder === 'archive').length,
+      proposalsTotal: messages.filter(m => m.hasAttachment || m.attachedProposalId || (m.attachments && m.attachments.length > 0)).length
+    };
   }, [messages]);
 
-  // Truncate helper
-  const truncate45 = (text?: string | null, limit = 45): string => {
-    if (!text) return '';
-    return text.length > limit ? `${text.slice(0, limit)}...` : text;
+  // Helper: Extrair e limpar Remetente (Nome, Email limpo e Iniciais para Avatar)
+  const parseSenderDetails = (rawFrom?: string, rawClientName?: string) => {
+    let name = (rawClientName || '').trim();
+    let email = (rawFrom || '').trim();
+
+    // Se email vier no formato "Nome Exemplo <email@dominio.com>"
+    const emailMatch = email.match(/^(.*?)\s*<([^>]+)>$/);
+    if (emailMatch) {
+      if (!name || name === email) {
+        name = emailMatch[1].trim().replace(/^["']|["']$/g, '');
+      }
+      email = emailMatch[2].trim();
+    }
+
+    // Se name vier no formato "Nome Exemplo <email@dominio.com>"
+    const nameMatch = name.match(/^(.*?)\s*<([^>]+)>$/);
+    if (nameMatch) {
+      name = nameMatch[1].trim().replace(/^["']|["']$/g, '');
+      if (!email || email.includes('<')) {
+        email = nameMatch[2].trim();
+      }
+    }
+
+    // Limpar aspas e colchetes residuais
+    name = name.replace(/^["']|["']$/g, '').trim();
+    email = email.replace(/^<+|>+$/g, '').trim();
+
+    // Se name for igual ao email ou vazio, extrair nome amigável
+    let displayName = name;
+    if (!displayName || displayName.toLowerCase() === email.toLowerCase()) {
+      if (email.includes('@')) {
+        const localPart = email.split('@')[0];
+        displayName = localPart.replace(/[._-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      } else {
+        displayName = email || 'Desconhecido';
+      }
+    }
+
+    // Gerar Iniciais limpas para o Avatar
+    let initials = 'L';
+    if (displayName && displayName.toLowerCase() !== email.toLowerCase()) {
+      const parts = displayName.split(/\s+/).filter(Boolean);
+      if (parts.length >= 2) {
+        initials = (parts[0][0] + parts[1][0]).toUpperCase();
+      } else if (parts.length === 1 && parts[0].length >= 2) {
+        initials = parts[0].substring(0, 2).toUpperCase();
+      } else if (parts.length === 1) {
+        initials = parts[0][0].toUpperCase();
+      }
+    } else if (email) {
+      initials = email.substring(0, 2).toUpperCase();
+    }
+
+    return {
+      displayName,
+      emailAddress: email,
+      initials
+    };
+  };
+
+  // Helper: Formatar lista de destinatários (To / Cc)
+  const formatEmailList = (raw?: string) => {
+    if (!raw) return '';
+    return raw.split(',').map(item => {
+      const trimmed = item.trim();
+      const match = trimmed.match(/^(.*?)\s*<([^>]+)>$/);
+      if (match) {
+        const n = match[1].trim().replace(/^["']|["']$/g, '');
+        const e = match[2].trim().replace(/^<+|>+$/g, '');
+        return n ? `${n} <${e}>` : `<${e}>`;
+      }
+      const clean = trimmed.replace(/^<+|>+$/g, '');
+      return clean.includes('@') ? `<${clean}>` : clean;
+    }).join(', ');
+  };
+
+  // Helper: Sanitizar e Otimizar HTML do corpo do e-mail
+  const sanitizeEmailHtml = (htmlContent: string): string => {
+    if (!htmlContent) return '';
+    let cleaned = htmlContent;
+
+    // 1. Remover tags de script
+    cleaned = cleaned.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+
+    // 2. Ocultar imagens cid: residuais não resolvidas para não quebrar o layout
+    cleaned = cleaned.replace(/<img\b([^>]*?)src=["']cid:[^"']*["']([^>]*?)>/gi, '');
+
+    // 3. Adicionar fallback de erro em imagens e carregamento sob demanda
+    cleaned = cleaned.replace(/<img\b(?![^>]*\bonerror=)([^>]*?)>/gi, '<img $1 onerror="this.style.display=\'none\';" loading="lazy">');
+
+    // 4. Garantir que links externos abram em nova aba com segurança
+    cleaned = cleaned.replace(/<a\b(?![^>]*\btarget=)([^>]*?)>/gi, '<a target="_blank" rel="noopener noreferrer" $1>');
+
+    return cleaned;
+  };
+
+  // Helper: Renderizar texto puro com links clicáveis e blocos de citação
+  const renderPlainTextBody = (text: string) => {
+    if (!text || !text.trim()) {
+      return <p className="text-slate-400 italic">Mensagem sem conteúdo de texto disponível.</p>;
+    }
+
+    const lines = text.split('\n');
+    return (
+      <div className="space-y-2.5 font-sans text-[13.5px] leading-relaxed text-slate-800">
+        {lines.map((line, idx) => {
+          if (line.trim().startsWith('>')) {
+            return (
+              <blockquote key={idx} className="border-l-4 border-orange-300 bg-orange-50/50 pl-3 py-1.5 text-slate-600 italic rounded-r text-xs sm:text-[13px] my-1">
+                {line.replace(/^>\s?/, '')}
+              </blockquote>
+            );
+          }
+
+          if (!line.trim()) {
+            return <div key={idx} className="h-2" />;
+          }
+
+          const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g;
+          const parts = line.split(urlRegex);
+
+          return (
+            <p key={idx} className="leading-relaxed break-words">
+              {parts.map((part, pIdx) => {
+                if (part.match(/^https?:\/\//i)) {
+                  return (
+                    <a key={pIdx} href={part} target="_blank" rel="noopener noreferrer" className="text-[#FF8000] hover:underline font-medium break-all">
+                      {part}
+                    </a>
+                  );
+                } else if (part.match(/^www\./i)) {
+                  return (
+                    <a key={pIdx} href={`https://${part}`} target="_blank" rel="noopener noreferrer" className="text-[#FF8000] hover:underline font-medium break-all">
+                      {part}
+                    </a>
+                  );
+                } else if (part.match(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)) {
+                  return (
+                    <a key={pIdx} href={`mailto:${part}`} className="text-[#FF8000] hover:underline font-mono text-xs">
+                      {part}
+                    </a>
+                  );
+                }
+                return part;
+              })}
+            </p>
+          );
+        })}
+      </div>
+    );
   };
 
   // Format Roundcube Date: "Qui 16:53", "Qua 12:31", "2026-09-23 12:31"
@@ -571,7 +827,7 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
     const day = String(d.getDate()).padStart(2, '0');
     const hours = String(d.getHours()).padStart(2, '0');
     const mins = String(d.getMinutes()).padStart(2, '0');
-    return `${y}-${m}-${day} ${hours}:${mins}`;
+    return `${day}/${m}/${y} às ${hours}:${mins}`;
   };
 
   return (
@@ -596,7 +852,7 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
       <div className="h-11 bg-[#F4F6F8] border-b border-slate-200 flex items-stretch shrink-0 text-xs">
         
         {/* Pane 1 Header: Email da Conta & Multi-Account Switcher */}
-        <div className="relative w-52 sm:w-56 px-3 flex items-center justify-between border-r border-slate-200 font-semibold text-slate-800 bg-[#FAFAF9] shrink-0">
+        <div className="relative w-44 sm:w-48 px-2.5 flex items-center justify-between border-r border-slate-200 font-semibold text-slate-800 bg-[#FAFAF9] shrink-0">
           <button
             type="button"
             onClick={() => setShowAccountDropdown(!showAccountDropdown)}
@@ -687,7 +943,7 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
           )}
         </div>
 
-        {/* Pane 2 Header Actions: Escrever | + Proposta | Atualizar */}
+        {/* Pane 2 Header Actions: Escrever | Atualizar */}
         <div className="w-72 sm:w-80 px-3 flex items-center justify-between border-r border-slate-200 bg-[#F4F6F8] shrink-0">
           <div className="flex items-center gap-2.5 text-slate-600 whitespace-nowrap">
             <button
@@ -698,16 +954,6 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
             >
               <Edit3 size={13} className="text-[#FF8000] shrink-0" />
               <span className="whitespace-nowrap">Escrever</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveSidebarTab('proposals')}
-              className="flex items-center gap-1.5 text-[#FF8000] hover:text-[#E67300] transition font-medium cursor-pointer whitespace-nowrap shrink-0"
-              title="Gerir e Criar Propostas Comerciais"
-            >
-              <FileSpreadsheet size={13} className="shrink-0" />
-              <span className="whitespace-nowrap">+ Proposta</span>
             </button>
           </div>
 
@@ -784,9 +1030,9 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
             <button
               type="button"
               disabled={!currentItem}
-              onClick={() => addToast('info', 'Arquivo', 'Mensagem arquivada.')}
+              onClick={() => currentItem && handleMoveFolder(currentItem.id, 'archive')}
               className="hidden sm:flex items-center gap-1.5 hover:text-[#FF8000] transition cursor-pointer disabled:opacity-40 whitespace-nowrap shrink-0"
-              title="Arquivo"
+              title="Mover para o Arquivo"
             >
               <Archive size={14} className="shrink-0" />
               <span className="whitespace-nowrap">Arquivo</span>
@@ -796,7 +1042,7 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
             <button
               type="button"
               disabled={!currentItem}
-              onClick={() => addToast('info', 'Spam', 'Marcado como spam.')}
+              onClick={() => currentItem && handleMoveFolder(currentItem.id, 'spam')}
               className="hidden md:flex items-center gap-1.5 hover:text-[#FF8000] transition cursor-pointer disabled:opacity-40 whitespace-nowrap shrink-0"
               title="Marcar como Spam"
             >
@@ -1094,8 +1340,8 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
             {/* ---------------------------------------------------------------------
                 PANE 1: ROUNDCUBE FOLDERS (A receber, Rascunhos, Enviados, etc.)
                --------------------------------------------------------------------- */}
-            <div className="w-52 sm:w-56 bg-[#F8F9FA] border-r border-slate-200 flex flex-col shrink-0 min-h-0 overflow-y-auto text-xs">
-            <div className="py-2 px-1.5 space-y-0.5">
+            <div className="w-44 sm:w-48 bg-[#F8F9FA] border-r border-slate-200 flex flex-col shrink-0 min-h-0 overflow-y-auto text-xs">
+            <div className="py-2 px-1.5 space-y-0.5 flex-1 min-h-0 overflow-y-auto">
               
               {/* A receber (Inbox) */}
               <div
@@ -1110,78 +1356,129 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
                   <Inbox size={15} className={selectedFolder === 'inbox' ? 'text-white' : 'text-[#FF8000]'} />
                   <span>A receber</span>
                 </div>
-                {inboxUnreadCount > 0 && (
+                {folderCounts.inboxUnread > 0 ? (
                   <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
                     selectedFolder === 'inbox' ? 'bg-white text-[#FF8000]' : 'bg-[#FF8000] text-white'
                   }`}>
-                    {inboxUnreadCount}
+                    {folderCounts.inboxUnread}
                   </span>
-                )}
+                ) : folderCounts.inboxTotal > 0 ? (
+                  <span className={`text-[10px] font-medium px-1.5 py-0.2 rounded-full ${
+                    selectedFolder === 'inbox' ? 'bg-orange-600 text-white' : 'text-slate-400'
+                  }`}>
+                    {folderCounts.inboxTotal}
+                  </span>
+                ) : null}
               </div>
 
               {/* Rascunhos */}
               <div
                 onClick={() => setSelectedFolder('drafts')}
-                className={`flex items-center gap-2 px-2.5 py-1.5 rounded cursor-pointer transition ${
+                className={`flex items-center justify-between px-2.5 py-1.5 rounded cursor-pointer transition ${
                   selectedFolder === 'drafts'
                     ? 'bg-[#FF8000] text-white font-semibold shadow-2xs'
                     : 'text-slate-700 hover:bg-orange-50/70 hover:text-[#FF8000]'
                 }`}
               >
-                <Edit3 size={15} className={selectedFolder === 'drafts' ? 'text-white' : 'text-slate-500'} />
-                <span>Rascunhos</span>
+                <div className="flex items-center gap-2">
+                  <Edit3 size={15} className={selectedFolder === 'drafts' ? 'text-white' : 'text-slate-500'} />
+                  <span>Rascunhos</span>
+                </div>
+                {folderCounts.draftsTotal > 0 && (
+                  <span className={`text-[10px] font-medium px-1.5 py-0.2 rounded-full ${
+                    selectedFolder === 'drafts' ? 'bg-white text-[#FF8000]' : 'text-slate-400'
+                  }`}>
+                    {folderCounts.draftsTotal}
+                  </span>
+                )}
               </div>
 
               {/* Enviados */}
               <div
                 onClick={() => setSelectedFolder('sent')}
-                className={`flex items-center gap-2 px-2.5 py-1.5 rounded cursor-pointer transition ${
+                className={`flex items-center justify-between px-2.5 py-1.5 rounded cursor-pointer transition ${
                   selectedFolder === 'sent'
                     ? 'bg-[#FF8000] text-white font-semibold shadow-2xs'
                     : 'text-slate-700 hover:bg-orange-50/70 hover:text-[#FF8000]'
                 }`}
               >
-                <Send size={15} className={selectedFolder === 'sent' ? 'text-white' : 'text-slate-500'} />
-                <span>Enviados</span>
+                <div className="flex items-center gap-2">
+                  <Send size={15} className={selectedFolder === 'sent' ? 'text-white' : 'text-slate-500'} />
+                  <span>Enviados</span>
+                </div>
+                {folderCounts.sentTotal > 0 && (
+                  <span className={`text-[10px] font-medium px-1.5 py-0.2 rounded-full ${
+                    selectedFolder === 'sent' ? 'bg-white text-[#FF8000]' : 'text-slate-400'
+                  }`}>
+                    {folderCounts.sentTotal}
+                  </span>
+                )}
               </div>
 
               {/* Spam */}
               <div
                 onClick={() => setSelectedFolder('spam')}
-                className={`flex items-center gap-2 px-2.5 py-1.5 rounded cursor-pointer transition ${
+                className={`flex items-center justify-between px-2.5 py-1.5 rounded cursor-pointer transition ${
                   selectedFolder === 'spam'
                     ? 'bg-[#FF8000] text-white font-semibold shadow-2xs'
                     : 'text-slate-700 hover:bg-orange-50/70 hover:text-[#FF8000]'
                 }`}
               >
-                <AlertOctagon size={15} className={selectedFolder === 'spam' ? 'text-white' : 'text-slate-500'} />
-                <span>Spam</span>
+                <div className="flex items-center gap-2">
+                  <AlertOctagon size={15} className={selectedFolder === 'spam' ? 'text-white' : 'text-slate-500'} />
+                  <span>Spam</span>
+                </div>
+                {folderCounts.spamTotal > 0 && (
+                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                    selectedFolder === 'spam' ? 'bg-white text-[#FF8000]' : 'bg-rose-100 text-rose-700'
+                  }`}>
+                    {folderCounts.spamTotal}
+                  </span>
+                )}
               </div>
 
               {/* Reciclagem (Trash) */}
               <div
                 onClick={() => setSelectedFolder('trash')}
-                className={`flex items-center gap-2 px-2.5 py-1.5 rounded cursor-pointer transition ${
+                className={`flex items-center justify-between px-2.5 py-1.5 rounded cursor-pointer transition ${
                   selectedFolder === 'trash'
                     ? 'bg-[#FF8000] text-white font-semibold shadow-2xs'
                     : 'text-slate-700 hover:bg-orange-50/70 hover:text-[#FF8000]'
                 }`}
               >
-                <Trash2 size={15} className={selectedFolder === 'trash' ? 'text-white' : 'text-slate-500'} />
-                <span>Reciclagem</span>
+                <div className="flex items-center gap-2">
+                  <Trash2 size={15} className={selectedFolder === 'trash' ? 'text-white' : 'text-slate-500'} />
+                  <span>Reciclagem</span>
+                </div>
+                {folderCounts.trashTotal > 0 && (
+                  <span className={`text-[10px] font-medium px-1.5 py-0.2 rounded-full ${
+                    selectedFolder === 'trash' ? 'bg-white text-[#FF8000]' : 'text-slate-400'
+                  }`}>
+                    {folderCounts.trashTotal}
+                  </span>
+                )}
               </div>
 
               {/* Arquivo */}
               <div
                 onClick={() => setSelectedFolder('archive')}
-                className={`flex items-center gap-2 px-2.5 py-1.5 rounded cursor-pointer transition ${
+                className={`flex items-center justify-between px-2.5 py-1.5 rounded cursor-pointer transition ${
                   selectedFolder === 'archive'
                     ? 'bg-[#FF8000] text-white font-semibold shadow-2xs'
                     : 'text-slate-700 hover:bg-orange-50/70 hover:text-[#FF8000]'
                 }`}
               >
-                <Archive size={15} className={selectedFolder === 'archive' ? 'text-white' : 'text-slate-500'} />
-                <span>Arquivo</span>
+                <div className="flex items-center gap-2">
+                  <Archive size={15} className={selectedFolder === 'archive' ? 'text-white' : 'text-slate-500'} />
+                  <span>Arquivo</span>
+                </div>
+                {folderCounts.archiveTotal > 0 && (
+                  <span className={`text-[10px] font-medium px-1.5 py-0.2 rounded-full ${
+                    selectedFolder === 'archive' ? 'bg-white text-[#FF8000]' : 'text-slate-400'
+                  }`}>
+                    {folderCounts.archiveTotal}
+                  </span>
+                )}
               </div>
 
               {/* Pasta Especial: Propostas Comerciais */}
@@ -1206,45 +1503,6 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
 
             </div>
 
-            {/* Clientes Registados (Filtro Direto) */}
-            <div className="mt-2 pt-2 border-t border-slate-200 px-3 pb-1 flex items-center justify-between text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-              <span>Clientes ({clients.length})</span>
-              <button
-                type="button"
-                onClick={() => setIsClientModalOpen(true)}
-                className="text-slate-400 hover:text-[#FF8000] p-0.5 cursor-pointer transition"
-                title="Novo Cliente"
-              >
-                <Plus size={13} />
-              </button>
-            </div>
-
-            <div className="p-1.5 space-y-0.5 flex-1 min-h-0 overflow-y-auto">
-              {clients.map(client => {
-                const isSelected = selectedFolder === `client_${client.id}`;
-                const clientProposalsCount = client.proposals?.length || 0;
-                return (
-                  <div
-                    key={client.id}
-                    onClick={() => setSelectedFolder(`client_${client.id}`)}
-                    className={`flex items-center justify-between px-2 py-1 rounded cursor-pointer transition ${
-                      isSelected
-                        ? 'bg-orange-100/70 text-[#FF8000] font-bold border-l-2 border-[#FF8000]'
-                        : 'text-slate-600 hover:bg-orange-50/50 hover:text-[#FF8000]'
-                    }`}
-                    title={client.name}
-                  >
-                    <span className="truncate text-xs">{truncate45(client.name, 18)}</span>
-                    {clientProposalsCount > 0 && (
-                      <span className="text-[10px] text-[#FF8000] font-mono font-semibold ml-1 shrink-0">
-                        {clientProposalsCount}p
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
             {/* Footer Status */}
             <div className="p-2.5 border-t border-slate-200 bg-[#F0F2F5] text-[11px] text-slate-600 flex items-center justify-between shrink-0 font-sans">
               <span className="flex items-center gap-1.5">
@@ -1257,9 +1515,9 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
           </div>
 
           {/* ---------------------------------------------------------------------
-              PANE 2: ROUNDCUBE MESSAGE LIST (Lista Fiel ao Roundcube)
+              PANE 2: ROUNDCUBE MESSAGE LIST (Lista Fiel ao Roundcube com Paginação)
              --------------------------------------------------------------------- */}
-          <div className="w-72 sm:w-80 bg-white border-r border-slate-200 flex flex-col shrink-0 min-h-0 overflow-hidden text-xs">
+          <div className="w-80 sm:w-96 lg:w-[380px] bg-white border-r border-slate-200 flex flex-col shrink-0 min-h-0 overflow-hidden text-xs">
             
             {/* Roundcube Search Bar: 🔍 Pesquisar... + Filter Icon */}
             <div className="p-2 border-b border-slate-200 bg-[#FAFAF9] flex items-center gap-1.5 shrink-0">
@@ -1267,7 +1525,7 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="Pesquisar..."
+                  placeholder="Pesquisar remetente, assunto, texto..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-8 pr-6 py-1 bg-white border border-slate-200 rounded text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#FF8000]"
@@ -1293,14 +1551,17 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
 
             {/* Message List Items (Roundcube Structure: Remetente + Data, • Assunto + Anexo) */}
             <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-slate-100">
-              {filteredMessages.length === 0 ? (
+              {paginatedMessages.length === 0 ? (
                 <div className="p-8 text-center text-slate-400">
                   <Mail size={28} className="mx-auto mb-2 opacity-30 text-slate-400" />
                   <p className="text-xs font-semibold text-slate-600">Nenhuma mensagem nesta pasta</p>
+                  {searchQuery && <p className="text-[11px] text-slate-400 mt-1">Tente ajustar sua busca.</p>}
                 </div>
               ) : (
-                filteredMessages.map(msg => {
+                paginatedMessages.map(msg => {
                   const isSelected = currentItem?.id === msg.id;
+                  const hasAtt = Boolean(msg.hasAttachment || (msg.attachments && msg.attachments.length > 0));
+                  const senderInfo = parseSenderDetails(msg.from, msg.clientName);
                   return (
                     <div
                       key={msg.id}
@@ -1317,7 +1578,7 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
                       {/* Linha 1: Remetente à esquerda, Data (ex: Qui 16:53) à direita */}
                       <div className="flex items-center justify-between text-xs mb-0.5">
                         <span className={`truncate ${!msg.isRead ? 'font-bold text-slate-900' : 'font-medium'}`}>
-                          {msg.clientName || msg.from}
+                          {senderInfo.displayName}
                         </span>
                         <span className="text-[11px] text-slate-400 shrink-0 font-mono ml-2">
                           {formatRoundcubeListDate(msg.date)}
@@ -1330,40 +1591,60 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
                           isSelected ? 'text-[#FF8000]' : !msg.isRead ? 'font-bold text-slate-900' : 'text-slate-600'
                         }`}>
                           {!msg.isRead && <span className="text-[#FF8000] font-bold mr-1">•</span>}
-                          {msg.subject}
+                          {msg.subject || '(Sem assunto)'}
                         </p>
-                        {msg.hasAttachment && (
+                        {hasAtt && (
                           <Paperclip size={12} className="text-slate-400 shrink-0" />
                         )}
                       </div>
 
-                      {/* Linha 3 (Opcional): Tag da Proposta */}
-                      {msg.attachedProposalId && (
+                      {/* Linha 3 (Opcional): Tag da Proposta ou Anexos */}
+                      {msg.attachedProposalId ? (
                         <div className="mt-1 flex items-center justify-between text-[10px]">
                           <span className="text-[#FF8000] font-semibold">
                             Proposta #{msg.attachedProposalId}
                           </span>
                         </div>
-                      )}
+                      ) : (msg.attachments && msg.attachments.length > 0) ? (
+                        <div className="mt-0.5 text-[10px] text-slate-400 flex items-center gap-1">
+                          <span>{msg.attachments.length} anexo(s)</span>
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })
               )}
             </div>
 
-            {/* Roundcube Bottom Pagination Bar */}
+            {/* Roundcube Bottom Pagination Bar com controles reais */}
             <div className="px-3 py-2 bg-[#F0F2F5] border-t border-slate-200 text-[11px] text-slate-600 flex items-center justify-between shrink-0 font-sans">
               <span className="font-medium text-slate-700">
-                {filteredMessages.length} {filteredMessages.length === 1 ? 'mensagem' : 'mensagens'}
+                {filteredMessages.length === 0 ? (
+                  '0 mensagens'
+                ) : (
+                  `${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, filteredMessages.length)} de ${filteredMessages.length}`
+                )}
               </span>
               <div className="flex items-center gap-1">
-                <button type="button" className="p-1 hover:text-[#FF8000] hover:bg-white rounded transition text-slate-500 disabled:opacity-30 cursor-pointer" title="Página anterior">
+                <button 
+                  type="button" 
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage <= 1}
+                  className="p-1 hover:text-[#FF8000] hover:bg-white rounded transition text-slate-500 disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed" 
+                  title="Página anterior"
+                >
                   <ChevronLeft size={13} />
                 </button>
                 <span className="px-2 py-0.5 bg-white border border-slate-300 rounded text-slate-800 font-bold text-[10px] shadow-2xs">
-                  1
+                  {currentPage} / {totalPages}
                 </span>
-                <button type="button" className="p-1 hover:text-[#FF8000] hover:bg-white rounded transition text-slate-500 disabled:opacity-30 cursor-pointer" title="Próxima página">
+                <button 
+                  type="button" 
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage >= totalPages}
+                  className="p-1 hover:text-[#FF8000] hover:bg-white rounded transition text-slate-500 disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed" 
+                  title="Próxima página"
+                >
                   <ChevronRight size={13} />
                 </button>
               </div>
@@ -1372,188 +1653,297 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
           </div>
 
           {/* ---------------------------------------------------------------------
-              PANE 3: ROUNDCUBE READING PANE (Estrutura Fiel ao Roundcube Webmail)
+              PANE 3: ROUNDCUBE READING PANE (Estrutura Fiel, Tipografia e Imagens)
              --------------------------------------------------------------------- */}
-          <div className="flex-1 bg-white flex flex-col min-h-0 overflow-y-auto">
-            {currentItem ? (
-              <div className="p-6 max-w-4xl mx-auto w-full flex flex-col min-h-full">
-                
-                {/* 1. Roundcube Subject Title com Link Externo */}
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <h1 className="text-lg font-bold text-slate-900 leading-tight flex items-center gap-2">
-                    <span>{currentItem.subject}</span>
-                    <span title="Abrir em nova janela">
-                      <ExternalLink size={15} className="text-slate-400 cursor-pointer hover:text-[#FF8000] transition" />
-                    </span>
-                  </h1>
-                </div>
+          <div className="flex-1 bg-slate-50/60 flex flex-col min-h-0 overflow-y-auto p-4 sm:p-6">
+            {currentItem ? (() => {
+              const currentSender = parseSenderDetails(currentItem.from, currentItem.clientName);
+              const folderLabel = currentItem.folder === 'sent' 
+                ? 'Enviados' 
+                : currentItem.folder === 'trash' 
+                ? 'Reciclagem' 
+                : currentItem.folder === 'spam' 
+                ? 'Spam' 
+                : currentItem.folder === 'archive' 
+                ? 'Arquivo' 
+                : currentItem.folder === 'drafts' 
+                ? 'Rascunhos' 
+                : 'A receber';
 
-                {/* 2. Roundcube Sender Info Header: Avatar + "De [Nome] em [Data]" + Links: Detalhes, Cabeçalhos */}
-                <div className="flex items-start gap-3 py-2.5 border-b border-slate-200 mb-4">
-                  {/* Round Avatar Icon */}
-                  <div className="w-10 h-10 rounded-full bg-orange-100 text-[#FF8000] border border-orange-200 flex items-center justify-center font-bold text-sm shrink-0">
-                    {(currentItem.clientName || currentItem.from).substring(0, 2).toUpperCase()}
-                  </div>
+              return (
+                <div className="bg-white rounded-xl border border-slate-200/80 p-5 sm:p-7 max-w-4xl mx-auto w-full flex flex-col min-h-full shadow-2xs">
+                  
+                  {/* 1. Subject Title com Badge de Pasta */}
+                  <div className="mb-4">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <span className={`px-2.5 py-0.5 border text-[10px] font-bold uppercase rounded-md tracking-wider ${
+                        currentItem.folder === 'sent' 
+                          ? 'bg-blue-50 text-blue-700 border-blue-200'
+                          : currentItem.folder === 'trash'
+                          ? 'bg-rose-50 text-rose-700 border-rose-200'
+                          : currentItem.folder === 'spam'
+                          ? 'bg-amber-50 text-amber-700 border-amber-200'
+                          : currentItem.folder === 'archive'
+                          ? 'bg-purple-50 text-purple-700 border-purple-200'
+                          : currentItem.folder === 'drafts'
+                          ? 'bg-slate-100 text-slate-700 border-slate-300'
+                          : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      }`}>
+                        {folderLabel}
+                      </span>
 
-                  <div className="min-w-0 flex-1 text-xs">
-                    {/* De [Nome] em YYYY-MM-DD HH:MM */}
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-slate-500">De</span>
-                      <a href={`mailto:${currentItem.from}`} className="font-semibold text-[#FF8000] hover:underline">
-                        {currentItem.clientName || currentItem.from}
-                      </a>
-                      <span className="text-slate-400">em {formatRoundcubeFullDate(currentItem.date)}</span>
-                    </div>
-
-                    {/* Action Links: ✉ Detalhes | ℹ Cabeçalhos | 🌐 Modo HTML */}
-                    <div className="flex items-center gap-3 mt-1 text-[11px] text-slate-500 flex-wrap">
-                      <button
-                        type="button"
-                        onClick={() => setShowDetailsHeader(!showDetailsHeader)}
-                        className="hover:text-[#FF8000] hover:underline flex items-center gap-1 cursor-pointer transition"
-                      >
-                        <Mail size={11} className="text-[#FF8000]" />
-                        <span>Detalhes</span>
-                      </button>
-                      <span className="text-slate-300">•</span>
-                      <span className="text-slate-500">Para: {currentItem.to}</span>
-                      {currentItem.bodyHtml && (
-                        <>
-                          <span className="text-slate-300">•</span>
-                          <button
-                            type="button"
-                            onClick={() => setBodyViewMode(prev => prev === 'html' ? 'text' : 'html')}
-                            className="hover:text-[#FF8000] hover:underline flex items-center gap-1 cursor-pointer transition text-[#FF8000] font-semibold"
-                            title="Alternar entre visualização HTML rica e Texto Simples"
-                          >
-                            <span>{bodyViewMode === 'html' ? '≡ Ver Texto' : '🌐 Ver HTML / Imagens'}</span>
-                          </button>
-                        </>
+                      {currentItem.attachedProposalId && (
+                        <span className="px-2.5 py-0.5 bg-orange-50 text-[#FF8000] border border-orange-200 text-[10px] font-bold rounded-md">
+                          Proposta #{currentItem.attachedProposalId}
+                        </span>
                       )}
                     </div>
 
-                    {/* Extended Details Dropdown */}
-                    {showDetailsHeader && (
-                      <div className="mt-2 p-2.5 bg-slate-50 border border-slate-200 rounded font-mono text-[11px] text-slate-600 space-y-0.5">
-                        <p><strong>De:</strong> {currentItem.from}</p>
-                        <p><strong>Para:</strong> {currentItem.to}</p>
-                        <p><strong>Data:</strong> {currentItem.date}</p>
-                        <p><strong>Assunto:</strong> {currentItem.subject}</p>
-                      </div>
-                    )}
+                    <h1 className="text-xl sm:text-2xl font-bold text-slate-900 leading-snug break-words">
+                      {currentItem.subject || '(Sem assunto)'}
+                    </h1>
                   </div>
-                </div>
 
-                {/* 3. Roundcube Attachment Strips: 📄 [Nome Arquivo] (~Tamanho) ▾ com Apenas Ícone de Baixar */}
-                {currentItem.hasAttachment && (
-                  <div className="mb-5 space-y-1.5">
-                    {/* Attachment Row 1 */}
-                    <div className="p-2 px-3 bg-[#F8F9FA] hover:bg-orange-50/40 border border-slate-200 rounded flex items-center justify-between text-xs transition gap-2 whitespace-nowrap">
-                      <div className="flex items-center gap-2 text-slate-800 min-w-0 flex-1 whitespace-nowrap overflow-hidden">
-                        <FileIcon size={14} className="text-[#FF8000] shrink-0" />
-                        <span 
-                          onClick={() => addToast('info', 'Anexo', 'Abertura de anexo PDF...')}
-                          className="font-medium text-slate-800 hover:text-[#FF8000] hover:underline cursor-pointer truncate"
-                          title={currentItem.attachedProposalTitle 
-                            ? `Processo_${currentItem.attachedProposalId || '01914318'}_${currentItem.attachedProposalTitle.replace(/\s+/g, '_')}.pdf`
-                            : 'Documento_Anexo_LECASU.pdf'}
-                        >
-                          {currentItem.attachedProposalTitle 
-                            ? `Processo_${currentItem.attachedProposalId || '01914318'}_${currentItem.attachedProposalTitle.replace(/\s+/g, '_')}.pdf`
-                            : 'Documento_Anexo_LECASU.pdf'}
-                        </span>
-                        <span className="text-slate-400 text-[11px] font-mono shrink-0 whitespace-nowrap">(~807 KB)</span>
-                        <ChevronDown size={12} className="text-slate-400 shrink-0" />
+                  {/* 2. Sender / Recipients Info Card Estruturado e Harmonioso */}
+                  <div className="bg-[#F8FAFC] border border-slate-200/80 rounded-xl p-3.5 sm:p-4 mb-5 shadow-2xs">
+                    <div className="flex items-start gap-3.5">
+                      {/* Avatar com Gradiente Suave e Iniciais Limpas */}
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-100 to-amber-100 text-[#FF8000] border border-orange-200 flex items-center justify-center font-bold text-sm shrink-0 shadow-2xs tracking-wider">
+                        {currentSender.initials}
                       </div>
 
-                      {/* Apenas Ícone de Baixar Ficheiro */}
-                      <button
-                        type="button"
-                        onClick={() => addToast('success', 'Download', 'Transferência do ficheiro iniciada.')}
-                        className="p-1.5 text-slate-500 hover:text-[#FF8000] hover:bg-orange-100/70 rounded transition cursor-pointer shrink-0"
-                        title="Baixar ficheiro"
-                      >
-                        <Download size={14} />
-                      </button>
-                    </div>
+                      <div className="min-w-0 flex-1">
+                        {/* Linha Superior: Remetente + Data e Hora alinhada */}
+                        <div className="flex items-baseline justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                            <span className="text-xs font-semibold text-slate-500">De:</span>
+                            <span className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                              {currentSender.displayName}
+                            </span>
+                            {currentSender.emailAddress && (
+                              <span className="text-[11px] text-slate-400 font-mono truncate">
+                                &lt;{currentSender.emailAddress}&gt;
+                              </span>
+                            )}
+                          </div>
 
-                    {/* Attachment Row 2 if proposal */}
-                    {currentItem.attachedProposalId && (
-                      <div className="p-2 px-3 bg-[#F8F9FA] hover:bg-orange-50/40 border border-slate-200 rounded flex items-center justify-between text-xs transition gap-2 whitespace-nowrap">
-                        <div className="flex items-center gap-2 text-slate-800 min-w-0 flex-1 whitespace-nowrap overflow-hidden">
-                          <FileIcon size={14} className="text-[#FF8000] shrink-0" />
-                          <span 
-                            onClick={() => addToast('info', 'Anexo', 'Abertura de anexo PDF...')}
-                            className="font-medium text-slate-800 hover:text-[#FF8000] hover:underline cursor-pointer truncate"
-                            title="Relatorio_Fotografico_Viabilidade_LECASU.pdf"
-                          >
-                            Relatorio_Fotografico_Viabilidade_LECASU.pdf
-                          </span>
-                          <span className="text-slate-400 text-[11px] font-mono shrink-0 whitespace-nowrap">(~1.3 MB)</span>
-                          <ChevronDown size={12} className="text-slate-400 shrink-0" />
+                          {/* Data e Hora */}
+                          <div className="text-[11px] text-slate-500 font-mono font-medium shrink-0 ml-auto">
+                            {formatRoundcubeFullDate(currentItem.date)}
+                          </div>
                         </div>
 
-                        {/* Apenas Ícone de Baixar Ficheiro */}
-                        <button
-                          type="button"
-                          onClick={() => addToast('success', 'Download', 'Transferência do relatório iniciada.')}
-                          className="p-1.5 text-slate-500 hover:text-[#FF8000] hover:bg-orange-100/70 rounded transition cursor-pointer shrink-0"
-                          title="Baixar ficheiro"
-                        >
-                          <Download size={14} />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
+                        {/* Linha Inferior: Destinatário + Ações de Detalhes / Modo Texto */}
+                        <div className="flex items-center justify-between gap-3 mt-2.5 pt-2.5 border-t border-slate-200/60 flex-wrap">
+                          <div className="flex items-center gap-1.5 text-xs text-slate-600 min-w-0 truncate">
+                            <span className="text-slate-400 font-medium">Para:</span>
+                            <span className="text-slate-800 font-medium truncate font-mono text-[11px]">
+                              {formatEmailList(currentItem.to)}
+                            </span>
+                            {currentItem.cc && (
+                              <span className="text-slate-400 text-[11px] font-mono ml-2 truncate">
+                                (Cc: {formatEmailList(currentItem.cc)})
+                              </span>
+                            )}
+                          </div>
 
-                {/* 4. Roundcube Email Body (Suporte Completo a Rich HTML, Imagens, Links e Tabelas) */}
-                <div className="py-2 mb-8 min-h-[140px] text-xs sm:text-[13px] leading-relaxed font-sans text-slate-800">
-                  {currentItem.bodyHtml && bodyViewMode === 'html' ? (
-                    <div 
-                      className="email-html-body overflow-x-auto max-w-full [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded [&_table]:max-w-full [&_a]:text-[#FF8000] [&_a]:underline"
-                      dangerouslySetInnerHTML={{ __html: currentItem.bodyHtml }}
-                    />
-                  ) : (
-                    <div className="whitespace-pre-line text-slate-800 font-sans leading-relaxed">
-                      {currentItem.body}
+                          {/* Botões de Ação Contextuais */}
+                          <div className="flex items-center gap-2 shrink-0 ml-auto">
+                            <button
+                              type="button"
+                              onClick={() => setShowDetailsHeader(!showDetailsHeader)}
+                              className={`px-2.5 py-1 rounded-md text-[11px] font-semibold border transition cursor-pointer flex items-center gap-1.5 ${
+                                showDetailsHeader
+                                  ? 'bg-orange-50 border-orange-200 text-[#FF8000]'
+                                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 shadow-2xs'
+                              }`}
+                            >
+                              <Mail size={12} className={showDetailsHeader ? 'text-[#FF8000]' : 'text-slate-400'} />
+                              <span>{showDetailsHeader ? 'Ocultar Detalhes' : 'Detalhes'}</span>
+                            </button>
+
+                            {currentItem.bodyHtml && (
+                              <button
+                                type="button"
+                                onClick={() => setBodyViewMode(prev => prev === 'html' ? 'text' : 'html')}
+                                className="px-2.5 py-1 rounded-md text-[11px] font-semibold border border-orange-200 bg-orange-50 hover:bg-orange-100 text-[#FF8000] transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                                title="Alternar entre visualização HTML rica e Texto Simples"
+                              >
+                                <span>{bodyViewMode === 'html' ? '≡ Modo Texto' : '🌐 Modo HTML'}</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Painel expansível de Detalhes Técnicos */}
+                        {showDetailsHeader && (
+                          <div className="mt-3 p-3 bg-white border border-slate-200 rounded-lg font-mono text-[11px] text-slate-700 space-y-1 shadow-2xs">
+                            <div className="grid grid-cols-[85px_1fr] gap-1">
+                              <span className="text-slate-400 font-semibold">Remetente:</span>
+                              <span className="text-slate-900 break-all">{currentItem.from}</span>
+                              
+                              <span className="text-slate-400 font-semibold">Destinatário:</span>
+                              <span className="text-slate-900 break-all">{currentItem.to}</span>
+
+                              {currentItem.cc && (
+                                <>
+                                  <span className="text-slate-400 font-semibold">Cópia (Cc):</span>
+                                  <span className="text-slate-900 break-all">{currentItem.cc}</span>
+                                </>
+                              )}
+
+                              <span className="text-slate-400 font-semibold">Data RFC:</span>
+                              <span className="text-slate-900">{currentItem.date}</span>
+
+                              <span className="text-slate-400 font-semibold">Assunto:</span>
+                              <span className="text-slate-900 break-all">{currentItem.subject || '(Sem assunto)'}</span>
+
+                              <span className="text-slate-400 font-semibold">Pasta:</span>
+                              <span className="text-slate-900 uppercase font-bold text-[10px]">{currentItem.folder}</span>
+
+                              <span className="text-slate-400 font-semibold">ID Registo:</span>
+                              <span className="text-slate-500">{currentItem.id}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. Attachment Cards Section (Downloads Reais com Ícones e Tamanho) */}
+                  {Boolean(currentItem.hasAttachment || (currentItem.attachments && currentItem.attachments.length > 0) || currentItem.attachedProposalId) && (
+                    <div className="mb-6 p-3.5 bg-[#F8F9FA] border border-slate-200 rounded-xl space-y-2">
+                      <div className="flex items-center justify-between text-xs text-slate-600 font-semibold mb-1">
+                        <div className="flex items-center gap-1.5">
+                          <Paperclip size={14} className="text-[#FF8000]" />
+                          <span>Ficheiros Anexados ({currentItem.attachments?.length || 1})</span>
+                        </div>
+                        <span className="text-[11px] text-slate-400 font-normal">Clique para transferir</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {currentItem.attachments && currentItem.attachments.length > 0 ? (
+                          currentItem.attachments.map((att, idx) => {
+                            const ext = (att.filename || '').split('.').pop()?.toLowerCase() || '';
+                            return (
+                              <div
+                                key={idx}
+                                className="p-2.5 bg-white hover:bg-orange-50/40 border border-slate-200 hover:border-orange-200 rounded-lg flex items-center justify-between text-xs transition gap-2 shadow-2xs group"
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                  {ext === 'pdf' ? (
+                                    <FileIcon size={18} className="text-rose-500 shrink-0" />
+                                  ) : ['xlsx', 'xls', 'csv'].includes(ext) ? (
+                                    <FileSpreadsheet size={18} className="text-emerald-600 shrink-0" />
+                                  ) : ['png', 'jpg', 'jpeg', 'svg', 'webp'].includes(ext) ? (
+                                    <ImageIcon size={18} className="text-indigo-500 shrink-0" />
+                                  ) : ['zip', 'rar', '7z'].includes(ext) ? (
+                                    <Archive size={18} className="text-amber-500 shrink-0" />
+                                  ) : (
+                                    <FileText size={18} className="text-[#FF8000] shrink-0" />
+                                  )}
+                                  <div className="min-w-0 flex-1">
+                                    <span 
+                                      onClick={() => handleDownloadAttachment(att, currentItem.id)}
+                                      className="font-semibold text-slate-800 hover:text-[#FF8000] cursor-pointer truncate block" 
+                                      title={att.filename}
+                                    >
+                                      {att.filename}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400 font-mono">
+                                      {formatFileSize(att.size_bytes)}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Botão de Download */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownloadAttachment(att, currentItem.id)}
+                                  className="p-1.5 text-slate-400 group-hover:text-[#FF8000] group-hover:bg-orange-100/70 rounded-md transition cursor-pointer shrink-0"
+                                  title={`Baixar ${att.filename}`}
+                                >
+                                  <Download size={15} />
+                                </button>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          /* Fallback para Proposta Comercial */
+                          <div className="p-2.5 bg-white hover:bg-orange-50/40 border border-slate-200 hover:border-orange-200 rounded-lg flex items-center justify-between text-xs transition gap-2 shadow-2xs group">
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                              <FileIcon size={18} className="text-rose-500 shrink-0" />
+                              <div className="min-w-0 flex-1">
+                                <span 
+                                  onClick={() => handleDownloadAttachment({ index: 0, filename: `Proposta_${currentItem.attachedProposalId || 'LECASU'}.pdf`, size_bytes: 850000 }, currentItem.id)}
+                                  className="font-semibold text-slate-800 hover:text-[#FF8000] cursor-pointer truncate block"
+                                >
+                                  {currentItem.attachedProposalTitle ? `Proposta_${currentItem.attachedProposalId}_${currentItem.attachedProposalTitle.replace(/\s+/g, '_')}.pdf` : 'Proposta_Comercial_LECASU.pdf'}
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-mono">~850 KB • PDF</span>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadAttachment({ index: 0, filename: `Proposta_${currentItem.attachedProposalId || 'LECASU'}.pdf`, size_bytes: 850000 }, currentItem.id)}
+                              className="p-1.5 text-slate-400 group-hover:text-[#FF8000] group-hover:bg-orange-100/70 rounded-md transition cursor-pointer shrink-0"
+                              title="Baixar Proposta em PDF"
+                            >
+                              <Download size={15} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
-                </div>
 
-                {/* 5. Roundcube Signature (Alinhada no final da mensagem - Paleta Oficial LECASU para emails da empresa) */}
-                {(currentItem.folder === 'sent' || currentItem.from.toLowerCase().includes('lecasu.co.mz')) && (
-                  <div className="pt-6 border-t border-slate-200 mt-auto text-xs">
-                    <div className="flex items-start gap-3.5">
-                      <div className="w-1 self-stretch bg-[#FF8000] rounded-full shrink-0 min-h-[52px]" />
-                      <div className="space-y-1 text-xs">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-slate-900 text-sm">
-                            {currentItem.clientName || 'LECASU Engenharia'}
-                          </span>
-                          <span className="px-1.5 py-0.2 bg-orange-50 text-[#FF8000] border border-orange-200 rounded text-[10px] font-bold">
-                            LECASU
-                          </span>
-                        </div>
-                        <p className="text-slate-600 font-medium">
-                          Departamento Comercial & Gestão de Contratos
-                        </p>
-                        <div className="flex items-center gap-2 text-slate-500 text-[11px] flex-wrap pt-0.5">
-                          <span>Av. 24 de Julho, Maputo - Moçambique</span>
-                          <span>•</span>
-                          <a href="mailto:info@lecasu.co.mz" className="text-[#FF8000] hover:underline">
-                            info@lecasu.co.mz
-                          </a>
-                          <span>•</span>
-                          <span className="text-slate-400">www.lecasu.co.mz</span>
+                  {/* 4. Roundcube Email Body (Renderização Rica, Tipografia Limpa e Imagens Responsivas) */}
+                  <div className="bg-white rounded-xl border border-slate-100 p-4 sm:p-5 mb-6 min-h-[160px] text-xs sm:text-[13.5px] leading-relaxed font-sans text-slate-800">
+                    {currentItem.bodyHtml && bodyViewMode === 'html' ? (
+                      <div 
+                        className="email-html-body overflow-x-auto max-w-full text-[13.5px] leading-relaxed select-text font-sans [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-md [&_img]:my-2.5 [&_img]:shadow-2xs [&_img[src='']]:hidden [&_table]:max-w-full [&_table]:overflow-x-auto [&_table]:border-collapse [&_table]:my-3.5 [&_td]:p-2.5 [&_th]:p-2.5 [&_a]:text-[#FF8000] [&_a]:underline [&_a]:font-medium [&_p]:my-2.5 [&_p]:leading-relaxed [&_h1]:text-xl [&_h1]:font-bold [&_h1]:text-slate-900 [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-slate-900 [&_h2]:mt-3 [&_h2]:mb-2 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:text-slate-800 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-2 [&_blockquote]:border-l-4 [&_blockquote]:border-orange-300 [&_blockquote]:bg-orange-50/40 [&_blockquote]:p-3 [&_blockquote]:rounded-r-md [&_blockquote]:my-3 [&_blockquote]:text-slate-600 [&_pre]:bg-slate-900 [&_pre]:text-slate-100 [&_pre]:p-3.5 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_pre]:text-xs [&_pre]:font-mono"
+                        dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(currentItem.bodyHtml) }}
+                      />
+                    ) : (
+                      renderPlainTextBody(currentItem.body)
+                    )}
+                  </div>
+
+                  {/* 5. Roundcube Signature (Totalmente Isolada com Clearfix para Não Sobrepor Texto) */}
+                  {((currentItem.folder === 'sent' || currentItem.from.toLowerCase().includes('lecasu.co.mz')) && (!currentItem.bodyHtml || currentItem.bodyHtml.includes('LECASU - Engenharia & Serviços') === false)) && (
+                    <div className="clear-both pt-6 border-t border-slate-200 mt-auto text-xs">
+                      <div className="flex items-start gap-3.5 bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
+                        <div className="w-1 self-stretch bg-[#FF8000] rounded-full shrink-0 min-h-[52px]" />
+                        <div className="space-y-1 text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-900 text-sm">
+                              {currentSender.displayName || 'LECASU Engenharia & Serviços'}
+                            </span>
+                            <span className="px-1.5 py-0.2 bg-orange-50 text-[#FF8000] border border-orange-200 rounded text-[10px] font-bold">
+                              LECASU
+                            </span>
+                          </div>
+                          <p className="text-slate-600 font-medium">
+                            Departamento Comercial & Gestão de Contratos
+                          </p>
+                          <div className="flex items-center gap-2 text-slate-500 text-[11px] flex-wrap pt-0.5">
+                            <span>Av. 24 de Julho, Maputo - Moçambique</span>
+                            <span>•</span>
+                            <a href="mailto:info@lecasu.co.mz" className="text-[#FF8000] hover:underline font-mono">
+                              info@lecasu.co.mz
+                            </a>
+                            <span>•</span>
+                            <span className="text-slate-400">www.lecasu.co.mz</span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-              </div>
-            ) : (
+                </div>
+              );
+            })() : (
               <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-400">
                 <Mail size={40} className="opacity-30 mb-2 text-slate-400" />
                 <h3 className="text-xs font-bold text-slate-600">Selecione uma mensagem para ler</h3>
