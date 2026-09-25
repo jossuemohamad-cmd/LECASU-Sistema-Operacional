@@ -429,39 +429,52 @@ def sync_emails(req: EmailSyncRequest, db: Session = Depends(get_db)):
         incoming_message = msg
 
         if success:
+            try:
+                db.rollback()
+            except Exception:
+                pass
+
+            existing_ids = {r[0] for r in db.query(EmailMessageModel.external_id).all() if r[0]}
+            target_account_id = target_account.id if target_account else None
+
             for item in fetched_list:
                 ext_id = item.get("external_id")
-                # Verificar se já existe
-                existing = db.query(EmailMessageModel).filter(EmailMessageModel.external_id == ext_id).first()
-                if not existing:
-                    client = db.query(Client).filter(Client.email == item["from"]).first()
-                    new_email = EmailMessageModel(
-                        external_id=ext_id,
-                        account_id=target_account.id if target_account else None,
-                        client_id=client.id if client else None,
-                        folder='inbox',
-                        from_email=item["from"],
-                        from_name=item["clientName"],
-                        to_email=item["to"],
-                        cc=item.get("cc"),
-                        subject=item["subject"],
-                        body_text=item["body"],
-                        body_html=item.get("bodyHtml"),
-                        is_read=False,
-                        has_attachment=item["hasAttachment"],
-                        attachments_json=json.dumps(item.get("attachments", [])),
-                        date=datetime.fromisoformat(item["date"]) if isinstance(item["date"], str) else datetime.utcnow()
-                    )
-                    db.add(new_email)
-                    synced_count += 1
+                if ext_id and ext_id in existing_ids:
+                    continue
+
+                client = db.query(Client).filter(Client.email == item["from"]).first()
+                new_email = EmailMessageModel(
+                    external_id=ext_id,
+                    account_id=target_account_id,
+                    client_id=client.id if client else None,
+                    folder='inbox',
+                    from_email=item["from"],
+                    from_name=item["clientName"],
+                    to_email=item["to"],
+                    cc=item.get("cc"),
+                    subject=item["subject"],
+                    body_text=item["body"],
+                    body_html=item.get("bodyHtml"),
+                    is_read=False,
+                    has_attachment=item["hasAttachment"],
+                    attachments_json=json.dumps(item.get("attachments", [])),
+                    date=datetime.fromisoformat(item["date"]) if isinstance(item["date"], str) else datetime.utcnow()
+                )
+                db.add(new_email)
+                synced_count += 1
+                if ext_id:
+                    existing_ids.add(ext_id)
             db.commit()
     else:
         incoming_message = f"Credenciais {incoming_type.upper()} não configuradas. Exibindo mensagens locais salvas no ERP."
 
     # Atualizar last_sync na conta ativa
     if target_account:
-        target_account.last_sync = datetime.utcnow()
-        db.commit()
+        try:
+            target_account.last_sync = datetime.utcnow()
+            db.commit()
+        except Exception:
+            pass
 
     return {
         "success": True,
