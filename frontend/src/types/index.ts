@@ -520,6 +520,7 @@ export interface EmailMessage {
   cc?: string;
   subject: string;
   body: string;
+  bodyHtml?: string;
   date: string;
   isRead: boolean;
   hasAttachment: boolean;

@@ -14,7 +14,6 @@ import {
   Forward, 
   ShieldCheck, 
   Paperclip, 
-  LayoutGrid, 
   X, 
   Archive, 
   AlertOctagon, 
@@ -82,12 +81,12 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
 
   // Outlook Account Wizard State
   const [isAccountWizardOpen, setIsAccountWizardOpen] = useState(false);
-  const [showAdvancedConfig, setShowAdvancedConfig] = useState(false);
 
   // Selected Folder in Tree
   // 'inbox' (A receber) | 'drafts' (Rascunhos) | 'sent' (Enviados) | 'spam' (Spam) | 'trash' (Reciclagem) | 'archive' (Arquivo) | 'proposals_all' | 'client_[id]'
   const [selectedFolder, setSelectedFolder] = useState<string>('inbox');
   const [showDetailsHeader, setShowDetailsHeader] = useState(false);
+  const [bodyViewMode, setBodyViewMode] = useState<'html' | 'text'>('html');
 
   // Selected Email or Proposal for Reading Pane
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
@@ -815,23 +814,6 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
               <span className="whitespace-nowrap">Marcar</span>
             </button>
           </div>
-
-          {/* Right toggle: CRM Mode */}
-          <button
-            type="button"
-            onClick={() => {
-              if (activeSidebarTab === 'clients') {
-                setActiveSidebarTab('messages');
-              } else {
-                setActiveSidebarTab('clients');
-              }
-            }}
-            className="px-2.5 py-1 text-slate-700 hover:text-[#FF8000] hover:border-[#FF8000] hover:bg-orange-50/50 rounded text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer border border-slate-300 bg-white shadow-2xs whitespace-nowrap shrink-0 ml-3"
-            title="Alternar entre visualização de Correio e Tabela CRM"
-          >
-            <LayoutGrid size={13} className="text-[#FF8000] shrink-0" />
-            <span className="whitespace-nowrap">{activeSidebarTab === 'clients' ? 'Modo Correio' : 'Tabela CRM'}</span>
-          </button>
         </div>
 
       </div>
@@ -991,53 +973,18 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
           />
         ) : activeSidebarTab === 'settings' ? (
           <div className="flex-1 overflow-y-auto bg-slate-100 flex flex-col p-4 sm:p-6 min-h-0">
-            {/* Top Switcher Bar */}
-            <div className="w-full max-w-2xl mx-auto mb-4 flex items-center justify-between bg-white px-4 py-3 rounded-lg border border-slate-200 shadow-2xs">
-              <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded bg-[#0078D4] text-white flex items-center justify-center font-bold text-xs shadow-2xs">
-                  O
-                </div>
-                <div>
-                  <h3 className="text-xs font-bold text-slate-800">Assistente de Conexão de E-mail Corporativo</h3>
-                  <p className="text-[11px] text-slate-500">Conecte sua conta info@lecasu.co.mz para enviar e receber mensagens reais no sistema</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowAdvancedConfig(!showAdvancedConfig)}
-                className="text-xs font-semibold text-[#FF8000] hover:underline cursor-pointer whitespace-nowrap pl-3"
-              >
-                {showAdvancedConfig ? '← Voltar para Assistente Outlook' : 'Parâmetros Técnicos cPanel'}
-              </button>
+            <div className="w-full max-w-3xl mx-auto">
+              <EmailConfigView
+                currentConfig={emailConfig}
+                onConfigSaved={(saved) => {
+                  setEmailConfig(saved);
+                  loadAccounts();
+                  loadEmails();
+                  addToast('success', 'Configuração Salva', 'Configurações de e-mail atualizadas com sucesso.');
+                }}
+                onClose={() => setActiveSidebarTab('messages')}
+              />
             </div>
-
-            {showAdvancedConfig ? (
-              <div className="w-full max-w-2xl mx-auto">
-                <EmailConfigView
-                  currentConfig={emailConfig}
-                  onConfigSaved={(saved) => {
-                    setEmailConfig(saved);
-                    addToast('success', 'Configuração Salva', 'Configurações de e-mail atualizadas.');
-                  }}
-                  onClose={() => setActiveSidebarTab('messages')}
-                />
-              </div>
-            ) : (
-              <div className="w-full max-w-2xl mx-auto flex items-center justify-center my-auto">
-                <OutlookAccountWizard
-                  isInline={true}
-                  initialConfig={emailConfig}
-                  onSuccess={(cfg) => {
-                    setEmailConfig(cfg);
-                    loadAccounts();
-                    loadEmails();
-                    handleSyncEmails(true);
-                    addToast('success', 'Conta Conectada', `Conta ${cfg.email} conectada com êxito!`);
-                    setActiveSidebarTab('messages');
-                  }}
-                />
-              </div>
-            )}
           </div>
         ) : activeSidebarTab === 'clients' ? (
           <div className="flex-1 p-6 overflow-y-auto bg-white text-slate-800 space-y-4">
@@ -1456,8 +1403,8 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
                       <span className="text-slate-400">em {formatRoundcubeFullDate(currentItem.date)}</span>
                     </div>
 
-                    {/* Action Links: ✉ Detalhes | ℹ Cabeçalhos | ≡ Texto simples */}
-                    <div className="flex items-center gap-3 mt-1 text-[11px] text-slate-500">
+                    {/* Action Links: ✉ Detalhes | ℹ Cabeçalhos | 🌐 Modo HTML */}
+                    <div className="flex items-center gap-3 mt-1 text-[11px] text-slate-500 flex-wrap">
                       <button
                         type="button"
                         onClick={() => setShowDetailsHeader(!showDetailsHeader)}
@@ -1468,6 +1415,19 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
                       </button>
                       <span className="text-slate-300">•</span>
                       <span className="text-slate-500">Para: {currentItem.to}</span>
+                      {currentItem.bodyHtml && (
+                        <>
+                          <span className="text-slate-300">•</span>
+                          <button
+                            type="button"
+                            onClick={() => setBodyViewMode(prev => prev === 'html' ? 'text' : 'html')}
+                            className="hover:text-[#FF8000] hover:underline flex items-center gap-1 cursor-pointer transition text-[#FF8000] font-semibold"
+                            title="Alternar entre visualização HTML rica e Texto Simples"
+                          >
+                            <span>{bodyViewMode === 'html' ? '≡ Ver Texto' : '🌐 Ver HTML / Imagens'}</span>
+                          </button>
+                        </>
+                      )}
                     </div>
 
                     {/* Extended Details Dropdown */}
@@ -1545,39 +1505,50 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
                   </div>
                 )}
 
-                {/* 4. Roundcube Email Body (Carta Branca Limpa) */}
-                <div className="text-slate-800 text-xs sm:text-[13px] leading-relaxed font-sans whitespace-pre-line py-2 mb-8">
-                  {currentItem.body}
+                {/* 4. Roundcube Email Body (Suporte Completo a Rich HTML, Imagens, Links e Tabelas) */}
+                <div className="py-2 mb-8 min-h-[140px] text-xs sm:text-[13px] leading-relaxed font-sans text-slate-800">
+                  {currentItem.bodyHtml && bodyViewMode === 'html' ? (
+                    <div 
+                      className="email-html-body overflow-x-auto max-w-full [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded [&_table]:max-w-full [&_a]:text-[#FF8000] [&_a]:underline"
+                      dangerouslySetInnerHTML={{ __html: currentItem.bodyHtml }}
+                    />
+                  ) : (
+                    <div className="whitespace-pre-line text-slate-800 font-sans leading-relaxed">
+                      {currentItem.body}
+                    </div>
+                  )}
                 </div>
 
-                {/* 5. Roundcube Signature (Alinhada no final da mensagem - Paleta Oficial LECASU) */}
-                <div className="pt-6 border-t border-slate-200 mt-auto text-xs">
-                  <div className="flex items-start gap-3.5">
-                    <div className="w-1 self-stretch bg-[#FF8000] rounded-full shrink-0 min-h-[52px]" />
-                    <div className="space-y-1 text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900 text-sm">
-                          {currentItem.clientName || 'LECASU Engenharia'}
-                        </span>
-                        <span className="px-1.5 py-0.2 bg-orange-50 text-[#FF8000] border border-orange-200 rounded text-[10px] font-bold">
-                          LECASU
-                        </span>
-                      </div>
-                      <p className="text-slate-600 font-medium">
-                        Departamento Comercial & Gestão de Contratos
-                      </p>
-                      <div className="flex items-center gap-2 text-slate-500 text-[11px] flex-wrap pt-0.5">
-                        <span>Av. 24 de Julho, Maputo - Moçambique</span>
-                        <span>•</span>
-                        <a href="mailto:info@lecasu.co.mz" className="text-[#FF8000] hover:underline">
-                          info@lecasu.co.mz
-                        </a>
-                        <span>•</span>
-                        <span className="text-slate-400">www.lecasu.co.mz</span>
+                {/* 5. Roundcube Signature (Alinhada no final da mensagem - Paleta Oficial LECASU para emails da empresa) */}
+                {(currentItem.folder === 'sent' || currentItem.from.toLowerCase().includes('lecasu.co.mz')) && (
+                  <div className="pt-6 border-t border-slate-200 mt-auto text-xs">
+                    <div className="flex items-start gap-3.5">
+                      <div className="w-1 self-stretch bg-[#FF8000] rounded-full shrink-0 min-h-[52px]" />
+                      <div className="space-y-1 text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-900 text-sm">
+                            {currentItem.clientName || 'LECASU Engenharia'}
+                          </span>
+                          <span className="px-1.5 py-0.2 bg-orange-50 text-[#FF8000] border border-orange-200 rounded text-[10px] font-bold">
+                            LECASU
+                          </span>
+                        </div>
+                        <p className="text-slate-600 font-medium">
+                          Departamento Comercial & Gestão de Contratos
+                        </p>
+                        <div className="flex items-center gap-2 text-slate-500 text-[11px] flex-wrap pt-0.5">
+                          <span>Av. 24 de Julho, Maputo - Moçambique</span>
+                          <span>•</span>
+                          <a href="mailto:info@lecasu.co.mz" className="text-[#FF8000] hover:underline">
+                            info@lecasu.co.mz
+                          </a>
+                          <span>•</span>
+                          <span className="text-slate-400">www.lecasu.co.mz</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                )}
 
               </div>
             ) : (

@@ -11,6 +11,9 @@ import ssl
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
 import os
+import re
+import base64
+import html
 
 def clean_header_str(value: Optional[str]) -> str:
     """Decodifica cabeçalhos MIME RFC 2047 em string legível UTF-8."""
@@ -32,18 +35,38 @@ def clean_header_str(value: Optional[str]) -> str:
         return str(value)
 
 def parse_email_body(msg: email.message.Message) -> Tuple[str, str, List[Dict[str, Any]]]:
-    """Extrai texto simples, html e lista de anexos de uma mensagem MIME."""
+    """Extrai texto simples, html e lista de anexos de uma mensagem MIME, convertendo imagens inline (CID) em Data URLs para renderização perfeita."""
     text_content = ""
     html_content = ""
     attachments: List[Dict[str, Any]] = []
+    cid_images: Dict[str, str] = {}
 
     if msg.is_multipart():
         for part in msg.walk():
             content_type = part.get_content_type()
             content_disposition = str(part.get("Content-Disposition") or "")
+            content_id = str(part.get("Content-ID") or part.get("X-Attachment-Id") or "")
             filename = part.get_filename()
 
-            if filename or "attachment" in content_disposition.lower():
+            # 1. Tratar imagens inline (CID) para que apareçam perfeitamente no corpo
+            if content_type.startswith("image/"):
+                payload = part.get_payload(decode=True)
+                if payload:
+                    b64 = base64.b64encode(payload).decode('ascii')
+                    data_url = f"data:{content_type};base64,{b64}"
+                    
+                    if content_id:
+                        clean_cid = content_id.strip("<>").strip()
+                        cid_images[clean_cid] = data_url
+                        cid_images[clean_cid.lower()] = data_url
+                    
+                    if filename:
+                        clean_fn = clean_header_str(filename)
+                        cid_images[clean_fn] = data_url
+                        cid_images[clean_fn.lower()] = data_url
+
+            # 2. Anexos normais para download
+            if (filename or "attachment" in content_disposition.lower()) and not (content_id and "inline" in content_disposition.lower()):
                 fn = clean_header_str(filename) or "anexo_desconhecido"
                 payload = part.get_payload(decode=True)
                 size_bytes = len(payload) if payload else 0
@@ -81,6 +104,26 @@ def parse_email_body(msg: email.message.Message) -> Tuple[str, str, List[Dict[st
                     text_content = decoded
         except Exception:
             pass
+
+    # 3. Substituir referências cid: por Data URLs na versão HTML para renderização nativa
+    if html_content and cid_images:
+        for cid_key, data_url in cid_images.items():
+            pattern_quoted = re.compile(r'src=[\'"]cid:' + re.escape(cid_key) + r'[\'"]', re.IGNORECASE)
+            html_content = pattern_quoted.sub(f'src="{data_url}"', html_content)
+            pattern_unquoted = re.compile(r'src=cid:' + re.escape(cid_key) + r'(?=[>\s])', re.IGNORECASE)
+            html_content = pattern_unquoted.sub(f'src="{data_url}"', html_content)
+
+    # 4. Se não tiver HTML mas tiver texto simples, gerar uma versão HTML rica com quebras e links
+    if not html_content and text_content:
+        escaped = html.escape(text_content)
+        # Auto-link URLs
+        url_pattern = re.compile(r'(https?://[^\s<>"]+|www\.[^\s<>"]+)')
+        linked = url_pattern.sub(r'<a href="\1" target="_blank" rel="noopener noreferrer" style="color:#FF8000;text-decoration:underline;">\1</a>', escaped)
+        html_content = f'<div style="font-family:inherit;font-size:13px;line-height:1.6;color:#1e293b;">{linked.replace(chr(10), "<br/>")}</div>'
+
+    # 5. Garantir que links no HTML abram em nova aba
+    if html_content:
+        html_content = re.sub(r'<a\s+(?!.*?target=)([^>]+)>', r'<a target="_blank" rel="noopener noreferrer" \1>', html_content, flags=re.IGNORECASE)
 
     return text_content.strip(), html_content.strip(), attachments
 
@@ -324,8 +367,8 @@ def fetch_imap_emails(
     username: str,
     password: str,
     folder: str = 'INBOX',
-    limit: int = 25,
-    timeout: int = 15
+    limit: int = 150,
+    timeout: int = 30
 ) -> Tuple[bool, List[Dict[str, Any]], str]:
     """Busca e-mails reais do servidor IMAP."""
     if not host or not username or not password:
@@ -435,8 +478,8 @@ def fetch_pop3_emails(
     secure: str,
     username: str,
     password: str,
-    limit: int = 25,
-    timeout: int = 15
+    limit: int = 150,
+    timeout: int = 30
 ) -> Tuple[bool, List[Dict[str, Any]], str]:
     """Busca e-mails reais do servidor POP3."""
     if not host or not username or not password:

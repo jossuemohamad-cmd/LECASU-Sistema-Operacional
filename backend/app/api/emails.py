@@ -30,6 +30,12 @@ def get_email_config(db: Session = Depends(get_db)):
     """Obtém a configuração ativa de correio da LECASU."""
     account = db.query(EmailAccount).filter(EmailAccount.is_active == True).first()
     if not account:
+        account = db.query(EmailAccount).first()
+        if account:
+            account.is_active = True
+            db.commit()
+            db.refresh(account)
+    if not account:
         # Se nenhuma conta ativa, retorna isConnected=False
         cfg = EmailAccountConfigSchema()
         cfg.isConnected = False
@@ -218,6 +224,8 @@ def test_connection(req: EmailTestRequest, db: Session = Depends(get_db)):
 def send_email(req: EmailSendRequest, db: Session = Depends(get_db)):
     """Envia um e-mail através do servidor SMTP e registra na base de dados."""
     active_account = db.query(EmailAccount).filter(EmailAccount.is_active == True).first()
+    if not active_account:
+        active_account = db.query(EmailAccount).first()
     cfg = req.config
     
     target_account = active_account
@@ -358,6 +366,8 @@ def send_email(req: EmailSendRequest, db: Session = Depends(get_db)):
 def sync_emails(req: EmailSyncRequest, db: Session = Depends(get_db)):
     """Sincroniza os e-mails da caixa de correio através do protocolo IMAP ou POP3."""
     active_account = db.query(EmailAccount).filter(EmailAccount.is_active == True).first()
+    if not active_account:
+        active_account = db.query(EmailAccount).first()
     cfg = req.config
     
     target_account = active_account
@@ -403,7 +413,7 @@ def sync_emails(req: EmailSyncRequest, db: Session = Depends(get_db)):
                 secure=cfg.incomingSecure or 'ssl',
                 username=cfg.username,
                 password=password,
-                limit=req.limit or 25
+                limit=req.limit or 150
             )
         else:
             success, fetched_list, msg = fetch_imap_emails(
@@ -413,7 +423,7 @@ def sync_emails(req: EmailSyncRequest, db: Session = Depends(get_db)):
                 username=cfg.username,
                 password=password,
                 folder=req.folder or 'INBOX',
-                limit=req.limit or 25
+                limit=req.limit or 150
             )
         incoming_connected = success
         incoming_message = msg
@@ -513,6 +523,7 @@ def list_emails(
             "cc": r.cc,
             "subject": r.subject,
             "body": r.body_text or "",
+            "bodyHtml": r.body_html,
             "date": r.date.isoformat() if r.date else datetime.utcnow().isoformat(),
             "isRead": r.is_read,
             "hasAttachment": r.has_attachment,
