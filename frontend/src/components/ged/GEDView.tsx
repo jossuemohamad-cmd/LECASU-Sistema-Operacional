@@ -947,6 +947,12 @@ export const GEDView: React.FC = () => {
     });
   };
 
+  // Truncate Text / Title at 45 characters limit
+  const truncateText45 = (text?: string | null, limit = 45): string => {
+    if (!text) return '';
+    return text.length > limit ? `${text.slice(0, limit)}...` : text;
+  };
+
   const trashTotalCount = trashedDocuments.length + trashedFolders.length;
 
   return (
@@ -1319,8 +1325,8 @@ export const GEDView: React.FC = () => {
                     >
                       <span className="font-mono text-neutral-400 text-[11px] select-none">+</span>
                       {renderFolderIcon(folder.iconType)}
-                      <span className="text-[12px] truncate capitalize font-medium">
-                        {folder.name}
+                      <span className="text-[12px] truncate capitalize font-medium" title={folder.name}>
+                        {truncateText45(folder.name, 45)}
                       </span>
                     </div>
                   );
@@ -1518,9 +1524,9 @@ export const GEDView: React.FC = () => {
                               isSelected ? 'bg-[#D9EDF7] font-semibold text-sky-900' : 'hover:bg-[#EBF5FB]'
                             }`}
                           >
-                            <td className="py-1.5 px-3 flex items-center gap-2">
+                            <td className="py-1.5 px-3 flex items-center gap-2" title={gf.name}>
                               {getFileRowIcon(gf.name, gf.mimeType)}
-                              <span className="truncate max-w-sm">{gf.name}</span>
+                              <span className="truncate max-w-sm" title={gf.name}>{truncateText45(gf.name, 45)}</span>
                               {gdriveImportingId === gf.id && (
                                 <Loader2 className="w-3.5 h-3.5 text-sky-600 animate-spin ml-2" />
                               )}
@@ -1531,8 +1537,8 @@ export const GEDView: React.FC = () => {
                             <td className="py-1.5 px-3 text-[11px] text-neutral-600">
                               {formatCPanelDate(gf.modifiedTime)}
                             </td>
-                            <td className="py-1.5 px-3 text-[11px] text-neutral-600 font-mono truncate max-w-xs">
-                              {gf.mimeType}
+                            <td className="py-1.5 px-3 text-[11px] text-neutral-600 font-mono truncate max-w-xs" title={gf.mimeType}>
+                              {truncateText45(gf.mimeType, 45)}
                             </td>
                             <td className="py-1.5 px-3 text-right font-mono text-[11px] text-neutral-600">
                               0644
@@ -1573,10 +1579,10 @@ export const GEDView: React.FC = () => {
                         isFolderSelected ? 'bg-[#D9EDF7] font-semibold text-sky-900' : 'hover:bg-[#EBF5FB]'
                       }`}
                     >
-                      <td className="py-1.5 px-3 flex items-center gap-2">
+                      <td className="py-1.5 px-3 flex items-center gap-2" title={folder.name}>
                         {renderFolderIcon(folder.iconType)}
-                        <span className="text-neutral-900 font-medium group-hover:text-sky-800 capitalize">
-                          {folder.name}
+                        <span className="text-neutral-900 font-medium group-hover:text-sky-800 capitalize truncate max-w-sm" title={folder.name}>
+                          {truncateText45(folder.name, 45)}
                         </span>
                       </td>
                       <td className="py-1.5 px-3 font-mono text-[11px] text-neutral-600">
@@ -1606,9 +1612,11 @@ export const GEDView: React.FC = () => {
                         isFolderSelected ? 'bg-rose-100 font-semibold text-rose-900' : 'hover:bg-rose-50/50'
                       }`}
                     >
-                      <td className="py-1.5 px-3 flex items-center gap-2">
+                      <td className="py-1.5 px-3 flex items-center gap-2" title={tf.name}>
                         <Folder className="w-4 h-4 text-rose-500 fill-rose-400/20 shrink-0" />
-                        <span className="text-rose-900 font-medium capitalize">{tf.name} (Pasta Eliminada)</span>
+                        <span className="text-rose-900 font-medium capitalize truncate max-w-sm" title={`${tf.name} (Pasta Eliminada)`}>
+                          {truncateText45(`${tf.name} (Pasta Eliminada)`, 45)}
+                        </span>
                       </td>
                       <td className="py-1.5 px-3 font-mono text-[11px] text-neutral-600">4 KB</td>
                       <td className="py-1.5 px-3 text-[11px] text-neutral-600">{formatCPanelDate(tf.createdAt)}</td>
@@ -1649,10 +1657,10 @@ export const GEDView: React.FC = () => {
                         }`}
                       >
                         {/* Nome (Only Clean Title / Name) */}
-                        <td className="py-1.5 px-3 flex items-center gap-2">
+                        <td className="py-1.5 px-3 flex items-center gap-2" title={doc.title || doc.file_name}>
                           {getFileRowIcon(doc.file_name, doc.mime_type)}
-                          <span className="text-neutral-900 group-hover:text-sky-800 truncate max-w-md">
-                            {doc.title}
+                          <span className="text-neutral-900 group-hover:text-sky-800 truncate max-w-md" title={doc.title || doc.file_name}>
+                            {truncateText45(doc.title, 45)}
                           </span>
                         </td>
 
@@ -1667,8 +1675,8 @@ export const GEDView: React.FC = () => {
                         </td>
 
                         {/* Digitar (MIME / Type) */}
-                        <td className="py-1.5 px-3 text-[11px] text-neutral-600 font-mono truncate max-w-xs">
-                          {getCPanelType(doc.file_name, doc.mime_type)}
+                        <td className="py-1.5 px-3 text-[11px] text-neutral-600 font-mono truncate max-w-xs" title={getCPanelType(doc.file_name, doc.mime_type)}>
+                          {truncateText45(getCPanelType(doc.file_name, doc.mime_type), 45)}
                         </td>
 
                         {/* Permissões */}
