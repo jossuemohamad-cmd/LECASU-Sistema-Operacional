@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 from app.core.database import engine, Base, SessionLocal
 import app.models.models as models
@@ -95,3 +97,17 @@ app.include_router(emails_router, prefix='/api/v1')
 @app.get('/api/health')
 def health_check():
     return {'status': 'online', 'system': 'LECASU ERP v2.0'}
+
+# Servir o frontend React (ficheiros estáticos compilados)
+import os
+_frontend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'frontend')
+if os.path.isdir(_frontend_dir):
+    app.mount('/assets', StaticFiles(directory=os.path.join(_frontend_dir, 'assets')), name='assets')
+
+    @app.get('/{full_path:path}')
+    def serve_frontend(full_path: str):
+        """SPA fallback — todas as rotas que não são /api/ servem o index.html"""
+        index_file = os.path.join(_frontend_dir, 'index.html')
+        if os.path.isfile(index_file):
+            return FileResponse(index_file)
+        return {'error': 'Frontend não encontrado'}
