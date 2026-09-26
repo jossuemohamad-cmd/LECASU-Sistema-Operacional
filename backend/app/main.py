@@ -100,7 +100,7 @@ def health_check():
 
 # Servir o frontend React (ficheiros estáticos compilados)
 import os
-_frontend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'frontend')
+_frontend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'dist')
 if os.path.isdir(_frontend_dir):
     app.mount('/assets', StaticFiles(directory=os.path.join(_frontend_dir, 'assets')), name='assets')
 
