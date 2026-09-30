@@ -100,6 +100,18 @@ def switch_email_account(payload: Dict[str, Any], db: Session = Depends(get_db))
     target.is_active = True
     db.commit()
     db.refresh(target)
+
+    # Vincular e-mails sem conta à conta selecionada
+    try:
+        db.query(EmailMessageModel).filter(
+            (EmailMessageModel.account_id == None) |
+            (func.lower(EmailMessageModel.to_email) == target.email.lower()) |
+            (func.lower(EmailMessageModel.from_email) == target.email.lower())
+        ).update({"account_id": target.id}, synchronize_session=False)
+        db.commit()
+    except Exception:
+        pass
+
     return {
         "success": True,
         "message": f"Conta {target.email} ativada com sucesso.",
