@@ -44,13 +44,11 @@ def init_default_admin(db: Session):
 @router.post('/auth/login', response_model=TokenResponse, summary='Iniciar sessão e obter token JWT')
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
     email_clean = payload.email.strip().lower()
-    user = db.query(User).filter(User.email == email_clean).first()
+    user = db.query(User).filter(func.lower(User.email) == email_clean).first()
     
     if not user:
-        # If user table has no matching user or is empty, seed admin
-        if db.query(func.count(User.id)).scalar() == 0:
-            init_default_admin(db)
-            user = db.query(User).filter(User.email == email_clean).first()
+        init_default_admin(db)
+        user = db.query(User).filter(func.lower(User.email) == email_clean).first()
         
         if not user:
             raise HTTPException(
@@ -58,6 +56,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
                 detail="Credenciais inválidas. Verifique o e-mail e a senha informados.",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+
 
     is_valid = verify_password(payload.password, user.hashed_password or "")
     if not is_valid:
