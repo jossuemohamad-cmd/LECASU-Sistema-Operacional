@@ -2099,12 +2099,12 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
           isInline={false}
           initialConfig={emailConfig}
           onClose={() => setIsAccountWizardOpen(false)}
-          onSuccess={(cfg) => {
+          onSuccess={async (cfg) => {
             setEmailConfig(cfg);
             setIsAccountWizardOpen(false);
-            loadAccounts();
-            loadEmails();
-            handleSyncEmails(true);
+            await loadAccounts();
+            await handleSyncEmails(true);
+            await loadEmails();
             addToast('success', 'Conta Conectada', `Conta ${cfg.email} conectada com êxito!`);
           }}
         />

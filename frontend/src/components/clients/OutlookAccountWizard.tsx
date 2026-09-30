@@ -298,13 +298,12 @@ export const OutlookAccountWizard: React.FC<OutlookAccountWizardProps> = ({
       lastSync: new Date().toLocaleTimeString('pt-MZ', { hour: '2-digit', minute: '2-digit' })
     };
 
-    // Save configuration
+    // Save configuration and sync emails
     try {
       await saveEmailConfig(finalConfig);
-      // Trigger background sync
-      syncEmails({ config: finalConfig, folder: 'inbox', limit: 25 }).catch(err => console.warn('Background sync started:', err));
+      await syncEmails({ config: finalConfig, folder: 'inbox', limit: 50 });
     } catch (err) {
-      console.warn('Save on finish:', err);
+      console.warn('Save & sync on finish:', err);
     }
 
     onSuccess(finalConfig);

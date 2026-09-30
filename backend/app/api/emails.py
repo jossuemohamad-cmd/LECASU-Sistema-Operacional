@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 from datetime import datetime
@@ -157,6 +158,18 @@ def save_email_config(config: EmailAccountConfigSchema, db: Session = Depends(ge
 
     db.commit()
     db.refresh(account)
+
+    # Vincular e-mails existentes sem conta a esta conta recém-salva
+    try:
+        db.query(EmailMessageModel).filter(
+            (EmailMessageModel.account_id == None) |
+            (func.lower(EmailMessageModel.to_email) == account.email.lower()) |
+            (func.lower(EmailMessageModel.from_email) == account.email.lower())
+        ).update({"account_id": account.id}, synchronize_session=False)
+        db.commit()
+    except Exception:
+        pass
+
     config.isConnected = True
     return config
 
@@ -497,18 +510,32 @@ def list_emails(
 ):
     """Lista e-mails registrados no banco de dados para a conta ativa. Se não houver conta ativa, retorna lista vazia."""
     if account_email:
-        active_account = db.query(EmailAccount).filter(EmailAccount.email == account_email).first()
+        active_account = db.query(EmailAccount).filter(func.lower(EmailAccount.email) == account_email.lower()).first()
     else:
         active_account = db.query(EmailAccount).filter(EmailAccount.is_active == True).first()
 
-    # Se não houver conta ativa conectada, retorna vazio imediatamente
+    if not active_account:
+        active_account = db.query(EmailAccount).first()
+
     if not active_account:
         return []
 
+    # Vincular e-mails sem conta à conta ativa
+    try:
+        db.query(EmailMessageModel).filter(
+            (EmailMessageModel.account_id == None) |
+            (func.lower(EmailMessageModel.to_email) == active_account.email.lower()) |
+            (func.lower(EmailMessageModel.from_email) == active_account.email.lower())
+        ).update({"account_id": active_account.id}, synchronize_session=False)
+        db.commit()
+    except Exception:
+        pass
+
     query = db.query(EmailMessageModel).filter(
         (EmailMessageModel.account_id == active_account.id) |
-        (EmailMessageModel.to_email == active_account.email) |
-        (EmailMessageModel.from_email == active_account.email)
+        (func.lower(EmailMessageModel.to_email) == active_account.email.lower()) |
+        (func.lower(EmailMessageModel.from_email) == active_account.email.lower()) |
+        (EmailMessageModel.account_id == None)
     )
     if folder and folder != 'all':
         query = query.filter(EmailMessageModel.folder == folder)
