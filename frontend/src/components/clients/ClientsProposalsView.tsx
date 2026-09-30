@@ -341,7 +341,7 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
     }
   };
 
-  // Auto-sync e Polling automático em segundo plano a cada 20 segundos (tempo real sem precisar dar refresh)
+  // Auto-sync e Polling automático em segundo plano a cada 10 segundos + no foco da janela (tempo real sem precisar dar refresh)
   useEffect(() => {
     if (!emailConfig.isConnected || !emailConfig.email) return;
 
@@ -349,10 +349,19 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
 
     const intervalId = setInterval(() => {
       handleSyncEmails(false);
-    }, 20000);
+    }, 10000);
 
-    return () => clearInterval(intervalId);
+    const handleFocus = () => {
+      handleSyncEmails(false);
+    };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [emailConfig.email, emailConfig.isConnected]);
+
 
   useEffect(() => {
     loadClients();
@@ -612,8 +621,14 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
       );
     }
 
-    return result;
+    // Ordenação estrita da mensagem MAIS RECENTE no TOPO (Decrescente por Data)
+    return [...result].sort((a, b) => {
+      const timeA = a.date ? new Date(a.date).getTime() : 0;
+      const timeB = b.date ? new Date(b.date).getTime() : 0;
+      return timeB - timeA;
+    });
   }, [messages, selectedFolder, searchQuery]);
+
 
   // Paginated slice
   const totalPages = useMemo(() => {
@@ -808,16 +823,36 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
     );
   };
 
-  // Format Roundcube Date: "Qui 16:53", "Qua 12:31", "2026-09-23 12:31"
+  // Format Roundcube Date: "16:53" (hoje), "Sex 16:57" (esta semana), "25/09 16:57" ou "25/09/2026"
   const formatRoundcubeListDate = (dateStr: string): string => {
     const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr;
+    if (isNaN(d.getTime())) return dateStr || '—';
+    const now = new Date();
+    const isToday = d.toDateString() === now.toDateString();
     const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-    const dayName = days[d.getDay()];
     const hours = String(d.getHours()).padStart(2, '0');
     const mins = String(d.getMinutes()).padStart(2, '0');
-    return `${dayName} ${hours}:${mins}`;
+
+    if (isToday) {
+      return `${hours}:${mins}`;
+    }
+
+    const diffMs = now.getTime() - d.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays >= 0 && diffDays < 7) {
+      const dayName = days[d.getDay()];
+      return `${dayName} ${hours}:${mins}`;
+    }
+
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    if (d.getFullYear() === now.getFullYear()) {
+      return `${day}/${month} ${hours}:${mins}`;
+    }
+
+    return `${day}/${month}/${d.getFullYear()}`;
   };
+
 
   const formatRoundcubeFullDate = (dateStr: string): string => {
     const d = new Date(dateStr);
