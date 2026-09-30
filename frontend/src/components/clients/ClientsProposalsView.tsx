@@ -47,7 +47,8 @@ import {
   saveEmailConfig,
   fetchEmailAccounts,
   switchEmailAccount,
-  logoutEmailAccount
+  logoutEmailAccount,
+  deleteEmailAccount
 } from '../../services/api';
 import { ClientModal } from './ClientModal';
 import { ProposalModal } from './ProposalModal';
@@ -232,6 +233,26 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
       addToast('info', 'Conta Desconectada', 'Sessão de correio desconectada com sucesso.');
     } catch (e: any) {
       addToast('error', 'Erro ao sair', e.message);
+    }
+  };
+
+  // Delete an email account permanently from PostgreSQL database
+  const handleDeleteAccount = async (e: React.MouseEvent, accountId: number, emailStr: string) => {
+    e.stopPropagation();
+    if (!window.confirm(`Tem certeza que deseja remover permanentemente a conta ${emailStr}?`)) {
+      return;
+    }
+    try {
+      await deleteEmailAccount(accountId);
+      addToast('success', 'Conta Removida', `A conta ${emailStr} foi excluída.`);
+      await loadAccounts();
+      if (emailConfig.email === emailStr) {
+        await handleLogoutAccount();
+      } else {
+        await loadEmails();
+      }
+    } catch (err: any) {
+      addToast('error', 'Erro ao Remover', err.message || 'Falha ao remover a conta.');
     }
   };
 
@@ -926,7 +947,7 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
                       <div
                         key={acc.id}
                         onClick={() => handleSwitchAccount(acc.id, acc.email)}
-                        className={`flex items-center justify-between p-2 rounded cursor-pointer transition ${
+                        className={`flex items-center justify-between p-2 rounded cursor-pointer transition group ${
                           isCurActive
                             ? 'bg-orange-50 text-[#FF8000] font-semibold'
                             : 'hover:bg-slate-50 text-slate-700'
@@ -941,9 +962,19 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
                             {acc.incomingType.toUpperCase()} • {acc.displayName}
                           </span>
                         </div>
-                        {isCurActive && (
-                          <Check size={14} className="text-[#FF8000] shrink-0 ml-1" />
-                        )}
+                        <div className="flex items-center gap-1 shrink-0 ml-1">
+                          {isCurActive && (
+                            <Check size={14} className="text-[#FF8000]" />
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => handleDeleteAccount(e, acc.id, acc.email)}
+                            className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer opacity-70 hover:opacity-100"
+                            title={`Remover conta ${acc.email}`}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </div>
                     );
                   })
@@ -960,8 +991,7 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
                   className="w-full flex items-center gap-2 p-2 rounded hover:bg-orange-50/60 text-slate-700 hover:text-[#FF8000] font-medium transition cursor-pointer text-left"
                 >
                   <Plus size={14} className="text-[#FF8000]" />
-                  <span>+ Adicionar Conta (Outlook / Webmail)</span>
-
+                  <span>Adicionar Nova Conta de Correio</span>
                 </button>
 
                 {emailConfig.isConnected && (
