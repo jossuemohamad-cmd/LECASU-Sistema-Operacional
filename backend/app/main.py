@@ -39,30 +39,34 @@ async def neon_keepalive_worker():
         except Exception:
             pass
 
+import os
+
+is_vercel = os.getenv("VERCEL") == "1"
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Inicialização resiliente de tabelas e utilizador Admin
+    # Inicialização de tabelas e utilizador Admin
     try:
         Base.metadata.create_all(bind=engine)
         with SessionLocal() as db_session:
             init_default_admin(db_session)
-        print("[LECASU ERP] Base de dados e Administrador inicializados com sucesso.")
+        print("[LECASU ERP] Base de dados e Administrador inicializados.")
     except Exception as e:
         print(f"[LECASU ERP] Aviso na inicialização: {e}")
     
-    # Sincronizar todas as pastas no Neon S3 Bucket em background
-    try:
-        from app.services.storage import ensure_s3_folders_exist
-        asyncio.create_task(asyncio.to_thread(ensure_s3_folders_exist))
-    except Exception as e:
-        print(f"[LECASU ERP] Aviso ao sincronizar S3: {e}")
+    if not is_vercel:
+        try:
+            from app.services.storage import ensure_s3_folders_exist
+            asyncio.create_task(asyncio.to_thread(ensure_s3_folders_exist))
+        except Exception:
+            pass
 
-    # Iniciar worker de warm connection em background
-    keepalive_task = asyncio.create_task(neon_keepalive_worker())
-    
-    yield
-    
-    keepalive_task.cancel()
+        keepalive_task = asyncio.create_task(neon_keepalive_worker())
+        yield
+        keepalive_task.cancel()
+    else:
+        yield
+
 
 
 app = FastAPI(
