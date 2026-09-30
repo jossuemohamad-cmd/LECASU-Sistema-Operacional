@@ -425,7 +425,7 @@ export async function updateService(serviceId: number, payload: ServiceUpdateInp
 // ================= AUTHENTICATION & USERS =================
 export async function loginUser(credentials: LoginCredentials): Promise<AuthResponse> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
   try {
     const res = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
@@ -443,10 +443,16 @@ export async function loginUser(credentials: LoginCredentials): Promise<AuthResp
       clearApiCache();
     }
     return data;
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      throw new Error('A conexão demorou a responder. Por favor, tente novamente.');
+    }
+    throw error;
   } finally {
     clearTimeout(timeoutId);
   }
 }
+
 
 export async function fetchCurrentUser(): Promise<User> {
   const res = await fetch(`${API_BASE_URL}/auth/me`, {
