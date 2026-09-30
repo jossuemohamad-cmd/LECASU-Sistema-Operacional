@@ -28,6 +28,9 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
-# Storage
+# Storage & Databases
 backend/uploads/*
 !backend/uploads/.gitkeep
+*.db
+*.sqlite3
+

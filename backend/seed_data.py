@@ -4,14 +4,18 @@ Cenário Corporativo Realista de Moçambique (Valores em MZN, NUITs e Empresas L
 """
 from datetime import datetime, timedelta
 from decimal import Decimal
-from app.core.database import SessionLocal
+from app.core.database import SessionLocal, engine, Base
 from app.core.security import get_password_hash
 from app.models.models import (
     User, Client, Proposal, Project, Task, Invoice, 
     Service, Supplier, PurchaseOrder, Employee, EmployeeLeave, Document
 )
 
+# Garantir criação prévia de tabelas na base de dados
+Base.metadata.create_all(bind=engine)
+
 db = SessionLocal()
+
 
 try:
     print("=" * 60)
@@ -121,16 +125,18 @@ try:
     polana = clients_map.get("Condomínio Residencial Marés da Polana")
 
     # Projeto 1: CDM (75% concluído)
-    if cdm and not db.query(Proposal).filter(Proposal.title.like("%Automação e Eficiência Energética%")).first():
-        p1 = Proposal(
-            client_id=cdm.id,
-            title="Automação e Eficiência Energética na Fábrica da Matola",
-            scope="Substituição de luminárias industriais por LED inteligente e compensação de fator de potência.",
-            total_amount=Decimal("450000.00"),
-            status="ACCEPTED"
-        )
-        db.add(p1)
-        db.flush()
+    if cdm and not db.query(Project).filter(Project.code == "PRJ-2026-001").first():
+        p1 = db.query(Proposal).filter(Proposal.title.like("%Automação e Eficiência Energética%")).first()
+        if not p1:
+            p1 = Proposal(
+                client_id=cdm.id,
+                title="Automação e Eficiência Energética na Fábrica da Matola",
+                scope="Substituição de luminárias industriais por LED inteligente e compensação de fator de potência.",
+                total_amount=Decimal("450000.00"),
+                status="ACCEPTED"
+            )
+            db.add(p1)
+            db.flush()
 
         proj1 = Project(
             client_id=cdm.id,
@@ -166,16 +172,18 @@ try:
         db.add(inv1)
 
     # Projeto 2: Marés da Polana (33% concluído)
-    if polana and not db.query(Proposal).filter(Proposal.title.like("%Sistema Solar Backup%")).first():
-        p2 = Proposal(
-            client_id=polana.id,
-            title="Sistema Solar Fotovoltaico Backup 15kWp",
-            scope="Instalação de inversores solares Deye e bancos de baterias Lítio para áreas comuns do condomínio.",
-            total_amount=Decimal("520000.00"),
-            status="ACCEPTED"
-        )
-        db.add(p2)
-        db.flush()
+    if polana and not db.query(Project).filter(Project.code == "PRJ-2026-002").first():
+        p2 = db.query(Proposal).filter(Proposal.title.like("%Sistema Solar Backup%")).first()
+        if not p2:
+            p2 = Proposal(
+                client_id=polana.id,
+                title="Sistema Solar Fotovoltaico Backup 15kWp",
+                scope="Instalação de inversores solares Deye e bancos de baterias Lítio para áreas comuns do condomínio.",
+                total_amount=Decimal("520000.00"),
+                status="ACCEPTED"
+            )
+            db.add(p2)
+            db.flush()
 
         proj2 = Project(
             client_id=polana.id,
@@ -186,6 +194,7 @@ try:
         )
         db.add(proj2)
         db.flush()
+
 
         tec = users_map.get("carlos.tecnico@lecasu.co.mz")
         tasks2 = [
