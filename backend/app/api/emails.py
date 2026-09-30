@@ -378,128 +378,166 @@ def send_email(req: EmailSendRequest, db: Session = Depends(get_db)):
 @router.post("/sync")
 def sync_emails(req: EmailSyncRequest, db: Session = Depends(get_db)):
     """Sincroniza os e-mails da caixa de correio através do protocolo IMAP ou POP3."""
-    active_account = db.query(EmailAccount).filter(EmailAccount.is_active == True).first()
-    if not active_account:
-        active_account = db.query(EmailAccount).first()
-    cfg = req.config
-    
-    target_account = active_account
-    if cfg and cfg.email:
-        acc_by_email = db.query(EmailAccount).filter(EmailAccount.email == cfg.email).first()
-        if acc_by_email:
-            target_account = acc_by_email
+    try:
+        active_account = db.query(EmailAccount).filter(EmailAccount.is_active == True).first()
+        if not active_account:
+            active_account = db.query(EmailAccount).first()
+        cfg = req.config
+        
+        target_account = active_account
+        if cfg and cfg.email:
+            acc_by_email = db.query(EmailAccount).filter(EmailAccount.email == cfg.email).first()
+            if acc_by_email:
+                target_account = acc_by_email
 
-    password = None
-    if cfg and cfg.password and cfg.password != '••••••••••••':
-        password = cfg.password
-    elif target_account and target_account.password:
-        password = target_account.password
-
-    if not cfg or not cfg.incomingHost or not cfg.username:
-        if target_account:
-            cfg = EmailAccountConfigSchema(
-                provider=target_account.provider,
-                displayName=target_account.display_name,
-                email=target_account.email,
-                smtpHost=target_account.smtp_host,
-                smtpPort=target_account.smtp_port,
-                smtpSecure=target_account.smtp_secure,
-                incomingType=target_account.incoming_type,
-                incomingHost=target_account.incoming_host,
-                incomingPort=target_account.incoming_port,
-                incomingSecure=target_account.incoming_secure,
-                username=target_account.username,
-                password=target_account.password
-            )
+        password = None
+        if cfg and cfg.password and cfg.password != '••••••••••••':
+            password = cfg.password
+        elif target_account and target_account.password:
             password = target_account.password
 
-    incoming_connected = False
-    incoming_message = ""
-    synced_count = 0
-    incoming_type = (cfg.incomingType or (target_account.incoming_type if target_account else 'imap') or 'imap').lower() if cfg else 'imap'
+        if not cfg or not cfg.incomingHost or not cfg.username:
+            if target_account:
+                cfg = EmailAccountConfigSchema(
+                    provider=target_account.provider,
+                    displayName=target_account.display_name,
+                    email=target_account.email,
+                    smtpHost=target_account.smtp_host,
+                    smtpPort=target_account.smtp_port,
+                    smtpSecure=target_account.smtp_secure,
+                    incomingType=target_account.incoming_type,
+                    incomingHost=target_account.incoming_host,
+                    incomingPort=target_account.incoming_port,
+                    incomingSecure=target_account.incoming_secure,
+                    username=target_account.username,
+                    password=target_account.password
+                )
+                password = target_account.password
 
-    if cfg and cfg.incomingHost and cfg.username and password and password != '••••••••••••':
-        # Carregar Message-IDs já salvos no banco para busca incremental ultrarrápida
-        existing_ids = {r[0] for r in db.query(EmailMessageModel.external_id).all() if r[0]}
+        incoming_connected = False
+        incoming_message = ""
+        synced_count = 0
+        incoming_type = (cfg.incomingType or (target_account.incoming_type if target_account else 'imap') or 'imap').lower() if cfg else 'imap'
 
-        if incoming_type == 'pop3':
-            success, fetched_list, msg = fetch_pop3_emails(
-                host=cfg.incomingHost,
-                port=cfg.incomingPort or 995,
-                secure=cfg.incomingSecure or 'ssl',
-                username=cfg.username,
-                password=password,
-                limit=req.limit or 150
-            )
-        else:
-            success, fetched_list, msg = fetch_imap_emails(
-                host=cfg.incomingHost,
-                port=cfg.incomingPort or 993,
-                secure=cfg.incomingSecure or 'ssl',
-                username=cfg.username,
-                password=password,
-                folder=req.folder or 'INBOX',
-                limit=req.limit or 150,
-                known_external_ids=existing_ids
-            )
-        incoming_connected = success
-        incoming_message = msg
-
-        if success:
+        if cfg and cfg.incomingHost and cfg.username and password and password != '••••••••••••':
+            # Carregar Message-IDs já salvos no banco para busca incremental ultrarrápida
+            existing_ids = set()
             try:
-                db.rollback()
+                existing_ids = {r[0] for r in db.query(EmailMessageModel.external_id).all() if r[0]}
             except Exception:
                 pass
 
-            target_account_id = target_account.id if target_account else None
-
-            for item in fetched_list:
-                ext_id = item.get("external_id")
-                if ext_id and ext_id in existing_ids:
-                    continue
-
-                client = db.query(Client).filter(Client.email == item["from"]).first()
-                new_email = EmailMessageModel(
-                    external_id=ext_id,
-                    account_id=target_account_id,
-                    client_id=client.id if client else None,
-                    folder='inbox',
-                    from_email=item["from"],
-                    from_name=item["clientName"],
-                    to_email=item["to"],
-                    cc=item.get("cc"),
-                    subject=item["subject"],
-                    body_text=item["body"],
-                    body_html=item.get("bodyHtml"),
-                    is_read=False,
-                    has_attachment=item["hasAttachment"],
-                    attachments_json=json.dumps(item.get("attachments", [])),
-                    date=datetime.fromisoformat(item["date"]) if isinstance(item["date"], str) else datetime.utcnow()
+            if incoming_type == 'pop3':
+                success, fetched_list, msg = fetch_pop3_emails(
+                    host=cfg.incomingHost,
+                    port=cfg.incomingPort or 995,
+                    secure=cfg.incomingSecure or 'ssl',
+                    username=cfg.username,
+                    password=password,
+                    limit=req.limit or 150
                 )
-                db.add(new_email)
-                synced_count += 1
-                if ext_id:
-                    existing_ids.add(ext_id)
-            db.commit()
-    else:
-        incoming_message = f"Credenciais {incoming_type.upper()} não configuradas. Exibindo mensagens locais salvas no ERP."
+            else:
+                success, fetched_list, msg = fetch_imap_emails(
+                    host=cfg.incomingHost,
+                    port=cfg.incomingPort or 993,
+                    secure=cfg.incomingSecure or 'ssl',
+                    username=cfg.username,
+                    password=password,
+                    folder=req.folder or 'INBOX',
+                    limit=req.limit or 150,
+                    known_external_ids=existing_ids
+                )
+            incoming_connected = success
+            incoming_message = msg
 
-    # Atualizar last_sync na conta ativa
-    if target_account:
-        try:
-            target_account.last_sync = datetime.utcnow()
-            db.commit()
-        except Exception:
-            pass
+            if success:
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
 
-    return {
-        "success": True,
-        "imap_connected": incoming_connected,
-        "incoming_connected": incoming_connected,
-        "incoming_type": incoming_type,
-        "message": incoming_message,
-        "new_messages_count": synced_count
-    }
+                target_account_id = target_account.id if target_account else None
+
+                for item in fetched_list:
+                    ext_id = item.get("external_id")
+                    if ext_id and ext_id in existing_ids:
+                        continue
+
+                    # Tratamento seguro da data de criação
+                    date_val = datetime.utcnow()
+                    raw_date = item.get("date")
+                    if isinstance(raw_date, datetime):
+                        date_val = raw_date
+                    elif isinstance(raw_date, str) and raw_date.strip():
+                        try:
+                            date_val = datetime.fromisoformat(raw_date)
+                        except Exception:
+                            try:
+                                from email.utils import parsedate_to_datetime
+                                date_val = parsedate_to_datetime(raw_date)
+                            except Exception:
+                                date_val = datetime.utcnow()
+
+                    try:
+                        client = db.query(Client).filter(Client.email == item["from"]).first()
+                        new_email = EmailMessageModel(
+                            external_id=ext_id,
+                            account_id=target_account_id,
+                            client_id=client.id if client else None,
+                            folder='inbox',
+                            from_email=item["from"],
+                            from_name=item["clientName"],
+                            to_email=item["to"],
+                            cc=item.get("cc"),
+                            subject=item["subject"],
+                            body_text=item["body"],
+                            body_html=item.get("bodyHtml"),
+                            is_read=False,
+                            has_attachment=item["hasAttachment"],
+                            attachments_json=json.dumps(item.get("attachments", [])),
+                            date=date_val
+                        )
+                        db.add(new_email)
+                        synced_count += 1
+                        if ext_id:
+                            existing_ids.add(ext_id)
+                    except Exception as item_err:
+                        print(f"[LECASU ERP] Aviso ao salvar e-mail individual: {item_err}")
+
+                try:
+                    db.commit()
+                except Exception as commit_err:
+                    print(f"[LECASU ERP] Aviso no commit da sincronização: {commit_err}")
+                    db.rollback()
+        else:
+            incoming_message = f"Credenciais {incoming_type.upper()} não configuradas. Exibindo mensagens locais salvas no ERP."
+
+        # Atualizar last_sync na conta ativa
+        if target_account:
+            try:
+                target_account.last_sync = datetime.utcnow()
+                db.commit()
+            except Exception:
+                pass
+
+        return {
+            "success": True,
+            "imap_connected": incoming_connected,
+            "incoming_connected": incoming_connected,
+            "incoming_type": incoming_type,
+            "message": incoming_message,
+            "new_messages_count": synced_count
+        }
+    except Exception as err:
+        print(f"[LECASU ERP] Erro genérico na sincronização de e-mails: {err}")
+        return {
+            "success": False,
+            "imap_connected": False,
+            "incoming_connected": False,
+            "incoming_type": "imap",
+            "message": f"Não foi possível sincronizar no momento: {str(err)}",
+            "new_messages_count": 0
+        }
 
 @router.get("")
 def list_emails(
