@@ -8,11 +8,13 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 
-SECRET_KEY = os.getenv("SECRET_KEY")
-if not SECRET_KEY:
-    raise RuntimeError("SECRET_KEY não configurada no ambiente ou no ficheiro .env")
+DEFAULT_SECRET_KEY = "84b890dbd5b8f6b4cf4cd3ffd80b1847e4db8fe3bb8a13788293dfd41a9a4958"
+SECRET_KEY = os.getenv("SECRET_KEY", DEFAULT_SECRET_KEY)
+if not SECRET_KEY or not SECRET_KEY.strip():
+    SECRET_KEY = DEFAULT_SECRET_KEY
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 Horas
+
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security_bearer = HTTPBearer(auto_error=False)
