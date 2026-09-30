@@ -33,21 +33,22 @@ export interface EmailAccountConfig {
 }
 
 export const DEFAULT_EMAIL_CONFIG: EmailAccountConfig = {
-  provider: 'cpanel',
-  displayName: 'LECASU - Engenharia & Serviços',
-  email: 'info@lecasu.co.mz',
-  smtpHost: 'mail.lecasu.co.mz',
+  provider: 'outlook',
+  displayName: '',
+  email: '',
+  smtpHost: '',
   smtpPort: 465,
   smtpSecure: 'ssl',
   incomingType: 'imap',
-  incomingHost: 'mail.lecasu.co.mz',
+  incomingHost: '',
   incomingPort: 993,
   incomingSecure: 'ssl',
-  username: 'info@lecasu.co.mz',
+  username: '',
   password: '',
-  isConnected: true,
-  lastSync: 'Sincronizado'
+  isConnected: false,
+  lastSync: undefined
 };
+
 
 interface EmailConfigModalProps {
   isOpen: boolean;

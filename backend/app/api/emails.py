@@ -33,33 +33,30 @@ def get_email_config(db: Session = Depends(get_db)):
     """Obtém a configuração ativa de correio da LECASU."""
     account = db.query(EmailAccount).filter(EmailAccount.is_active == True).first()
     if not account:
-        account = db.query(EmailAccount).first()
-        if account:
-            account.is_active = True
-            db.commit()
-            db.refresh(account)
-    if not account:
-        # Se nenhuma conta ativa, retorna isConnected=False
+        # Se nenhuma conta ativa logada, retorna isConnected=False e campos vazios (0 contas)
         cfg = EmailAccountConfigSchema()
         cfg.isConnected = False
+        cfg.email = ""
+        cfg.displayName = ""
         return cfg
     
     return EmailAccountConfigSchema(
-        provider=account.provider,
-        displayName=account.display_name,
+        provider=account.provider or 'webmail',
+        displayName=account.display_name or '',
         email=account.email,
-        smtpHost=account.smtp_host,
-        smtpPort=account.smtp_port,
-        smtpSecure=account.smtp_secure,
-        incomingType=account.incoming_type,
-        incomingHost=account.incoming_host,
-        incomingPort=account.incoming_port,
-        incomingSecure=account.incoming_secure,
-        username=account.username,
-        password=account.password,
+        smtpHost=account.smtp_host or '',
+        smtpPort=account.smtp_port or 465,
+        smtpSecure=account.smtp_secure or 'ssl',
+        incomingType=account.incoming_type or 'imap',
+        incomingHost=account.incoming_host or '',
+        incomingPort=account.incoming_port or 993,
+        incomingSecure=account.incoming_secure or 'ssl',
+        username=account.username or '',
+        password=account.password or '',
         isConnected=account.is_active,
         lastSync=account.last_sync.strftime('%d/%m/%Y às %H:%M') if account.last_sync else None
     )
+
 
 @router.get("/accounts")
 def list_email_accounts(db: Session = Depends(get_db)):

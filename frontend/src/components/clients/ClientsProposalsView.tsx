@@ -960,7 +960,8 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
                   className="w-full flex items-center gap-2 p-2 rounded hover:bg-orange-50/60 text-slate-700 hover:text-[#FF8000] font-medium transition cursor-pointer text-left"
                 >
                   <Plus size={14} className="text-[#FF8000]" />
-                  <span>+ Adicionar Conta (Outlook / cPanel)</span>
+                  <span>+ Adicionar Conta (Outlook / Webmail)</span>
+
                 </button>
 
                 {emailConfig.isConnected && (
