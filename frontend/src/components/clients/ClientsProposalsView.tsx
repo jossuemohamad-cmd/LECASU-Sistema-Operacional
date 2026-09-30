@@ -1257,7 +1257,7 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
           />
         ) : activeSidebarTab === 'settings' ? (
           <div className="flex-1 overflow-y-auto bg-slate-100 flex flex-col p-4 sm:p-6 min-h-0">
-            <div className="w-full max-w-3xl mx-auto">
+            <div className="w-full">
               <EmailConfigView
                 currentConfig={emailConfig}
                 onConfigSaved={(saved) => {

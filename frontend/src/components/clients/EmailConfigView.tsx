@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { 
   Mail, 
   Server, 
-  ShieldCheck, 
   CheckCircle2, 
   AlertCircle, 
   Loader2, 
@@ -37,24 +36,6 @@ export const EmailConfigView: React.FC<EmailConfigViewProps> = ({
   useEffect(() => {
     setConfig(currentConfig);
   }, [currentConfig]);
-
-  const applyLecasuOfficialConfig = (type: 'imap' | 'pop3' = 'imap') => {
-    setConfig(prev => ({
-      ...prev,
-      provider: 'cpanel',
-      displayName: prev.displayName || 'LECASU - Engenharia & Serviços',
-      email: 'info@lecasu.co.mz',
-      username: 'info@lecasu.co.mz',
-      smtpHost: 'mail.lecasu.co.mz',
-      smtpPort: 465,
-      smtpSecure: 'ssl',
-      incomingType: type,
-      incomingHost: 'mail.lecasu.co.mz',
-      incomingPort: type === 'imap' ? 993 : 995,
-      incomingSecure: 'ssl',
-    }));
-    setTestResult(null);
-  };
 
   const handleTestConnection = async () => {
     setIsTesting(true);
@@ -149,7 +130,7 @@ export const EmailConfigView: React.FC<EmailConfigViewProps> = ({
         </div>
       </div>
 
-      <form onSubmit={handleSave} className="max-w-4xl space-y-6 text-xs">
+      <form onSubmit={handleSave} className="w-full space-y-6 text-xs">
         
         {/* Banner de Feedback */}
         {saveSuccessMessage && (
@@ -176,57 +157,6 @@ export const EmailConfigView: React.FC<EmailConfigViewProps> = ({
             </div>
           </div>
         )}
-
-        {/* Tabela de Parâmetros Oficiais de SSL/TLS (cPanel LECASU) */}
-        <div className="border border-sky-300 rounded-xl overflow-hidden shadow-xs bg-white">
-          <div className="bg-[#2B88D8] text-white px-4 py-2.5 font-bold flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2">
-              <ShieldCheck size={16} />
-              <span>Configurações Seguras de SSL/TLS (Recomendado)</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => applyLecasuOfficialConfig(config.incomingType)}
-              className="px-3 py-1 rounded bg-white text-[#2B88D8] hover:bg-sky-50 text-[11px] font-semibold transition cursor-pointer shadow-xs"
-            >
-              Aplicar no Formulário
-            </button>
-          </div>
-          <div className="divide-y divide-slate-100 text-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-3 px-4 py-2.5 items-center">
-              <span className="font-semibold text-slate-700">Nome do usuário:</span>
-              <span className="sm:col-span-2 font-mono font-medium text-slate-900">info@lecasu.co.mz</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 px-4 py-2.5 items-center">
-              <span className="font-semibold text-slate-700">Senha:</span>
-              <span className="sm:col-span-2 italic text-slate-500">Usar a senha da conta do e-mail corporativo.</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 px-4 py-2.5 items-center">
-              <span className="font-semibold text-slate-700">Servidor de entrada:</span>
-              <div className="sm:col-span-2 flex flex-wrap items-center gap-2.5">
-                <span className="font-mono font-medium text-slate-900">mail.lecasu.co.mz</span>
-                <span className="inline-flex items-center px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-[11px] font-mono border border-blue-200">
-                  IMAP Port: 993
-                </span>
-                <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px] font-mono border border-slate-200">
-                  POP3 Port: 995
-                </span>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 px-4 py-2.5 items-center">
-              <span className="font-semibold text-slate-700">Servidor de saída:</span>
-              <div className="sm:col-span-2 flex items-center gap-2.5">
-                <span className="font-mono font-medium text-slate-900">mail.lecasu.co.mz</span>
-                <span className="inline-flex items-center px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[11px] font-mono border border-emerald-200">
-                  SMTP Port: 465
-                </span>
-              </div>
-            </div>
-            <div className="px-4 py-2 bg-slate-50 text-[11px] text-slate-500 font-medium">
-              IMAP, POP3 e SMTP require authentication.
-            </div>
-          </div>
-        </div>
 
         {/* Informações da Conta e Login */}
         <div className="p-5 bg-slate-50/70 border border-slate-200 rounded-xl space-y-4">
