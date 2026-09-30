@@ -1,6 +1,7 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { removeAuthToken, clearApiCache } from '../../services/api';
+
 
 interface Props {
   children: ReactNode;
