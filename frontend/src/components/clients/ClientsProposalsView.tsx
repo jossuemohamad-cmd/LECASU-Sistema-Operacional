@@ -59,6 +59,7 @@ import { EmailComposeView } from './EmailComposeView';
 import { EmailConfigView } from './EmailConfigView';
 import { ProposalsManagerView } from './ProposalsManagerView';
 import { OutlookAccountWizard } from './OutlookAccountWizard';
+import { ConfirmationModal } from '../common/ConfirmationModal';
 import { Toast } from '../common/Toast';
 import { formatMZN } from '../../utils/formatters';
 
@@ -85,6 +86,10 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
 
   // Outlook Account Wizard State
   const [isAccountWizardOpen, setIsAccountWizardOpen] = useState(false);
+
+  // Account Deletion Modal State
+  const [accountToDelete, setAccountToDelete] = useState<{ id: number; email: string } | null>(null);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   // Selected Folder in Tree
   // 'inbox' (A receber) | 'drafts' (Rascunhos) | 'sent' (Enviados) | 'spam' (Spam) | 'trash' (Reciclagem) | 'archive' (Arquivo) | 'proposals_all' | 'client_[id]'
@@ -236,23 +241,31 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
     }
   };
 
-  // Delete an email account permanently from PostgreSQL database
-  const handleDeleteAccount = async (e: React.MouseEvent, accountId: number, emailStr: string) => {
+  // Open confirmation modal for account deletion
+  const promptDeleteAccount = (e: React.MouseEvent, accountId: number, emailStr: string) => {
     e.stopPropagation();
-    if (!window.confirm(`Tem certeza que deseja remover permanentemente a conta ${emailStr}?`)) {
-      return;
-    }
+    setAccountToDelete({ id: accountId, email: emailStr });
+  };
+
+  // Delete an email account permanently from PostgreSQL database
+  const handleConfirmDeleteAccount = async () => {
+    if (!accountToDelete) return;
+    setIsDeletingAccount(true);
     try {
-      await deleteEmailAccount(accountId);
-      addToast('success', 'Conta Removida', `A conta ${emailStr} foi excluída.`);
+      await deleteEmailAccount(accountToDelete.id);
+      addToast('success', 'Conta Removida', `A conta ${accountToDelete.email} foi excluída.`);
+      const deletedEmail = accountToDelete.email;
+      setAccountToDelete(null);
       await loadAccounts();
-      if (emailConfig.email === emailStr) {
+      if (emailConfig.email === deletedEmail) {
         await handleLogoutAccount();
       } else {
         await loadEmails();
       }
     } catch (err: any) {
       addToast('error', 'Erro ao Remover', err.message || 'Falha ao remover a conta.');
+    } finally {
+      setIsDeletingAccount(false);
     }
   };
 
@@ -908,18 +921,18 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
       <div className="h-11 bg-[#F4F6F8] border-b border-slate-200 flex items-stretch shrink-0 text-xs">
         
         {/* Pane 1 Header: Email da Conta & Multi-Account Switcher */}
-        <div className="relative w-44 sm:w-48 px-2.5 flex items-center justify-between border-r border-slate-200 font-semibold text-slate-800 bg-[#FAFAF9] shrink-0">
+        <div className="relative min-w-fit px-3 flex items-center justify-between border-r border-slate-200 font-semibold text-slate-800 bg-[#FAFAF9] shrink-0">
           <button
             type="button"
             onClick={() => setShowAccountDropdown(!showAccountDropdown)}
-            className="flex items-center gap-2 truncate text-left hover:text-[#FF8000] cursor-pointer flex-1 py-1 mr-1"
+            className="flex items-center gap-2 text-left hover:text-[#FF8000] cursor-pointer py-1 mr-1"
             title="Alternar conta ou gerenciar conexões de e-mail"
           >
             <div className={`w-2 h-2 rounded-full shrink-0 ${emailConfig.isConnected ? 'bg-emerald-500 ring-2 ring-emerald-200' : 'bg-slate-300'}`} />
-            <span className="truncate text-xs font-mono font-bold text-slate-800">
+            <span className="whitespace-nowrap text-xs font-mono font-bold text-slate-800">
               {emailConfig.isConnected ? emailConfig.email : 'Sem Conta'}
             </span>
-            <ChevronDown size={13} className="text-slate-400 shrink-0 ml-auto" />
+            <ChevronDown size={13} className="text-slate-400 shrink-0 ml-1" />
           </button>
           
           <button
@@ -933,7 +946,7 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
 
           {/* Multi-Account Dropdown in Pane 1 */}
           {showAccountDropdown && (
-            <div className="absolute left-1 top-full mt-1 w-72 bg-white border border-slate-200 rounded-lg shadow-xl z-50 p-2 text-xs divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
+            <div className="absolute left-1 top-full mt-1 w-80 bg-white border border-slate-200 rounded-lg shadow-xl z-50 p-2 text-xs divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
               <div className="pb-2">
                 <span className="text-[10px] uppercase font-bold text-slate-400 px-2 block mb-1">
                   Contas de Correio ({emailAccounts.length})
@@ -956,7 +969,7 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5">
                             <span className={`w-2 h-2 rounded-full ${isCurActive ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-                            <span className="truncate text-xs font-mono">{acc.email}</span>
+                            <span className="whitespace-nowrap text-xs font-mono">{acc.email}</span>
                           </div>
                           <span className="text-[10px] text-slate-400 block pl-3.5">
                             {acc.incomingType.toUpperCase()} • {acc.displayName}
@@ -968,7 +981,7 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
                           )}
                           <button
                             type="button"
-                            onClick={(e) => handleDeleteAccount(e, acc.id, acc.email)}
+                            onClick={(e) => promptDeleteAccount(e, acc.id, acc.email)}
                             className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer opacity-70 hover:opacity-100"
                             title={`Remover conta ${acc.email}`}
                           >
@@ -2096,6 +2109,25 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
           }}
         />
       )}
+
+      {/* Modal: Confirmação de Exclusão de Conta */}
+      <ConfirmationModal
+        isOpen={!!accountToDelete}
+        onClose={() => !isDeletingAccount && setAccountToDelete(null)}
+        onConfirm={handleConfirmDeleteAccount}
+        title="Remover Conta de Correio"
+        description={
+          accountToDelete ? (
+            <span>
+              Tem certeza que deseja remover permanentemente a conta de e-mail <strong className="font-mono text-slate-900">{accountToDelete.email}</strong>? Todas as mensagens associadas a esta conta serão excluídas da base de dados.
+            </span>
+          ) : ''
+        }
+        confirmText="Remover Conta"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={isDeletingAccount}
+      />
 
     </div>
   );
