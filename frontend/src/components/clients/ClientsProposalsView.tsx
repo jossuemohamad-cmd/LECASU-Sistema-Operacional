@@ -6,6 +6,7 @@ import {
   RefreshCw, 
   AlertCircle,
   FileSpreadsheet, 
+  Sparkles,
   Send, 
   Inbox, 
   Trash2, 
@@ -59,6 +60,7 @@ import { EmailComposeView } from './EmailComposeView';
 import { EmailConfigView } from './EmailConfigView';
 import { ProposalsManagerView } from './ProposalsManagerView';
 import { OutlookAccountWizard } from './OutlookAccountWizard';
+import { PPAProspectingView } from './PPAProspectingView';
 import { ConfirmationModal } from '../common/ConfirmationModal';
 import { Toast } from '../common/Toast';
 import { formatMZN } from '../../utils/formatters';
@@ -81,8 +83,8 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
 
   // Active Sidebar Navigation Tab (Roundcube Vertical Navigation)
-  // 'messages' (3-pane Correio) | 'compose' (Inline Escrever) | 'proposals' (Propostas) | 'settings' (Configurações) | 'clients' (Tabela Clientes)
-  const [activeSidebarTab, setActiveSidebarTab] = useState<'messages' | 'compose' | 'proposals' | 'settings' | 'clients'>('messages');
+  // 'messages' (3-pane Correio) | 'compose' (Inline Escrever) | 'proposals' (Propostas) | 'prospecting' (Radar PPA IA) | 'settings' (Configurações) | 'clients' (Tabela Clientes)
+  const [activeSidebarTab, setActiveSidebarTab] = useState<'messages' | 'compose' | 'proposals' | 'prospecting' | 'settings' | 'clients'>('messages');
 
   // Outlook Account Wizard State
   const [isAccountWizardOpen, setIsAccountWizardOpen] = useState(false);
@@ -1208,6 +1210,21 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
               <span className="text-[9px] mt-0.5 font-semibold leading-none">Propostas</span>
             </button>
 
+            {/* 4. Radar PPA / Prospecção IA */}
+            <button
+              type="button"
+              onClick={() => setActiveSidebarTab('prospecting')}
+              className={`w-11 h-11 rounded-xl flex flex-col items-center justify-center transition cursor-pointer group ${
+                activeSidebarTab === 'prospecting'
+                  ? 'bg-[#FF8000] text-white shadow-xs font-bold'
+                  : 'text-slate-600 hover:bg-slate-200/70 hover:text-slate-900'
+              }`}
+              title="Radar PPA & Prospecção IA (Pesquisa Avançada de Leads Moçambique)"
+            >
+              <Sparkles size={17} />
+              <span className="text-[9px] mt-0.5 font-semibold leading-none">Radar IA</span>
+            </button>
+
             {/* 4. Clientes */}
             <button
               type="button"
@@ -1297,6 +1314,23 @@ export const ClientsProposalsView: React.FC<ClientsProposalsViewProps> = ({
               setComposeInitialClient(client || null);
               setActiveSidebarTab('compose');
             }}
+          />
+        ) : activeSidebarTab === 'prospecting' ? (
+          <PPAProspectingView
+            onAddClient={async (clientInput) => {
+              try {
+                const created = await createClient(clientInput);
+                setClients(prev => [created, ...prev]);
+                addToast('success', 'Cliente Registado', `Empresa ${created.name} adicionada à carteira de clientes.`);
+              } catch (err: any) {
+                addToast('error', 'Erro ao registar cliente', err.message);
+              }
+            }}
+            onOpenCreateProposal={(_initialData) => {
+              setActiveSidebarTab('proposals');
+              setIsProposalModalOpen(true);
+            }}
+            addToast={addToast}
           />
         ) : activeSidebarTab === 'settings' ? (
           <div className="flex-1 overflow-y-auto bg-slate-100 flex flex-col p-4 sm:p-6 min-h-0">
