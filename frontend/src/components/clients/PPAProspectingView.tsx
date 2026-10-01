@@ -378,19 +378,19 @@ export const PPAProspectingView: React.FC<PPAProspectingViewProps> = ({
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-slate-100 flex flex-col p-4 sm:p-6 min-h-0 select-none">
+    <div className="flex-1 w-full h-full min-h-0 min-w-0 overflow-y-auto bg-slate-100 flex flex-col p-4 sm:p-6 select-none">
       
       {/* Banner de Inteligência Comercial / Top Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-[#0F172A] text-white p-5 sm:p-6 rounded-2xl shadow-lg border border-slate-800 mb-6 relative overflow-hidden">
+      <div className="shrink-0 w-full bg-gradient-to-r from-slate-900 via-slate-800 to-[#0F172A] text-white p-5 sm:p-6 rounded-2xl shadow-lg border border-slate-800 mb-6 relative overflow-hidden min-h-fit">
         <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-64 h-64 bg-[#FF8000]/10 rounded-full blur-3xl pointer-events-none" />
         
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
-          <div className="space-y-1.5 min-w-0">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10 min-h-fit">
+          <div className="space-y-1.5 min-w-0 flex-1">
             <div className="flex items-center gap-2.5">
               <div className="p-2 rounded-xl bg-[#FF8000] text-white font-bold shadow-sm shrink-0">
                 <Sparkles size={20} />
               </div>
-              <h1 className="text-base sm:text-lg md:text-xl font-bold tracking-tight text-white leading-normal">
+              <h1 className="text-base sm:text-lg md:text-xl font-bold tracking-tight text-white leading-normal shrink-0">
                 Radar de Prospecção Comercial & Levantamento PPA / EaaS (com IA)
               </h1>
             </div>
@@ -403,7 +403,7 @@ export const PPAProspectingView: React.FC<PPAProspectingViewProps> = ({
             type="button"
             onClick={handleRunAIScan}
             disabled={isScanning}
-            className="px-5 py-3 rounded-xl bg-gradient-to-r from-[#FF8000] to-[#E67300] hover:from-[#E67300] hover:to-[#CC6600] text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 shrink-0 whitespace-nowrap"
+            className="px-5 py-3 rounded-xl bg-gradient-to-r from-[#FF8000] to-[#E67300] hover:from-[#E67300] hover:to-[#CC6600] text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 shrink-0 whitespace-nowrap self-start md:self-center"
           >
             {isScanning ? (
               <Loader2 size={18} className="animate-spin text-white shrink-0" />
@@ -416,7 +416,7 @@ export const PPAProspectingView: React.FC<PPAProspectingViewProps> = ({
 
         {/* Progress Bar while scanning */}
         {isScanning && (
-          <div className="mt-4 pt-4 border-t border-slate-800 space-y-1.5 animate-in fade-in">
+          <div className="mt-4 pt-4 border-t border-slate-800 space-y-1.5 animate-in fade-in shrink-0">
             <div className="flex justify-between text-[11px] font-mono text-orange-300">
               <span>A analisar registros de empresas, faturas estimadas EDM e imagens de satélite...</span>
               <span>{scanProgress}%</span>
@@ -432,7 +432,7 @@ export const PPAProspectingView: React.FC<PPAProspectingViewProps> = ({
       </div>
 
       {/* Painel de Filtros Avançados */}
-      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs mb-6 space-y-4">
+      <div className="shrink-0 w-full bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs mb-6 space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <h3 className="font-bold text-slate-900 text-xs flex items-center gap-2 whitespace-nowrap">
             <Filter size={15} className="text-[#FF8000] shrink-0" />
