@@ -381,16 +381,16 @@ export const PPAProspectingView: React.FC<PPAProspectingViewProps> = ({
     <div className="flex-1 overflow-y-auto bg-slate-100 flex flex-col p-4 sm:p-6 min-h-0 select-none">
       
       {/* Banner de Inteligência Comercial / Top Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-[#0F172A] text-white p-6 rounded-2xl shadow-lg border border-slate-800 mb-6 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-[#0F172A] text-white p-5 sm:p-6 rounded-2xl shadow-lg border border-slate-800 mb-6 relative overflow-hidden">
         <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-64 h-64 bg-[#FF8000]/10 rounded-full blur-3xl pointer-events-none" />
         
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-xl bg-[#FF8000] text-white font-bold shadow-sm">
+          <div className="space-y-1.5 min-w-0">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-[#FF8000] text-white font-bold shadow-sm shrink-0">
                 <Sparkles size={20} />
               </div>
-              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white">
+              <h1 className="text-base sm:text-lg md:text-xl font-bold tracking-tight text-white leading-normal">
                 Radar de Prospecção Comercial & Levantamento PPA / EaaS (com IA)
               </h1>
             </div>
@@ -403,14 +403,14 @@ export const PPAProspectingView: React.FC<PPAProspectingViewProps> = ({
             type="button"
             onClick={handleRunAIScan}
             disabled={isScanning}
-            className="px-5 py-3 rounded-xl bg-gradient-to-r from-[#FF8000] to-[#E67300] hover:from-[#E67300] hover:to-[#CC6600] text-white font-bold text-xs shadow-md transition flex items-center gap-2.5 cursor-pointer disabled:opacity-50 shrink-0"
+            className="px-5 py-3 rounded-xl bg-gradient-to-r from-[#FF8000] to-[#E67300] hover:from-[#E67300] hover:to-[#CC6600] text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 shrink-0 whitespace-nowrap"
           >
             {isScanning ? (
-              <Loader2 size={18} className="animate-spin text-white" />
+              <Loader2 size={18} className="animate-spin text-white shrink-0" />
             ) : (
-              <Sparkles size={18} />
+              <Sparkles size={18} className="shrink-0" />
             )}
-            <span>{isScanning ? 'A Varrer Mercado com IA...' : 'Executar Varredura de Mercado com IA'}</span>
+            <span className="whitespace-nowrap">{isScanning ? 'A Varrer Mercado com IA...' : 'Executar Varredura de Mercado com IA'}</span>
           </button>
         </div>
 
@@ -434,11 +434,11 @@ export const PPAProspectingView: React.FC<PPAProspectingViewProps> = ({
       {/* Painel de Filtros Avançados */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs mb-6 space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-          <h3 className="font-bold text-slate-900 text-xs flex items-center gap-2">
-            <Filter size={15} className="text-[#FF8000]" />
+          <h3 className="font-bold text-slate-900 text-xs flex items-center gap-2 whitespace-nowrap">
+            <Filter size={15} className="text-[#FF8000] shrink-0" />
             <span>Filtros de Prospecção & Varredura Alvo</span>
           </h3>
-          <span className="text-[11px] text-slate-500 font-medium">
+          <span className="text-[11px] text-slate-500 font-medium whitespace-nowrap">
             Exibindo <strong className="text-slate-900 font-bold">{filteredLeads.length}</strong> potenciais clientes
           </span>
         </div>
@@ -447,9 +447,9 @@ export const PPAProspectingView: React.FC<PPAProspectingViewProps> = ({
           
           {/* Pesquisa por Texto */}
           <div className="lg:col-span-1">
-            <label className="block text-[11px] font-semibold text-slate-600 mb-1">Empresa / Palavra-chave</label>
+            <label className="block text-[11px] font-semibold text-slate-600 mb-1 whitespace-nowrap">Empresa / Palavra-chave</label>
             <div className="relative flex items-center">
-              <Search size={14} className="absolute left-3 text-slate-400" />
+              <Search size={14} className="absolute left-3 text-slate-400 shrink-0" />
               <input
                 type="text"
                 value={searchQuery}
@@ -462,7 +462,7 @@ export const PPAProspectingView: React.FC<PPAProspectingViewProps> = ({
 
           {/* Setor */}
           <div>
-            <label className="block text-[11px] font-semibold text-slate-600 mb-1">Setor de Actuação</label>
+            <label className="block text-[11px] font-semibold text-slate-600 mb-1 whitespace-nowrap">Setor de Actuação</label>
             <select
               value={selectedSector}
               onChange={e => setSelectedSector(e.target.value)}
@@ -480,7 +480,7 @@ export const PPAProspectingView: React.FC<PPAProspectingViewProps> = ({
 
           {/* Cidade/Província */}
           <div>
-            <label className="block text-[11px] font-semibold text-slate-600 mb-1">Cidade / Província</label>
+            <label className="block text-[11px] font-semibold text-slate-600 mb-1 whitespace-nowrap">Cidade / Província</label>
             <select
               value={selectedCity}
               onChange={e => setSelectedCity(e.target.value)}
@@ -499,7 +499,7 @@ export const PPAProspectingView: React.FC<PPAProspectingViewProps> = ({
 
           {/* Solução Recomendada */}
           <div>
-            <label className="block text-[11px] font-semibold text-slate-600 mb-1">Solução Recomendada</label>
+            <label className="block text-[11px] font-semibold text-slate-600 mb-1 whitespace-nowrap">Solução Recomendada</label>
             <select
               value={selectedSolution}
               onChange={e => setSelectedSolution(e.target.value)}
@@ -514,7 +514,7 @@ export const PPAProspectingView: React.FC<PPAProspectingViewProps> = ({
 
           {/* Prioridade */}
           <div>
-            <label className="block text-[11px] font-semibold text-slate-600 mb-1">Prioridade</label>
+            <label className="block text-[11px] font-semibold text-slate-600 mb-1 whitespace-nowrap">Prioridade</label>
             <select
               value={selectedPriority}
               onChange={e => setSelectedPriority(e.target.value)}
@@ -540,9 +540,9 @@ export const PPAProspectingView: React.FC<PPAProspectingViewProps> = ({
             <div>
               {/* Header Card: Nome, Match & Badge Prioridade */}
               <div className="flex items-start justify-between gap-2 mb-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                <div className="w-full">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap shrink-0 ${
                       lead.prioridade === 'A' 
                         ? 'bg-rose-100 text-rose-800 border border-rose-200' 
                         : lead.prioridade === 'B'
@@ -551,12 +551,12 @@ export const PPAProspectingView: React.FC<PPAProspectingViewProps> = ({
                     }`}>
                       Prioridade {lead.prioridade}
                     </span>
-                    <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200 flex items-center gap-1">
-                      <Sparkles size={11} />
+                    <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200 flex items-center gap-1 whitespace-nowrap shrink-0">
+                      <Sparkles size={11} className="shrink-0" />
                       {lead.matchPercentage}% Match IA
                     </span>
                   </div>
-                  <h4 className="font-bold text-sm text-slate-900 mt-2 leading-tight group-hover:text-[#FF8000] transition">
+                  <h4 className="font-bold text-sm text-slate-900 mt-2 leading-snug group-hover:text-[#FF8000] transition">
                     {lead.nomeEmpresa}
                   </h4>
                 </div>
@@ -566,39 +566,39 @@ export const PPAProspectingView: React.FC<PPAProspectingViewProps> = ({
               <div className="space-y-1.5 text-xs text-slate-500 mb-4 pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-1.5">
                   <Building2 size={13} className="text-slate-400 shrink-0" />
-                  <span>{lead.sector}</span>
+                  <span className="truncate">{lead.sector}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <MapPin size={13} className="text-slate-400 shrink-0" />
-                  <span>{lead.cidadeProvincia}</span>
+                  <span className="truncate">{lead.cidadeProvincia}</span>
                 </div>
                 <div className="flex items-center gap-1.5 font-mono text-[11px] text-slate-600">
                   <UserCheck size={13} className="text-slate-400 shrink-0" />
-                  <span>{lead.directorDecisor}</span>
+                  <span className="truncate">{lead.directorDecisor}</span>
                 </div>
               </div>
 
               {/* Métricas Energéticas Estimadas */}
               <div className="grid grid-cols-2 gap-2.5 p-3 bg-slate-50 border border-slate-100 rounded-xl mb-4 text-xs">
                 <div>
-                  <span className="text-[10px] text-slate-400 font-semibold block uppercase">Fatura Est. (MZN)</span>
-                  <strong className="font-mono font-bold text-slate-900 text-xs">
+                  <span className="text-[10px] text-slate-400 font-semibold block uppercase whitespace-nowrap">Fatura Est. (MZN)</span>
+                  <strong className="font-mono font-bold text-slate-900 text-xs whitespace-nowrap">
                     {(lead.consumoMensalEstimadoMZN).toLocaleString('pt-MZ')} MZN/mês
                   </strong>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 font-semibold block uppercase">Economia Est. PPA</span>
-                  <strong className="font-mono font-bold text-emerald-600 text-xs">
+                  <span className="text-[10px] text-slate-400 font-semibold block uppercase whitespace-nowrap">Economia Est. PPA</span>
+                  <strong className="font-mono font-bold text-emerald-600 text-xs whitespace-nowrap">
                     -{(lead.economiaMensalEstimadaMZN).toLocaleString('pt-MZ')} MZN
                   </strong>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 font-semibold block uppercase">Solução</span>
-                  <span className="font-bold text-[#FF8000]">{lead.solucaoRecomendada} ({lead.potenciaSolarRecomendadakWp} kWp)</span>
+                  <span className="text-[10px] text-slate-400 font-semibold block uppercase whitespace-nowrap">Solução</span>
+                  <span className="font-bold text-[#FF8000] whitespace-nowrap">{lead.solucaoRecomendada} ({lead.potenciaSolarRecomendadakWp} kWp)</span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 font-semibold block uppercase">Status</span>
-                  <span className="font-medium text-slate-700">{lead.status}</span>
+                  <span className="text-[10px] text-slate-400 font-semibold block uppercase whitespace-nowrap">Status</span>
+                  <span className="font-medium text-slate-700 whitespace-nowrap">{lead.status}</span>
                 </div>
               </div>
 
@@ -609,36 +609,36 @@ export const PPAProspectingView: React.FC<PPAProspectingViewProps> = ({
             </div>
 
             {/* Bottom Actions Buttons */}
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+            <div className="pt-3 border-t border-slate-100 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 shrink-0">
               <button
                 type="button"
                 onClick={() => handleOpenSurveyModal(lead)}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
+                className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0"
                 title="Ver / Preencher Ficha Técnica de Levantamento PPA"
               >
-                <FileText size={14} className="text-[#FF8000]" />
-                <span>Ficha Técnica</span>
+                <FileText size={14} className="text-[#FF8000] shrink-0" />
+                <span className="whitespace-nowrap">Ficha Técnica</span>
               </button>
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => handleConvertLeadToClient(lead)}
-                  className="px-3 py-1.5 rounded-lg bg-sky-50 text-sky-700 hover:bg-sky-100 text-xs font-bold transition cursor-pointer flex items-center gap-1"
+                  className="px-2.5 py-1.5 rounded-lg bg-sky-50 text-sky-700 hover:bg-sky-100 text-xs font-bold transition cursor-pointer flex items-center gap-1 whitespace-nowrap shrink-0"
                   title="Cadastrar Cliente na Carteira CRM"
                 >
-                  <Plus size={13} />
-                  <span>CRM</span>
+                  <Plus size={13} className="shrink-0" />
+                  <span className="whitespace-nowrap">+ CRM</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => handleGenerateProposalForLead(lead)}
-                  className="px-3.5 py-1.5 rounded-lg bg-[#FF8000] hover:bg-[#E67300] text-white text-xs font-bold transition cursor-pointer shadow-xs flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-lg bg-[#FF8000] hover:bg-[#E67300] text-white text-xs font-bold transition cursor-pointer shadow-xs flex items-center gap-1.5 whitespace-nowrap shrink-0"
                   title="Gerar Proposta Comercial PPA/EaaS Instantânea"
                 >
-                  <FileSpreadsheet size={14} />
-                  <span>Proposta</span>
+                  <FileSpreadsheet size={14} className="shrink-0" />
+                  <span className="whitespace-nowrap">Proposta</span>
                 </button>
               </div>
             </div>
@@ -652,45 +652,47 @@ export const PPAProspectingView: React.FC<PPAProspectingViewProps> = ({
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
           <div>
             <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-              <Award size={16} className="text-[#FF8000]" />
+              <Award size={16} className="text-[#FF8000] shrink-0" />
               <span>Resumo Diário de Levantamentos de Mercado (Empresas Prospectadas)</span>
             </h3>
             <p className="text-xs text-slate-500">Relatório executivo dos levantamentos PPA/EaaS registrados no ERP LECASU</p>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+        <div className="overflow-x-auto select-text scrollbar-thin">
+          <table className="w-full text-left text-xs border-collapse min-w-[920px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase text-[10px]">
-                <th className="p-3">Empresa</th>
-                <th className="p-3">Cidade / Província</th>
-                <th className="p-3">Potencial Estimado</th>
-                <th className="p-3">Prioridade</th>
-                <th className="p-3">Solução</th>
-                <th className="p-3">Observações / Diagnóstico</th>
-                <th className="p-3 text-right">Ação</th>
+                <th className="p-3 min-w-[200px] whitespace-nowrap">Empresa</th>
+                <th className="p-3 min-w-[140px] whitespace-nowrap">Cidade / Província</th>
+                <th className="p-3 min-w-[140px] whitespace-nowrap">Potencial Estimado</th>
+                <th className="p-3 min-w-[110px] whitespace-nowrap">Prioridade</th>
+                <th className="p-3 min-w-[150px] whitespace-nowrap">Solução</th>
+                <th className="p-3 min-w-[260px]">Observações / Diagnóstico</th>
+                <th className="p-3 text-right min-w-[100px] whitespace-nowrap">Ação</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
               {leads.map(l => (
                 <tr key={l.id} className="hover:bg-slate-50 transition">
-                  <td className="p-3 font-bold text-slate-900">{l.nomeEmpresa}</td>
-                  <td className="p-3 text-slate-600">{l.cidadeProvincia}</td>
-                  <td className="p-3">
-                    <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-bold border border-emerald-200">
+                  <td className="p-3 font-bold text-slate-900 min-w-[200px] leading-snug">{l.nomeEmpresa}</td>
+                  <td className="p-3 text-slate-600 whitespace-nowrap">{l.cidadeProvincia}</td>
+                  <td className="p-3 whitespace-nowrap">
+                    <span className="px-2.5 py-1 rounded bg-emerald-50 text-emerald-800 font-bold border border-emerald-200 whitespace-nowrap inline-block text-[11px]">
                       {l.potencialEstimado}
                     </span>
                   </td>
-                  <td className="p-3">
-                    <span className="font-mono font-bold text-slate-900">Prioridade {l.prioridade}</span>
+                  <td className="p-3 whitespace-nowrap">
+                    <span className="font-mono font-bold text-slate-900 whitespace-nowrap">Prioridade {l.prioridade}</span>
                   </td>
-                  <td className="p-3 font-bold text-[#FF8000]">{l.solucaoRecomendada} ({l.potenciaSolarRecomendadakWp} kWp)</td>
-                  <td className="p-3 text-slate-500 max-w-xs truncate">{l.observacoes}</td>
-                  <td className="p-3 text-right">
+                  <td className="p-3 font-bold text-[#FF8000] whitespace-nowrap">{l.solucaoRecomendada} ({l.potenciaSolarRecomendadakWp} kWp)</td>
+                  <td className="p-3 text-slate-600 min-w-[260px] leading-snug">
+                    {l.observacoes}
+                  </td>
+                  <td className="p-3 text-right whitespace-nowrap">
                     <button
                       onClick={() => handleOpenSurveyModal(l)}
-                      className="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold transition cursor-pointer text-[11px]"
+                      className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold transition cursor-pointer text-xs whitespace-nowrap shrink-0"
                     >
                       Abrir Ficha
                     </button>
